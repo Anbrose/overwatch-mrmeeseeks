@@ -1,0 +1,25 @@
+# systemd 服务示例：让 mrmeeseeks 在 Linux 服务器上开机自启、崩溃自动重启。
+# 假设项目放在 /opt/mrmeeseeks，虚拟环境在 /opt/mrmeeseeks/.venv，运行用户为 meeseeks。
+# 安装：
+#   sudo cp deploy/mrmeeseeks.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now mrmeeseeks
+# 查看日志：
+#   journalctl -u mrmeeseeks -f
+
+[Unit]
+Description=mrmeeseeks Discord bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=meeseeks
+WorkingDirectory=/opt/mrmeeseeks/server
+ExecStart=/opt/mrmeeseeks/.venv/bin/python bot.py
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
