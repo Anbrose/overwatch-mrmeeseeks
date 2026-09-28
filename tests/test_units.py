@@ -51,7 +51,7 @@ def test_analyzer():
                 body = "```json\n" + json.dumps(FACTS, ensure_ascii=False) + "\n```"
             else:                    # 第 2 步：建议
                 body = "Stay as is\n- reason (basis: enemy comp)"
-            return types.SimpleNamespace(content=[_Block(body)])
+            return types.SimpleNamespace(content=[_Block(body)], stop_reason="end_turn")
 
     a = analyzer.Analyzer.__new__(analyzer.Analyzer)
     a.model = "test-model"
@@ -72,6 +72,38 @@ def test_analyzer():
         check("无 JSON 时抛错", False)
     except ValueError:
         check("无 JSON 时抛错", True)
+
+
+def test_thinking_budget():
+    """模拟 adaptive thinking：思考先吃掉一部分 max_tokens，剩下的不够就只返回 thinking 块。
+    线上实测复杂计分板的思考会超过 1500 token。"""
+    THINKING = 4000
+
+    class ThinkingMessages:
+        async def create(self, **kw):
+            thinking = types.SimpleNamespace(type="thinking", thinking="")
+            if kw["max_tokens"] <= THINKING:
+                return types.SimpleNamespace(content=[thinking], stop_reason="max_tokens")
+            body = json.dumps(FACTS) if "system" not in kw else "Stay as is"
+            return types.SimpleNamespace(content=[thinking, _Block(body)], stop_reason="end_turn")
+
+    a = analyzer.Analyzer.__new__(analyzer.Analyzer)
+    a.model = "test-model"
+    a.client = types.SimpleNamespace(messages=ThinkingMessages())
+    try:
+        facts, advice = asyncio.run(a.analyze(b"\xff\xd8x", b"\xff\xd8y"))
+        check("思考较长时识别和建议仍能输出", facts == FACTS and advice == "Stay as is")
+    except ValueError as e:
+        check(f"思考较长时识别和建议仍能输出（{e}）", False)
+
+    a.client = types.SimpleNamespace(messages=types.SimpleNamespace(
+        create=lambda **kw: asyncio.sleep(0, types.SimpleNamespace(
+            content=[types.SimpleNamespace(type="thinking", thinking="")], stop_reason="max_tokens"))))
+    try:
+        asyncio.run(a.extract(b"x", b"y"))
+        check("输出被截断时报错说明 max_tokens", False)
+    except ValueError as e:
+        check("输出被截断时报错说明 max_tokens", "max_tokens" in str(e))
 
 
 # ---------------- 客户端截图时序 ----------------
@@ -125,6 +157,7 @@ async def _capture_flow():
 
 if __name__ == "__main__":
     test_analyzer()
+    test_thinking_budget()
     asyncio.run(_capture_flow())
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")

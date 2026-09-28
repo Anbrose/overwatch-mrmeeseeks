@@ -56,6 +56,16 @@ def _image_block(data: bytes) -> dict[str, Any]:
                        "data": base64.b64encode(data).decode()}}
 
 
+# 模型默认开启 adaptive thinking，思考也计入 max_tokens；给小了会只剩 thinking 块、没有正文
+MAX_TOKENS = 16000
+
+
+def _text(resp: Any) -> str:
+    if resp.stop_reason == "max_tokens":
+        raise ValueError(f"model output truncated at max_tokens={MAX_TOKENS}")
+    return "".join(b.text for b in resp.content if b.type == "text")
+
+
 def _parse_json(text: str) -> dict[str, Any]:
     cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip())
     match = re.search(r"\{.*\}", cleaned, re.S)
@@ -72,7 +82,7 @@ class Analyzer:
     async def extract(self, scoreboard: bytes, hud: bytes) -> dict[str, Any]:
         resp = await self.client.messages.create(
             model=self.model,
-            max_tokens=1500,
+            max_tokens=MAX_TOKENS,
             messages=[{"role": "user", "content": [
                 {"type": "text", "text": "Image 1 (scoreboard while holding Tab):"},
                 _image_block(scoreboard),
@@ -81,19 +91,18 @@ class Analyzer:
                 {"type": "text", "text": EXTRACT_PROMPT},
             ]}],
         )
-        text = "".join(b.text for b in resp.content if b.type == "text")
-        return _parse_json(text)
+        return _parse_json(_text(resp))
 
     async def advise(self, facts: dict[str, Any], context: dict[str, Any]) -> str:
         payload = {"screen_facts": facts, **context}
         resp = await self.client.messages.create(
             model=self.model,
-            max_tokens=800,
+            max_tokens=MAX_TOKENS,
             system=ADVISE_SYSTEM,
             messages=[{"role": "user", "content":
                        "Data:\n" + json.dumps(payload, ensure_ascii=False, indent=2)}],
         )
-        return "".join(b.text for b in resp.content if b.type == "text").strip()
+        return _text(resp).strip()
 
     async def analyze(self, scoreboard: bytes, hud: bytes) -> tuple[dict[str, Any], str]:
         facts = await self.extract(scoreboard, hud)
