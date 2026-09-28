@@ -27,10 +27,10 @@ def check(name, cond):
 
 # ---------------- 分析器 ----------------
 FACTS = {
-    "map": {"name": "国王大道", "confidence": 0.9}, "mode": "运载", "side": "进攻",
-    "segment": {"checkpoint": 2, "progress": "约40%", "detail": None, "confidence": 0.8},
-    "allies": [{"player": "A", "hero": "D.Va", "role": "坦克", "confidence": 0.9}],
-    "enemies": [{"player": None, "hero": "温斯顿", "role": "坦克", "confidence": 0.95}, {"hero": "猎空"}],
+    "map": {"name": "King's Row", "confidence": 0.9}, "mode": "Escort", "side": "Attack",
+    "segment": {"checkpoint": 2, "progress": "~40%", "detail": None, "confidence": 0.8},
+    "allies": [{"player": "A", "hero": "D.Va", "role": "Tank", "confidence": 0.9}],
+    "enemies": [{"player": None, "hero": "Winston", "role": "Tank", "confidence": 0.95}, {"hero": "Tracer"}],
     "unreadable": [],
 }
 
@@ -50,7 +50,7 @@ def test_analyzer():
             if "system" not in kw:   # 第 1 步：识别，故意包在 ```json 代码块里
                 body = "```json\n" + json.dumps(FACTS, ensure_ascii=False) + "\n```"
             else:                    # 第 2 步：建议
-                body = "维持现状\n- 理由（依据：敌方阵容）"
+                body = "Stay as is\n- reason (basis: enemy comp)"
             return types.SimpleNamespace(content=[_Block(body)])
 
     a = analyzer.Analyzer.__new__(analyzer.Analyzer)
@@ -62,11 +62,11 @@ def test_analyzer():
     images = [b for b in calls[0]["messages"][0]["content"] if b["type"] == "image"]
     check("识别步骤发送了两张图", len(images) == 2)
     check("建议步骤不看图，只看事实", "image" not in json.dumps(calls[1]["messages"]))
-    check("建议步骤带上了约束规则", "只能使用下面给出的数据" in calls[1]["system"])
-    check("建议文本返回", advice.startswith("维持现状"))
+    check("建议步骤带上了约束规则", "Use only the data provided below" in calls[1]["system"])
+    check("建议文本返回", advice.startswith("Stay as is"))
     check("识别摘要格式",
-          analyzer.format_facts(facts) == "地图 国王大道 ｜ 运载/进攻 ｜ 第2段 约40% ｜ 我方 D.Va ｜ 敌方 温斯顿、猎空")
-    check("空识别结果不报错", "地图 ?" in analyzer.format_facts({}))
+          analyzer.format_facts(facts) == "Map King's Row | Escort/Attack | Checkpoint 2 ~40% | Allies D.Va | Enemies Winston, Tracer")
+    check("空识别结果不报错", "Map ?" in analyzer.format_facts({}))
     try:
         analyzer._parse_json("没有 JSON")
         check("无 JSON 时抛错", False)

@@ -159,8 +159,8 @@ python bot.py
 看到这两行就说明启动成功：
 
 ```
-... INFO mrmeeseeks.ws: WebSocket 服务已监听 0.0.0.0:8765
-... INFO mrmeeseeks: Discord 已登录：mrmeeseeks#1234
+... INFO mrmeeseeks.ws: WebSocket server listening on 0.0.0.0:8765
+... INFO mrmeeseeks: Logged in to Discord as mrmeeseeks#1234
 ```
 
 这时去 Discord 看，bot 应该已经上线。**这个窗口保持开着**，关掉 bot 就下线了。
@@ -188,12 +188,12 @@ python client\client.py
 python client\client.py --server ws://192.168.1.10:8765
 ```
 
-看到类似下面的输出就说明连接成功，记下这个标识：
+看到类似下面的输出就说明连接成功，记下这个标识（Client ID）：
 
 ```
 [20:15:02] ============================================
-[20:15:02] 已连接服务器，本机标识：MEE-7K3Q
-[20:15:02] 去 Discord 频道里 @mrmeeseeks，选择这个标识。
+[20:15:02] Connected to server. Client ID: MEE-7K3Q
+[20:15:02] @mrmeeseeks in a Discord channel and pick this ID.
 [20:15:02] ============================================
 ```
 
@@ -214,10 +214,10 @@ python client\client.py --no-capture
 1. 在 Discord 任意文字频道发送 `@mrmeeseeks`
 2. bot 回复一个下拉菜单，选择你的标识 `MEE-XXXX`
 3. 你会收到一条**只有你能看到**的消息，里面是 8 位配对码
-4. 客户端窗口出现"请输入 8 位配对码"，输入它
-5. 客户端显示"✅ 配对成功"，频道里出现"✅ 客户端 MEE-XXXX 已连接"
+4. 客户端窗口出现 "Enter the 8-digit pairing code"，输入它
+5. 客户端显示 "✅ Paired!"，频道里出现 "✅ Client MEE-XXXX (...) connected."
 
-也可以顺便试试 `@mrmeeseeks 状态` 和 `@mrmeeseeks 断开`。
+也可以顺便试试 `@mrmeeseeks status` 和 `@mrmeeseeks disconnect`。
 
 ### 阶段 B：测试截图时机（不需要 API Key）
 
@@ -247,14 +247,14 @@ python client\client.py --no-capture
 频道里会先出现截图，几秒后 bot 回复：
 
 ```
-识别：地图 国王大道 ｜ 运载/进攻 ｜ 第2段 约40% ｜ 我方 D.Va、… ｜ 敌方 温斯顿、…
+Detected: Map King's Row | Escort/Attack | Checkpoint 2 ~40% | Allies D.Va, … | Enemies Winston, …
 
-一句话结论……
-- 理由 1（依据：……）
-- 理由 2（依据：……）
+One-sentence conclusion…
+- Reason 1 (basis: …)
+- Reason 2 (basis: …)
 ```
 
-第一行"识别"是模型看到的内容，用来核对它有没有认错。客户端窗口里也会显示结论。
+第一行 "Detected" 是模型看到的内容，用来核对它有没有认错。客户端窗口里也会显示结论。
 
 ---
 
@@ -348,10 +348,10 @@ python client\client.py --help
 
 | 指令 | 作用 |
 |---|---|
-| `@mrmeeseeks` | 连接客户端：选择标识，私下收到 8 位配对码 |
-| `@mrmeeseeks 状态` | 查看所有在线客户端和绑定情况 |
-| `@mrmeeseeks 断开` | 解绑本频道的客户端 |
-| `@mrmeeseeks 帮助` | 显示帮助 |
+| `@mrmeeseeks` 或 `@mrmeeseeks connect` | 连接客户端：选择标识，私下收到 8 位配对码 |
+| `@mrmeeseeks status` | 查看所有在线客户端和绑定情况 |
+| `@mrmeeseeks disconnect` | 解绑本频道的客户端 |
+| `@mrmeeseeks help` | 显示帮助 |
 
 ### 配对规则
 
@@ -378,13 +378,13 @@ python tests/test_e2e.py       # 真实服务器 + 真实客户端：握手、�
 
 ## 常见问题
 
-**启动服务器提示"缺少 DISCORD_TOKEN"**
+**启动服务器提示 "DISCORD_TOKEN is missing"**
 没有创建 `server/.env`，或者 Token 没填。按第 4 步复制 `.env.example` 并填写。
 
-**提示"Discord 登录失败"**
+**提示 "Discord login failed"**
 Token 填错了，或者在开发者后台重新生成过。重新复制一次。
 
-**提示"请打开 Message Content Intent"**
+**提示 "enable Message Content Intent"**
 按第 2 步第 2 点，在 Bot 页面打开 Message Content Intent 并保存。
 
 **@mrmeeseeks 没有任何反应**
@@ -392,9 +392,9 @@ Token 填错了，或者在开发者后台重新生成过。重新复制一次�
 - 确认 @ 的是 bot 本人，而不是同名的身份组
 - 确认 bot 在这个频道有"查看频道"和"发送消息"权限
 
-**回复"当前没有可用的客户端"，但客户端明明开着**
+**回复 "No clients available"，但客户端明明开着**
 - 看客户端窗口有没有显示"本机标识"。没有的话说明没连上，检查 `--server` 地址和防火墙
-- 这个客户端可能已经绑定到别的频道了，用 `@mrmeeseeks 状态` 查看，用 `@mrmeeseeks 断开` 解绑
+- 这个客户端可能已经绑定到别的频道了，用 `@mrmeeseeks status` 查看，用 `@mrmeeseeks disconnect` 解绑
 
 **PowerShell 提示"无法加载 Activate.ps1，因为在此系统上禁止运行脚本"**
 先执行 `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`，再激活虚拟环境。
@@ -406,13 +406,13 @@ Token 填错了，或者在开发者后台重新生成过。重新复制一次�
 **截图是黑的**
 把守望先锋改成"无边框窗口"模式。
 
-**游戏里按 Tab 没反应（客户端没有"已发送截图"日志）**
+**游戏里按 Tab 没反应（客户端没有 "Screenshots sent" 日志）**
 - 确认客户端已配对成功，没有加 `--no-capture`
 - 两次截图之间要隔 `--cooldown` 秒，按住时间要超过 `--min-hold`
 - 如果游戏是以管理员身份运行的，客户端所在的 PowerShell 也要以管理员身份运行，否则收不到游戏窗口里的按键
 
 **分析结果经常认错英雄**
-频道里的"识别"行能看出是哪一步出错。可以试着提高 `--quality`，或者换用更强的模型（`CLAUDE_MODEL`）。
+频道里的 "Detected" 行能看出是哪一步出错。可以试着提高 `--quality`，或者换用更强的模型（`CLAUDE_MODEL`）。
 
 ---
 

@@ -13,41 +13,41 @@ from typing import Any
 
 from anthropic import AsyncAnthropic
 
-EXTRACT_PROMPT = """你是守望先锋画面识别器。你会收到两张截图：
-- 图1：玩家按住 Tab 时的全屏画面（计分板）
-- 图2：松开 Tab 后屏幕顶部的目标/进度区域
+EXTRACT_PROMPT = """You are an Overwatch screen reader. You will receive two screenshots:
+- Image 1: the full screen while the player holds Tab (scoreboard)
+- Image 2: the top of the screen after Tab is released (objective/progress area)
 
-只报告你在画面上**直接看到**的信息，不要推测。看不清或不确定的字段填 null，并把原因写进 unreadable。
-confidence 取 0~1，表示你对该字段识别正确的把握。
+Report only what you **directly see** on screen; do not guess. Set any unclear or uncertain field to null and put the reason in unreadable.
+confidence is 0~1: how sure you are that the field is read correctly.
 
-只输出一个 JSON 对象，不要任何其他文字，格式：
+Output a single JSON object and nothing else, in this format:
 {
-  "map": {"name": 地图名或null, "confidence": 0~1},
-  "mode": "运载" | "混合" | "推进" | "占领" | "其他" | null,
-  "side": "进攻" | "防守" | null,
+  "map": {"name": map name or null, "confidence": 0~1},
+  "mode": "Escort" | "Hybrid" | "Push" | "Control" | "Other" | null,
+  "side": "Attack" | "Defense" | null,
   "segment": {
-    "checkpoint": 第几个检查点/子地图(整数)或null,
-    "progress": 进度描述(如"约40%")或null,
-    "detail": 进度条上看到的其他信息或null,
+    "checkpoint": checkpoint / sub-map number (integer) or null,
+    "progress": progress description (e.g. "~40%") or null,
+    "detail": anything else seen on the progress bar, or null,
     "confidence": 0~1
   },
-  "allies":  [{"player": 名字或null, "hero": 英雄名或null, "role": "坦克"|"输出"|"支援"|null, "confidence": 0~1}],
-  "enemies": [{"player": 名字或null, "hero": 英雄名或null, "role": "坦克"|"输出"|"支援"|null, "confidence": 0~1}],
-  "unreadable": ["无法识别的内容及原因"]
+  "allies":  [{"player": name or null, "hero": hero name or null, "role": "Tank"|"Damage"|"Support"|null, "confidence": 0~1}],
+  "enemies": [{"player": name or null, "hero": hero name or null, "role": "Tank"|"Damage"|"Support"|null, "confidence": 0~1}],
+  "unreadable": ["what could not be read, and why"]
 }
-英雄名和地图名使用简体中文官方译名。"""
+Use the official English names for heroes and maps."""
 
-ADVISE_SYSTEM = """你是 mrmeeseeks，一个守望先锋换英雄参谋。
-规则：
-1. 只能使用下面给出的数据做判断，不得补充数据里没有的事实。
-2. confidence 低于 0.6 的字段视为未知。
-3. 每条建议后用括号注明依据，例如（依据：敌方阵容 温斯顿+猎空）。
-4. 队友擅长英雄只能引用"队友生涯数据"里提供的内容；没提供就不要假设。
-5. 英雄克制关系如果只来自通用知识，而没有"版本数据"支撑，标注"（通用克制，未经当前版本数据验证）"。
-6. 关键信息不足时，直接回答"数据不足，无法给出建议"，并说明缺什么。
-输出格式（简体中文，总长不超过 500 字）：
-第一行：一句话结论（建议谁换成什么，或维持现状）
-然后最多 3 条理由，每条一行，以"- "开头。"""
+ADVISE_SYSTEM = """You are mrmeeseeks, an Overwatch hero-swap advisor.
+Rules:
+1. Use only the data provided below. Do not add facts that are not in the data.
+2. Treat any field with confidence below 0.6 as unknown.
+3. After each suggestion, cite its basis in parentheses, e.g. (basis: enemy comp Winston + Tracer).
+4. Teammates' best heroes may only come from "teammate_career_data"; if it is not provided, do not assume.
+5. If a counter relationship comes only from general knowledge and is not backed by "patch_data", mark it "(general counter, not verified against current patch data)".
+6. If key information is missing, answer "Not enough data to give advice" and say what is missing.
+Output format (English, at most 150 words):
+First line: a one-sentence conclusion (who should swap to what, or stay as is)
+Then at most 3 reasons, one per line, each starting with "- "."""
 
 
 def _image_block(data: bytes) -> dict[str, Any]:
@@ -60,7 +60,7 @@ def _parse_json(text: str) -> dict[str, Any]:
     cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", text.strip())
     match = re.search(r"\{.*\}", cleaned, re.S)
     if not match:
-        raise ValueError("模型没有返回 JSON")
+        raise ValueError("model did not return JSON")
     return json.loads(match.group(0))
 
 
@@ -74,9 +74,9 @@ class Analyzer:
             model=self.model,
             max_tokens=1500,
             messages=[{"role": "user", "content": [
-                {"type": "text", "text": "图1（按住 Tab 的计分板）："},
+                {"type": "text", "text": "Image 1 (scoreboard while holding Tab):"},
                 _image_block(scoreboard),
-                {"type": "text", "text": "图2（松开 Tab 后的顶部进度区域）："},
+                {"type": "text", "text": "Image 2 (top progress area after releasing Tab):"},
                 _image_block(hud),
                 {"type": "text", "text": EXTRACT_PROMPT},
             ]}],
@@ -85,13 +85,13 @@ class Analyzer:
         return _parse_json(text)
 
     async def advise(self, facts: dict[str, Any], context: dict[str, Any]) -> str:
-        payload = {"画面识别结果": facts, **context}
+        payload = {"screen_facts": facts, **context}
         resp = await self.client.messages.create(
             model=self.model,
             max_tokens=800,
             system=ADVISE_SYSTEM,
             messages=[{"role": "user", "content":
-                       "数据如下：\n" + json.dumps(payload, ensure_ascii=False, indent=2)}],
+                       "Data:\n" + json.dumps(payload, ensure_ascii=False, indent=2)}],
         )
         return "".join(b.text for b in resp.content if b.type == "text").strip()
 
@@ -99,9 +99,9 @@ class Analyzer:
         facts = await self.extract(scoreboard, hud)
         # 以后在这里接入：OverFast 队友生涯数据、地图分段对照表、当前版本英雄数据
         context = {
-            "队友生涯数据": "暂未接入",
-            "地图分段对照": "暂未接入",
-            "版本数据": "暂未接入",
+            "teammate_career_data": "not available yet",
+            "map_segment_reference": "not available yet",
+            "patch_data": "not available yet",
         }
         advice = await self.advise(facts, context)
         return facts, advice
@@ -117,10 +117,10 @@ def format_facts(facts: dict[str, Any]) -> str:
     enemies = [e.get("hero") or "?" for e in facts.get("enemies") or []]
     allies = [a.get("hero") or "?" for a in facts.get("allies") or []]
     parts = [
-        f"地图 {val(m.get('name'))}",
+        f"Map {val(m.get('name'))}",
         f"{val(facts.get('mode'))}/{val(facts.get('side'))}",
-        f"第{val(seg.get('checkpoint'))}段 {val(seg.get('progress'))}",
-        f"我方 {'、'.join(allies) or '?'}",
-        f"敌方 {'、'.join(enemies) or '?'}",
+        f"Checkpoint {val(seg.get('checkpoint'))} {val(seg.get('progress'))}",
+        f"Allies {', '.join(allies) or '?'}",
+        f"Enemies {', '.join(enemies) or '?'}",
     ]
-    return " ｜ ".join(parts)
+    return " | ".join(parts)

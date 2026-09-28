@@ -1,10 +1,10 @@
 """mrmeeseeks 服务器入口：Discord bot + WebSocket 配对服务，跑在同一个进程里。
 
 频道里的指令：
-  @mrmeeseeks            连接一个本地客户端（选择标识 -> 私发 8 位配对码）
-  @mrmeeseeks 状态       查看所有在线客户端
-  @mrmeeseeks 断开       解绑当前频道里的客户端
-  @mrmeeseeks 帮助       显示帮助
+  @mrmeeseeks            连接一个本地客户端（选择标识 -> 私发 8 位配对码），也可写 connect
+  @mrmeeseeks status     查看所有在线客户端
+  @mrmeeseeks disconnect 解绑当前频道里的客户端
+  @mrmeeseeks help       显示帮助
 """
 from __future__ import annotations
 
@@ -24,17 +24,17 @@ from ws_server import WSServer
 log = logging.getLogger("mrmeeseeks")
 
 HELP_TEXT = (
-    "**mrmeeseeks 指令**\n"
-    "`@mrmeeseeks` 连接本地客户端（选择客户端标识后，我会私下给你一个 8 位配对码）\n"
-    "`@mrmeeseeks 状态` 查看在线客户端\n"
-    "`@mrmeeseeks 断开` 解绑本频道的客户端\n"
-    "`@mrmeeseeks 帮助` 显示这条帮助"
+    "**mrmeeseeks commands**\n"
+    "`@mrmeeseeks` or `@mrmeeseeks connect` Connect a local client (pick its ID and I'll DM you an 8-digit pairing code)\n"
+    "`@mrmeeseeks status` List online clients\n"
+    "`@mrmeeseeks disconnect` Unpair the client bound to this channel\n"
+    "`@mrmeeseeks help` Show this help"
 )
 
 
 def _age(seconds: float) -> str:
     minutes = int(seconds // 60)
-    return f"{minutes} 分钟" if minutes else f"{int(seconds)} 秒"
+    return f"{minutes} min" if minutes else f"{int(seconds)} s"
 
 
 # ---------------- 选择客户端的下拉菜单 ----------------
@@ -44,16 +44,16 @@ class ClientSelect(discord.ui.Select):
         options = [
             discord.SelectOption(
                 label=c.client_id, value=c.client_id,
-                description=f"{c.hostname} · 已在线 {_age(now - c.connected_at)}"[:100])
+                description=f"{c.hostname} · online for {_age(now - c.connected_at)}"[:100])
             for c in clients[:25]
         ]
-        super().__init__(placeholder="选择要连接的客户端标识", options=options)
+        super().__init__(placeholder="Choose a client ID to connect", options=options)
         self.bot = bot
 
     async def callback(self, interaction: discord.Interaction) -> None:
         view: ClientSelectView = self.view  # type: ignore[assignment]
         if interaction.user.id != view.owner_id:
-            await interaction.response.send_message("只有发起连接的人可以选择。", ephemeral=True)
+            await interaction.response.send_message("Only the person who started the connection can choose.", ephemeral=True)
             return
 
         client_id = self.values[0]
@@ -71,17 +71,17 @@ class ClientSelect(discord.ui.Select):
                               expires_in=CODE_TTL_SECONDS)
         except Exception:
             self.bot.registry.cancel_pairing(client_id)
-            await interaction.response.send_message(f"客户端 {client_id} 已离线。", ephemeral=True)
+            await interaction.response.send_message(f"Client {client_id} is offline.", ephemeral=True)
             return
 
         self.disabled = True
         view.stop()
         await interaction.response.edit_message(
-            content=f"已选择 **{client_id}**，配对码已私下发给 {interaction.user.mention}。",
+            content=f"Selected **{client_id}**. The pairing code was sent privately to {interaction.user.mention}.",
             view=view)
         await interaction.followup.send(
-            f"你的配对码：**{pending.code}**\n"
-            f"请在客户端 **{client_id}** 的窗口里输入，{CODE_TTL_SECONDS // 60} 分钟内有效。",
+            f"Your pairing code: **{pending.code}**\n"
+            f"Enter it in the **{client_id}** client window. Valid for {CODE_TTL_SECONDS // 60} minutes.",
             ephemeral=True)
 
 
@@ -97,7 +97,7 @@ class ClientSelectView(discord.ui.View):
             item.disabled = True  # type: ignore[attr-defined]
         if self.message:
             try:
-                await self.message.edit(content="选择已超时，请重新 @mrmeeseeks。", view=self)
+                await self.message.edit(content="Selection timed out. Please @mrmeeseeks again.", view=self)
             except discord.HTTPException:
                 pass
 
@@ -112,7 +112,7 @@ class MeeseeksBot(discord.Client):
         self.analyzer = analyzer
 
     async def on_ready(self) -> None:
-        log.info("Discord 已登录：%s", self.user)
+        log.info("Logged in to Discord as %s", self.user)
 
     async def _channel(self, channel_id: int):
         channel = self.get_channel(channel_id)
@@ -129,11 +129,11 @@ class MeeseeksBot(discord.Client):
             text = text.replace(token, "")
         cmd = text.strip().lower()
 
-        if cmd in ("", "连接", "connect"):
+        if cmd in ("", "connect"):
             await self._connect_flow(message)
-        elif cmd in ("状态", "status"):
+        elif cmd == "status":
             await self._status(message)
-        elif cmd in ("断开", "disconnect"):
+        elif cmd == "disconnect":
             await self._disconnect(message)
         else:
             await message.reply(HELP_TEXT)
@@ -141,63 +141,63 @@ class MeeseeksBot(discord.Client):
     async def _connect_flow(self, message: discord.Message) -> None:
         clients = self.registry.available()
         if not clients:
-            await message.reply("当前没有可用的客户端。请先在你的电脑上运行客户端脚本。")
+            await message.reply("No clients available. Run the client script on your PC first.")
             return
         view = ClientSelectView(self, message.author.id, clients)
         view.message = await message.reply(
-            f"有 {len(clients)} 个客户端在线，请选择要连接的标识：", view=view)
+            f"{len(clients)} client(s) online. Choose the one to connect:", view=view)
 
     async def _status(self, message: discord.Message) -> None:
         if not self.registry.clients:
-            await message.reply("当前没有在线的客户端。")
+            await message.reply("No clients online.")
             return
         now = time.time()
         lines = []
         for c in sorted(self.registry.clients.values(), key=lambda c: c.connected_at):
-            where = f"已绑定 <#{c.channel_id}>（{c.user_name}）" if c.paired else "未绑定"
-            lines.append(f"`{c.client_id}` {c.hostname} · 在线 {_age(now - c.connected_at)} · {where}")
+            where = f"paired to <#{c.channel_id}> ({c.user_name})" if c.paired else "not paired"
+            lines.append(f"`{c.client_id}` {c.hostname} · online for {_age(now - c.connected_at)} · {where}")
         await message.reply("\n".join(lines))
 
     async def _disconnect(self, message: discord.Message) -> None:
         clients = self.registry.in_channel(message.channel.id)
         if not clients:
-            await message.reply("本频道没有绑定的客户端。")
+            await message.reply("No client is paired to this channel.")
             return
         for c in clients:
             self.registry.unpair(c.client_id)
             try:
-                await c.send(type="unpaired", reason=f"{message.author} 在 Discord 里断开了连接")
+                await c.send(type="unpaired", reason=f"{message.author} disconnected it from Discord")
             except Exception:
                 pass
-        await message.reply("已断开：" + "、".join(f"`{c.client_id}`" for c in clients))
+        await message.reply("Disconnected: " + ", ".join(f"`{c.client_id}`" for c in clients))
 
     # ---------- WebSocket 事件（ws_server.Events） ----------
     async def client_paired(self, client: ClientConn) -> None:
         channel = await self._channel(client.channel_id)
-        await channel.send(f"✅ 客户端 **{client.client_id}**（{client.hostname}）已连接。"
-                           f"在游戏里按住 Tab 再松开，我就会开始分析。")
+        await channel.send(f"✅ Client **{client.client_id}** ({client.hostname}) connected. "
+                           f"Hold Tab in game and release it, and I'll start analyzing.")
 
     async def pair_failed(self, client: ClientConn, channel_id: int, reason: str) -> None:
         channel = await self._channel(channel_id)
-        await channel.send(f"❌ 客户端 **{client.client_id}** 配对失败：{reason}")
+        await channel.send(f"❌ Pairing failed for client **{client.client_id}**: {reason}")
 
     async def client_disconnected(self, client: ClientConn) -> None:
         if client.paired:
             channel = await self._channel(client.channel_id)
-            await channel.send(f"⚠️ 客户端 **{client.client_id}** 已断开。")
+            await channel.send(f"⚠️ Client **{client.client_id}** disconnected.")
 
     async def snapshot_received(self, client: ClientConn, scoreboard: bytes, hud: bytes) -> str:
         channel = await self._channel(client.channel_id)
         files = [discord.File(io.BytesIO(scoreboard), "scoreboard.jpg"),
                  discord.File(io.BytesIO(hud), "hud.jpg")]
-        msg = await channel.send(f"🔍 收到 **{client.client_id}** 的截图，分析中…", files=files)
+        msg = await channel.send(f"🔍 Got screenshots from **{client.client_id}**, analyzing…", files=files)
 
         if self.analyzer is None:
-            await msg.reply("（未配置 ANTHROPIC_API_KEY，只转发截图，不做分析）")
-            return "未配置分析"
+            await msg.reply("(ANTHROPIC_API_KEY is not set, so screenshots are only forwarded, not analyzed.)")
+            return "Analysis not configured"
 
         facts, advice = await self.analyzer.analyze(scoreboard, hud)
-        text = f"**识别**：{format_facts(facts)}\n\n{advice}"
+        text = f"**Detected**: {format_facts(facts)}\n\n{advice}"
         await msg.reply(text[:1990])
         return advice.splitlines()[0] if advice else ""
 
@@ -208,14 +208,14 @@ async def main() -> None:
 
     token = os.environ.get("DISCORD_TOKEN", "").strip()
     if not token:
-        raise SystemExit("缺少 DISCORD_TOKEN：请把 server/.env.example 复制为 server/.env 并填写。")
+        raise SystemExit("DISCORD_TOKEN is missing: copy server/.env.example to server/.env and fill it in.")
     api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     model = os.environ.get("CLAUDE_MODEL", "").strip() or "claude-sonnet-5"
     analyzer = Analyzer(api_key, model) if api_key else None
     if analyzer is None:
-        log.warning("未设置 ANTHROPIC_API_KEY，截图只会转发到频道，不做分析")
+        log.warning("ANTHROPIC_API_KEY not set; screenshots will be forwarded without analysis")
     else:
-        log.info("分析模型：%s", model)
+        log.info("Analysis model: %s", model)
 
     registry = Registry()
     bot = MeeseeksBot(registry, analyzer)
@@ -231,9 +231,9 @@ async def main() -> None:
         try:
             await bot.start(token)
         except discord.LoginFailure:
-            raise SystemExit("Discord 登录失败：DISCORD_TOKEN 不正确，请到开发者后台重新生成。")
+            raise SystemExit("Discord login failed: DISCORD_TOKEN is invalid. Regenerate it in the Developer Portal.")
         except discord.PrivilegedIntentsRequired:
-            raise SystemExit("Discord 拒绝连接：请在开发者后台 Bot 页面打开 Message Content Intent。")
+            raise SystemExit("Discord refused the connection: enable Message Content Intent on the Bot page of the Developer Portal.")
         finally:
             await ws.close()
 

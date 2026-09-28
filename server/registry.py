@@ -83,9 +83,9 @@ class Registry:
                       channel_id: int) -> PendingPair:
         client = self.clients.get(client_id)
         if client is None:
-            raise PairingError(f"客户端 {client_id} 已离线。")
+            raise PairingError(f"Client {client_id} is offline.")
         if client.paired:
-            raise PairingError(f"客户端 {client_id} 已经被绑定了。")
+            raise PairingError(f"Client {client_id} is already paired.")
         code = f"{secrets.randbelow(10**8):08d}"
         client.pending = PendingPair(code, user_id, user_name, channel_id,
                                      time.time() + CODE_TTL_SECONDS)
@@ -100,11 +100,11 @@ class Registry:
         """返回 (是否成功, 原因, 剩余次数)。"""
         client = self.clients.get(client_id)
         if client is None or client.pending is None:
-            return False, "当前没有待处理的配对请求", 0
+            return False, "No pending pairing request", 0
         pending = client.pending
         if time.time() > pending.expires_at:
             client.pending = None
-            return False, "配对码已过期，请在 Discord 里重新 @mrmeeseeks", 0
+            return False, "Pairing code expired. @mrmeeseeks again in Discord", 0
 
         pending.attempts += 1
         if hmac.compare_digest(pending.code.encode(), str(code).strip().encode()):
@@ -112,13 +112,13 @@ class Registry:
             client.user_id = pending.user_id
             client.user_name = pending.user_name
             client.channel_id = pending.channel_id
-            return True, "配对成功", 0
+            return True, "Paired", 0
 
         left = MAX_CODE_ATTEMPTS - pending.attempts
         if left <= 0:
             client.pending = None
-            return False, "错误次数过多，本次配对已作废，请重新 @mrmeeseeks", 0
-        return False, "配对码错误", left
+            return False, "Too many wrong attempts; this pairing was cancelled. @mrmeeseeks again", 0
+        return False, "Wrong pairing code", left
 
     def unpair(self, client_id: str) -> None:
         client = self.clients.get(client_id)

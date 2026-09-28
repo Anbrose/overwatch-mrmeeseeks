@@ -1,6 +1,6 @@
 """mrmeeseeks 本地客户端。
 
-运行：python client.py --server ws://你的服务器IP:8765
+运行：python client.py --server ws://<server-ip>:8765
 
 流程：
   1. 连上服务器握手，拿到本机标识（如 MEE-7K3Q）
@@ -98,10 +98,10 @@ class MeeseeksClient:
         loop = asyncio.get_running_loop()
         try:
             while True:
-                code = (await loop.run_in_executor(None, input, "请输入 8 位配对码：")).strip()
+                code = (await loop.run_in_executor(None, input, "Enter the 8-digit pairing code: ")).strip()
                 if re.fullmatch(r"\d{8}", code):
                     break
-                print("格式不对，应为 8 位数字。")
+                print("Invalid format: expected 8 digits.")
             await self.send(type="pair_code", code=code)
         except (EOFError, ConnectionClosed):
             pass
@@ -112,22 +112,22 @@ class MeeseeksClient:
     async def handle(self, msg: dict) -> None:
         kind = msg.get("type")
         if kind == "pair_request":
-            log(f"收到来自 Discord 用户 {msg.get('user')}（频道 #{msg.get('channel')}）的配对请求，"
-                f"{int(msg.get('expires_in', 300)) // 60} 分钟内有效。")
+            log(f"Pairing request from Discord user {msg.get('user')} (channel #{msg.get('channel')}), "
+                f"valid for {int(msg.get('expires_in', 300)) // 60} minutes.")
             asyncio.create_task(self.prompt_code())
         elif kind == "pair_result":
             if msg.get("ok"):
                 self.paired = True
-                log("✅ 配对成功！现在进游戏按住 Tab 再松开即可。")
+                log("✅ Paired! In game, hold Tab and release it.")
             else:
                 left = msg.get("attempts_left", 0)
-                log(f"❌ {msg.get('reason')}" + (f"（还可尝试 {left} 次）" if left else ""))
+                log(f"❌ {msg.get('reason')}" + (f" ({left} attempts left)" if left else ""))
                 if left:
                     asyncio.create_task(self.prompt_code())
         elif kind == "unpaired":
             self.paired = False
-            log(f"已解除绑定：{msg.get('reason')}。可在 Discord 里重新 @mrmeeseeks 配对，"
-                f"本机标识仍是 {self.client_id}。")
+            log(f"Unpaired: {msg.get('reason')}. @mrmeeseeks in Discord to pair again; "
+                f"this client's ID is still {self.client_id}.")
         elif kind == "analysis":
             log(f"💡 {msg.get('summary')}")
         elif kind in ("info", "error"):
@@ -172,7 +172,7 @@ class MeeseeksClient:
             except asyncio.CancelledError:
                 continue
             except Exception as e:
-                log(f"截图失败：{e}")
+                log(f"Screenshot failed: {e}")
                 continue
             finally:
                 score_task = None
@@ -182,9 +182,9 @@ class MeeseeksClient:
                 await self.send(type="snapshot",
                                 scoreboard=base64.b64encode(scoreboard).decode(),
                                 hud=base64.b64encode(hud).decode())
-                log(f"已发送截图（计分板 {len(scoreboard)//1024} KB，进度条 {len(hud)//1024} KB）")
+                log(f"Screenshots sent (scoreboard {len(scoreboard)//1024} KB, HUD {len(hud)//1024} KB)")
             except ConnectionClosed:
-                log("发送失败：连接已断开")
+                log("Send failed: connection closed")
 
     # ----- 连接与重连 -----
     async def run(self) -> None:
@@ -203,13 +203,13 @@ class MeeseeksClient:
                     self.client_id = welcome.get("client_id")
                     self.paired = False
                     log("=" * 44)
-                    log(f"已连接服务器，本机标识：{self.client_id}")
-                    log("去 Discord 频道里 @mrmeeseeks，选择这个标识。")
+                    log(f"Connected to server. Client ID: {self.client_id}")
+                    log("@mrmeeseeks in a Discord channel and pick this ID.")
                     log("=" * 44)
                     async for raw in ws:
                         await self.handle(json.loads(raw))
             except (OSError, ConnectionClosed) as e:
-                log(f"与服务器的连接断开（{e.__class__.__name__}），{self.args.retry} 秒后重连…")
+                log(f"Lost connection to server ({e.__class__.__name__}); reconnecting in {self.args.retry}s…")
             finally:
                 self.ws = None
                 self.paired = False
@@ -217,18 +217,18 @@ class MeeseeksClient:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="mrmeeseeks 本地截图客户端")
-    p.add_argument("--server", default="ws://127.0.0.1:8765", help="服务器地址，如 ws://1.2.3.4:8765 或 wss://域名")
-    p.add_argument("--name", default=socket.gethostname(), help="在 Discord 里显示的设备名")
-    p.add_argument("--monitor", type=int, default=1, help="截哪个显示器（1 为主显示器）")
-    p.add_argument("--score-delay", type=float, default=0.15, help="按下 Tab 后等多久截计分板（秒）")
-    p.add_argument("--hud-delay", type=float, default=0.4, help="松开 Tab 后等多久截进度条（秒）")
-    p.add_argument("--hud-ratio", type=float, default=0.18, help="进度条截图取屏幕顶部的比例")
-    p.add_argument("--min-hold", type=float, default=0.2, help="按住 Tab 少于这个时长则忽略（秒）")
-    p.add_argument("--cooldown", type=float, default=5.0, help="两次发送截图的最短间隔（秒）")
-    p.add_argument("--quality", type=int, default=85, help="JPEG 质量")
-    p.add_argument("--retry", type=float, default=5.0, help="断线重连间隔（秒）")
-    p.add_argument("--no-capture", action="store_true", help="只测试连接和配对，不监听 Tab")
+    p = argparse.ArgumentParser(description="mrmeeseeks local screenshot client")
+    p.add_argument("--server", default="ws://127.0.0.1:8765", help="Server URL, e.g. ws://1.2.3.4:8765 or wss://your-domain")
+    p.add_argument("--name", default=socket.gethostname(), help="Device name shown in Discord")
+    p.add_argument("--monitor", type=int, default=1, help="Monitor to capture (1 = primary)")
+    p.add_argument("--score-delay", type=float, default=0.15, help="Delay after pressing Tab before capturing the scoreboard (s)")
+    p.add_argument("--hud-delay", type=float, default=0.4, help="Delay after releasing Tab before capturing the HUD (s)")
+    p.add_argument("--hud-ratio", type=float, default=0.18, help="Fraction of the screen top captured for the HUD")
+    p.add_argument("--min-hold", type=float, default=0.2, help="Ignore Tab presses shorter than this (s)")
+    p.add_argument("--cooldown", type=float, default=5.0, help="Minimum interval between screenshot uploads (s)")
+    p.add_argument("--quality", type=int, default=85, help="JPEG quality")
+    p.add_argument("--retry", type=float, default=5.0, help="Reconnect interval after disconnect (s)")
+    p.add_argument("--no-capture", action="store_true", help="Only test connection and pairing; do not watch Tab")
     return p.parse_args(argv)
 
 

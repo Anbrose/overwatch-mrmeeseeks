@@ -26,7 +26,7 @@ class FakeEvents:
     async def snapshot_received(self, c, sb, hud):
         self.log.append(("snap", c.client_id, sb, hud))
         await asyncio.sleep(0.5)
-        return "建议：维持现状"
+        return "Advice: stay as is"
 
 
 async def wait_for(pred, timeout=5):
@@ -75,21 +75,21 @@ async def main():
     proc.stdin.write(b"abc\n"); await proc.stdin.drain()           # 格式错误，客户端本地拦截
     proc.stdin.write(wrong.encode() + b"\n"); await proc.stdin.drain()
     check("错误配对码被拒绝并提示剩余次数",
-          await wait_for(lambda: any("还可尝试 4 次" in l for l in out)))
-    check("格式错误本地拦截", any("格式不对" in l for l in out))
+          await wait_for(lambda: any("4 attempts left" in l for l in out)))
+    check("格式错误本地拦截", any("Invalid format" in l for l in out))
     check("错误后尚未绑定", not c.paired)
 
     proc.stdin.write(pending.code.encode() + b"\n"); await proc.stdin.drain()
     check("正确配对码配对成功", await wait_for(lambda: c.paired))
     check("绑定到正确频道和用户", c.channel_id == 999 and c.user_id == 42)
     check("bot 收到 paired 事件", ("paired", c.client_id, 999) in ev.log)
-    check("客户端显示配对成功", await wait_for(lambda: any("配对成功" in l for l in out)))
+    check("客户端显示配对成功", await wait_for(lambda: any("Paired" in l for l in out)))
     check("已绑定客户端不再出现在可选列表", reg.available() == [])
 
     # ---------- 4. 断开绑定 ----------
     reg.unpair(c.client_id)
-    await c.send(type="unpaired", reason="测试断开")
-    check("客户端收到解绑通知", await wait_for(lambda: any("已解除绑定" in l for l in out)))
+    await c.send(type="unpaired", reason="test disconnect")
+    check("客户端收到解绑通知", await wait_for(lambda: any("Unpaired" in l for l in out)))
     check("解绑后重新可选", reg.available() == [c])
 
     # ---------- 5. 连续错 5 次作废 ----------
@@ -112,7 +112,7 @@ async def main():
         img = base64.b64encode(b"\xff\xd8fakejpeg").decode()
         await ws2.send(json.dumps({"type": "snapshot", "scoreboard": img, "hud": img}))
         r = json.loads(await ws2.recv())
-        check("未配对时截图被拒绝", r["type"] == "error" and "尚未配对" in r["message"])
+        check("未配对时截图被拒绝", r["type"] == "error" and "Not paired" in r["message"])
 
         p3 = reg.start_pairing(cid2, 7, "other", 555)
         await ws2.send(json.dumps({"type": "pair_code", "code": p3.code}))
@@ -121,18 +121,18 @@ async def main():
 
         await ws2.send(json.dumps({"type": "snapshot", "scoreboard": img, "hud": img}))
         r = json.loads(await ws2.recv())
-        check("截图被接收", r["type"] == "info" and "分析中" in r["message"])
+        check("截图被接收", r["type"] == "info" and "analyzing" in r["message"])
         await ws2.send(json.dumps({"type": "snapshot", "scoreboard": img, "hud": img}))
         r = json.loads(await ws2.recv())
-        check("分析中时新截图被跳过", "还在分析中" in r["message"])
+        check("分析中时新截图被跳过", "still being analyzed" in r["message"])
         r = json.loads(await ws2.recv())
-        check("分析结果回传给客户端", r["type"] == "analysis" and "维持现状" in r["summary"])
+        check("分析结果回传给客户端", r["type"] == "analysis" and "stay as is" in r["summary"])
         snap = [e for e in ev.log if e[0] == "snap"][0]
         check("图片字节原样送达", snap[2] == b"\xff\xd8fakejpeg")
 
         await ws2.send(json.dumps({"type": "snapshot", "scoreboard": img, "hud": img}))
         r = json.loads(await ws2.recv())
-        check("冷却时间内截图被跳过", "太频繁" in r["message"])
+        check("冷却时间内截图被跳过", "too often" in r["message"])
 
         await ws2.send(json.dumps({"type": "snapshot", "scoreboard": "!!!", "hud": img}))
         await asyncio.sleep(1.1)
@@ -145,7 +145,7 @@ async def main():
                 msgs.append(json.loads(await asyncio.wait_for(ws2.recv(), 0.5)))
         except asyncio.TimeoutError:
             pass
-        check("非法 base64 被拒绝", any("格式错误" in m.get("message", "") for m in msgs))
+        check("非法 base64 被拒绝", any("Invalid screenshot data" in m.get("message", "") for m in msgs))
 
     check("客户端断开时 bot 收到事件且带绑定信息",
           await wait_for(lambda: ("disc", cid2, True) in ev.log))
@@ -164,7 +164,7 @@ async def main():
     p4 = reg.start_pairing(c.client_id, 1, "x", 1)
     reg.get(c.client_id).pending.expires_at = time.time() - 1
     ok, reason, _ = reg.verify(c.client_id, p4.code)
-    check("过期配对码被拒绝", not ok and "过期" in reason)
+    check("过期配对码被拒绝", not ok and "expired" in reason)
 
     # ---------- 9. Discord 下拉菜单可构造 ----------
     from bot import ClientSelectView, MeeseeksBot, HELP_TEXT
