@@ -1,0 +1,17 @@
+# 密钥放在同目录的 .env（不是 server/.env），格式见 server/.env.example。
+services:
+  mrmeeseeks:
+    build: .
+    image: mrmeeseeks:local
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      WS_HOST: 0.0.0.0
+      WS_PORT: "8765"
+    ports:
+      - "8765:8765"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    mem_limit: 512m
