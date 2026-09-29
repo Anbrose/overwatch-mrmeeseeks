@@ -161,6 +161,7 @@ class MeeseeksBot(discord.Client):
             try:
                 summary, stats = await self.overfast.player(tag)
             except overfast.PlayerNotFound:
+                log.info("OverFast: player not found: %s", tag)
                 await message.reply(f"Player `{tag.replace('-', '#')}` not found. "
                                     "Check the spelling and capitalization, e.g. `Name#1234`.")
                 return
