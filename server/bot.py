@@ -3,6 +3,7 @@
 频道里的指令：
   @mrmeeseeks            连接一个本地客户端（选择标识 -> 私发 8 位配对码），也可写 connect
   @mrmeeseeks status     查看所有在线客户端
+  @mrmeeseeks player <BattleTag>  用 OverFast 查玩家段位和常用英雄
   @mrmeeseeks disconnect 解绑当前频道里的客户端
   @mrmeeseeks help       显示帮助
 """
@@ -17,6 +18,7 @@ import time
 import discord
 from dotenv import load_dotenv
 
+import overfast
 from analyzer import Analyzer, format_facts
 from registry import CODE_TTL_SECONDS, ClientConn, PairingError, Registry
 from ws_server import WSServer
@@ -27,9 +29,18 @@ HELP_TEXT = (
     "**mrmeeseeks commands**\n"
     "`@mrmeeseeks` or `@mrmeeseeks connect` Connect a local client (pick its ID and I'll DM you an 8-digit pairing code)\n"
     "`@mrmeeseeks status` List online clients\n"
+    "`@mrmeeseeks player Name#1234` Look up a player's ranks and most played heroes (case-sensitive BattleTag)\n"
     "`@mrmeeseeks disconnect` Unpair the client bound to this channel\n"
     "`@mrmeeseeks help` Show this help"
 )
+
+
+def parse_command(text: str) -> tuple[str, str]:
+    """拆成 (小写指令名, 原样参数)。参数保留大小写，因为 BattleTag 大小写敏感。"""
+    parts = text.strip().split(maxsplit=1)
+    if not parts:
+        return "", ""
+    return parts[0].lower(), parts[1].strip() if len(parts) > 1 else ""
 
 
 def _age(seconds: float) -> str:
@@ -110,6 +121,7 @@ class MeeseeksBot(discord.Client):
         super().__init__(intents=intents, allowed_mentions=discord.AllowedMentions(everyone=False, roles=False))
         self.registry = registry
         self.analyzer = analyzer
+        self.overfast = overfast.OverFast()
 
     async def on_ready(self) -> None:
         log.info("Logged in to Discord as %s", self.user)
@@ -127,7 +139,7 @@ class MeeseeksBot(discord.Client):
         text = message.content
         for token in (f"<@{self.user.id}>", f"<@!{self.user.id}>"):
             text = text.replace(token, "")
-        cmd = text.strip().lower()
+        cmd, arg = parse_command(text)
 
         if cmd in ("", "connect"):
             await self._connect_flow(message)
@@ -135,8 +147,28 @@ class MeeseeksBot(discord.Client):
             await self._status(message)
         elif cmd == "disconnect":
             await self._disconnect(message)
+        elif cmd == "player":
+            await self._player(message, arg)
         else:
             await message.reply(HELP_TEXT)
+
+    async def _player(self, message: discord.Message, arg: str) -> None:
+        tag = overfast.normalize_battletag(arg)
+        if tag is None:
+            await message.reply("Usage: `@mrmeeseeks player Name#1234` (BattleTags are case-sensitive).")
+            return
+        async with message.channel.typing():
+            try:
+                summary, stats = await self.overfast.player(tag)
+            except overfast.PlayerNotFound:
+                await message.reply(f"Player `{tag.replace('-', '#')}` not found. "
+                                    "Check the spelling and capitalization, e.g. `Name#1234`.")
+                return
+            except overfast.OverFastUnavailable as e:
+                log.warning("OverFast lookup failed for %s: %s", tag, e)
+                await message.reply("OverFast is unavailable right now (rate-limited or down). Try again in a minute.")
+                return
+        await message.reply(overfast.format_player(tag, summary, stats))
 
     async def _connect_flow(self, message: discord.Message) -> None:
         clients = self.registry.available()
