@@ -162,8 +162,12 @@ class MeeseeksBot(discord.Client):
                 summary, stats = await self.overfast.player(tag)
             except overfast.PlayerNotFound:
                 log.info("OverFast: player not found: %s", tag)
-                await message.reply(f"Player `{tag.replace('-', '#')}` not found. "
-                                    "Check the spelling and capitalization, e.g. `Name#1234`.")
+                # 暴雪对私密生涯也返回 404，OverFast 无法区分"不存在"和"私密"
+                await message.reply(
+                    f"Player `{tag.replace('-', '#')}` not found. Either:\n"
+                    "- the BattleTag is misspelled (it's case-sensitive, e.g. `Name#1234`), or\n"
+                    "- the career profile is private: in Overwatch go to Options → Social → "
+                    "Career Profile Visibility → Public, then try again in ~10 minutes.")
                 return
             except overfast.OverFastUnavailable as e:
                 log.warning("OverFast lookup failed for %s: %s", tag, e)
