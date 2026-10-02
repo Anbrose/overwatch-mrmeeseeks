@@ -11,7 +11,7 @@ SSH=(ssh -i "$KEY" "$HOST")
 
 cd "$(dirname "$0")/.."
 
-"${SSH[@]}" "sudo mkdir -p '$DIR' && sudo chown \"\$(id -un):\$(id -gn)\" '$DIR'"
+"${SSH[@]}" "sudo mkdir -p '$DIR/state' && sudo chown \"\$(id -un):\$(id -gn)\" '$DIR' && sudo chown -R 10001:10001 '$DIR/state'"
 rsync -az --delete -e "ssh -i $KEY" \
   --exclude .env --exclude __pycache__ \
   server/ "$HOST:$DIR/server/"

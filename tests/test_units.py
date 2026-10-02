@@ -1,4 +1,4 @@
-"""单元测试：分析器的两步流程（用假的 Claude 客户端）+ 客户端 Tab 截图时序（用假截图函数）。
+"""单元测试：分析器给建议（用假的 Claude 客户端）+ 客户端 Tab 截图时序（用假截图函数）。
 
 运行：python tests/test_units.py
 不需要 Discord、Claude API，也不需要显示器。
@@ -25,12 +25,16 @@ def check(name, cond):
     print(("PASS " if cond else "FAIL ") + name, flush=True)
 
 
-# ---------------- 分析器 ----------------
+# ---------------- 分析器（只给建议） ----------------
+def _p(player, hero, status="alive"):
+    return {"player": player, "hero": hero, "hero_key": hero and hero.lower(), "status": status}
+
+
 FACTS = {
-    "map": {"name": "King's Row", "confidence": 0.9}, "mode": "Escort", "side": "Attack",
-    "segment": {"checkpoint": 2, "progress": "~40%", "detail": None, "confidence": 0.8},
-    "allies": [{"player": "A", "hero": "D.Va", "role": "Tank", "confidence": 0.9}],
-    "enemies": [{"player": None, "hero": "Winston", "role": "Tank", "confidence": 0.95}, {"hero": "Tracer"}],
+    "map": {"name": "King's Row"}, "mode": "Hybrid", "side": "Attack",
+    "segment": {"checkpoint": "2", "progress": "~40%"},
+    "allies": [_p("A", "D.Va"), _p("B", None, "unknown"), _p("C", None, "empty")],
+    "enemies": [_p("D", "Winston"), _p("E", "Tracer", "dead")],
     "unreadable": [],
 }
 
@@ -41,37 +45,63 @@ class _Block:
         self.text = text
 
 
+def _analyzer(create, effort="low"):
+    a = analyzer.Analyzer.__new__(analyzer.Analyzer)
+    a.model, a.effort = "test-model", effort
+    a.client = types.SimpleNamespace(messages=types.SimpleNamespace(create=create))
+    return a
+
+
 def test_analyzer():
     calls = []
 
-    class FakeMessages:
-        async def create(self, **kw):
-            calls.append(kw)
-            if "system" not in kw:   # 第 1 步：识别，故意包在 ```json 代码块里
-                body = "```json\n" + json.dumps(FACTS, ensure_ascii=False) + "\n```"
-            else:                    # 第 2 步：建议
-                body = "Stay as is\n- reason (basis: enemy comp)"
-            return types.SimpleNamespace(content=[_Block(body)])
+    async def create(**kw):
+        calls.append(kw)
+        return types.SimpleNamespace(content=[_Block("Stay as is\n- reason (basis: enemy comp)")],
+                                     stop_reason="end_turn")
 
-    a = analyzer.Analyzer.__new__(analyzer.Analyzer)
-    a.model = "test-model"
-    a.client = types.SimpleNamespace(messages=FakeMessages())
-
-    facts, advice = asyncio.run(a.analyze(b"\xff\xd8x", b"\xff\xd8y"))
-    check("识别结果 JSON 解析正确（含代码块包裹）", facts == FACTS)
-    images = [b for b in calls[0]["messages"][0]["content"] if b["type"] == "image"]
-    check("识别步骤发送了两张图", len(images) == 2)
-    check("建议步骤不看图，只看事实", "image" not in json.dumps(calls[1]["messages"]))
-    check("建议步骤带上了约束规则", "Use only the data provided below" in calls[1]["system"])
+    advice = asyncio.run(_analyzer(create).advise(FACTS))
     check("建议文本返回", advice.startswith("Stay as is"))
-    check("识别摘要格式",
-          analyzer.format_facts(facts) == "Map King's Row | Escort/Attack | Checkpoint 2 ~40% | Allies D.Va | Enemies Winston, Tracer")
-    check("空识别结果不报错", "Map ?" in analyzer.format_facts({}))
+    check("只发文字、不发图", "image" not in json.dumps(calls[0]["messages"]))
+    check("带上识别出的 facts", "King's Row" in calls[0]["messages"][0]["content"])
+    check("带上约束规则：只用识别出的事实", "Use only the facts provided below" in calls[0]["system"])
+    sent = calls[0]["messages"][0]["content"]
+    check("不再发送 not available 占位数据（模型会因此拒绝给建议）", "not available" not in sent)
+    check("没有'缺信息就不给建议'的规则", "Not enough data to give advice" not in calls[0]["system"])
+    check("允许用通用克制知识", "general" in calls[0]["system"].lower())
+    check("effort 传给 API", calls[0]["output_config"] == {"effort": "low"})
+    asyncio.run(_analyzer(create, effort=None).advise(FACTS))
+    check("effort 为 None 时不传 output_config", "output_config" not in calls[1])
+
+    text = analyzer.format_facts(FACTS)
+    check("摘要第一行：地图 · 模式 · 攻防 · 阶段",
+          text.splitlines()[0] == "King's Row · Hybrid · Attack · checkpoint 2 (~40%)")
+    check("我方：未知显示 ?，未选显示 (not picked)", text.splitlines()[1] == "Allies: D.Va, ?, (not picked)")
+    check("敌方：阵亡的补全英雄带 †", text.splitlines()[2] == "Enemies: Winston, Tracer†")
+    check("认不出但有上次英雄显示 Moira?", analyzer.format_facts(
+        {**FACTS, "enemies": [{**_p("X", None, "unknown"), "last_seen_hero": "Moira"}]}).splitlines()[2] == "Enemies: Moira?")
+    check("阵亡且没有记忆显示 ?†", analyzer.format_facts(
+        {**FACTS, "enemies": [_p("X", None, "dead")]}).splitlines()[2] == "Enemies: ?†")
+    check("沿用的阶段标注 last seen", "checkpoint 1 (last seen)" in analyzer.format_facts(
+        {**FACTS, "segment": {"checkpoint": "1", "progress": None, "stale": True}}))
+    check("A 点阶段显示 point A",
+          "point A" in analyzer.format_facts({**FACTS, "segment": {"checkpoint": "A"}}))
+    check("地图读不出时附 OCR 原文", "Map ? (OCR: 'xx')" in analyzer.format_facts(
+        {**FACTS, "map": {"name": None}, "unreadable": ["map (OCR: 'xx')"]}))
+    check("空 facts 不报错", "Map ?" in analyzer.format_facts({}))
+
+
+def test_thinking_budget():
+    """adaptive thinking 的思考也计入 max_tokens：截断时要明确报 max_tokens。"""
+    async def truncated(**kw):
+        return types.SimpleNamespace(content=[types.SimpleNamespace(type="thinking", thinking="")],
+                                     stop_reason="max_tokens")
     try:
-        analyzer._parse_json("没有 JSON")
-        check("无 JSON 时抛错", False)
-    except ValueError:
-        check("无 JSON 时抛错", True)
+        asyncio.run(_analyzer(truncated).advise(FACTS))
+        check("输出被截断时报错说明 max_tokens", False)
+    except ValueError as e:
+        check("输出被截断时报错说明 max_tokens", "max_tokens" in str(e))
+    check("max_tokens 足够大，留给思考", analyzer.MAX_TOKENS >= 16000)
 
 
 # ---------------- 客户端截图时序 ----------------
@@ -125,6 +155,7 @@ async def _capture_flow():
 
 if __name__ == "__main__":
     test_analyzer()
+    test_thinking_budget()
     asyncio.run(_capture_flow())
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")

@@ -1,0 +1,42 @@
+{
+  "Control": [
+    {"en": "Antarctic Peninsula", "zh": "南极半岛"},
+    {"en": "Busan", "zh": "釜山"},
+    {"en": "Ilios", "zh": "伊利奥斯"},
+    {"en": "Lijiang Tower", "zh": "漓江塔"},
+    {"en": "Nepal", "zh": "尼泊尔"},
+    {"en": "Oasis", "zh": "绿洲城"},
+    {"en": "Samoa", "zh": "萨摩亚"}
+  ],
+  "Escort": [
+    {"en": "Circuit Royal", "zh": "皇家赛道"},
+    {"en": "Dorado", "zh": "多拉多"},
+    {"en": "Havana", "zh": "哈瓦那"},
+    {"en": "Junkertown", "zh": "渣客镇"},
+    {"en": "Rialto", "zh": "里阿尔托"},
+    {"en": "Route 66", "zh": "66号公路"},
+    {"en": "Shambali Monastery", "zh": "香巴里寺院"},
+    {"en": "Watchpoint: Gibraltar", "zh": "监测站：直布罗陀"}
+  ],
+  "Hybrid": [
+    {"en": "Blizzard World", "zh": "暴雪世界"},
+    {"en": "Eichenwalde", "zh": "艾兴瓦尔德"},
+    {"en": "Hollywood", "zh": "好莱坞"},
+    {"en": "King's Row", "zh": "国王大道"},
+    {"en": "Midtown", "zh": "中城"},
+    {"en": "Neon Junction", "zh": "霓虹枢纽"},
+    {"en": "Numbani", "zh": "努巴尼"},
+    {"en": "Paraíso", "zh": "帕拉伊苏"}
+  ],
+  "Push": [
+    {"en": "Colosseo", "zh": "斗兽场"},
+    {"en": "Esperança", "zh": "埃斯佩兰萨"},
+    {"en": "New Queen Street", "zh": "新皇后街"},
+    {"en": "Runasapi", "zh": "鲁纳塞彼"}
+  ],
+  "Flashpoint": [
+    {"en": "Aatlis", "zh": "阿特利斯"},
+    {"en": "New Junk City", "zh": "新渣客城"},
+    {"en": "Suravasa", "zh": "苏拉瓦萨"}
+  ]
+}
