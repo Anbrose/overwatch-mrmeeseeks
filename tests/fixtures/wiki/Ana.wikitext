@@ -1,0 +1,1147 @@
+{{Infobox character
+| name = Ana
+| image = <gallery>
+OW2 Ana.png|Overwatch
+OW_Ana.png|Overwatch Classic
+</gallery>
+| caption = "I will not leave a broken world behind."
+| realname = Ana Amari (أنا عماري)
+| aliases = Horus<br>Janina Kowalska<br>Shrike<br>Bastet
+| status = Active
+| birth = January 1st<ref name="OW2Ana"/>
+| age = 62 (''[[Overwatch 2]]'')<ref name="OW2Ana"/><br>60 (''[[Overwatch]]'')<ref name="Ana"/>
+| nationality = {{flag|eg}} Egyptian
+| occupation = Sharpshooter (formerly)<br>Overwatch second-in-command, captain<ref name="WhiteDome"/> (formerly)<br>Bounty hunter
+| baseofoperations = [[Cairo]], [[Egypt]] (formerly)<br>[[Zurich]], [[Switzerland]] (formerly)<ref name="LostGhosts"/><br>[[Gothenburg]], [[Sweden]]
+| affiliation = [[Egyptian Army]] (formerly)<br>[[El-Sa'ka Forces]] (formerly)<br>[[Overwatch (group)|Overwatch]]
+| cosmetics = 1
+| quotes = 1
+| stadium = 1
+| relations = Unnamed mother<ref name="LostGhosts"/><br>[[File:Sam.jpg|20px]] [[Sam English]] (ex-husband)<ref>2023-11-10, [https://x.com/seananmcguire/status/1723056396638314544 Ana's ex-husband, Sam, was already existing, but also fell into several gaps.] ''X''. Accessed on 2026-05-31</ref><br>[[File:Icon-Reinhardt.png|20px]] [[Reinhardt|Reinhardt Wilhelm]] (love interest)<ref>''[[Undivided-Episode 15]]''</ref><br>[[File:Icon-Pharah.png|20px]] [[Pharah|Fareeha Amari]] (daughter)
+| type = 
+| role = [[Support]]
+| sub-role = [[Tactician]]
+| health = 250
+| shield = 
+| armor = 
+| minor_perk_xp = 2025
+| major_perk_xp = 5060
+| video = {{#ev:youtube|ZcCGKrYgr0k|325|inline}}
+| voice = {{VA stack
+| english = [[Aysha Selim]]
+| other = [[Marie Vincent]] (French, 1st voice)
+<br>[[Isabelle Leprince]] (French, 2nd voice)
+<br>Martina Treger (German)
+<br>Elisabetta Cesone (Italian, 1st voice)
+<br>Veronica Rocca (Italian, 2nd voice)
+<br>Yoshiko Sakakibara (Japanese, 1st voice)
+<br>Kei Hayami<ref>2026-05-15, [https://x.com/jpPlayOverwatch/status/2055166451175301581 Statement by official Japanese Overwatch account]. ''X @jpPlayOverwatch'', accessed on 2026-05-18</ref> (Japanese, 2nd voice)
+<br>Lee Sun-ju (Korean, 1st voice)
+<br>Lee Yeong-ri (Korean, 2nd voice)
+<br>Wu Xiangtong (Mainland Mandarin)
+<br>Cuei Guo-fu (Taiwanese Mandarin)
+<br>Miriam Aleksandrowicz † (Polish, 1st voice)
+<br>Barbara Zielińska (Polish, 2nd voice)
+<br>Ângela Bonatti † (Brazilian Portuguese, 1st voice)
+<br>[[Marize Motta]] (Brazilian Portuguese, 2nd voice)
+<br>Lyudmila Gnilova (Russian)
+<br>Ana García Olivares (European Spanish)
+<br>Andrea Coto (Latin American Spanish, main)
+<br>Yolanda Vidal (Latin American Spanish, temp.)
+}}
+}}
+{{HeroTabs}}
+'''Ana''' is a [[Sub-Roles#Tactician|Tactician]] [[Roles#Support|Support]] [[Heroes|hero]] in ''[[Overwatch 2|Overwatch]]''. Released on 19 July 2016, she is the 22nd hero to be added to the game.
+
+==Overview==
+[[File:Ana HS.mp4|left|thumb]] A founding member of Overwatch and once renowned as the greatest sniper in the world, Ana Amari comes from a long line of decorated military veterans. Though she was thought to have perished in a firefight with Talon, Ana has rejoined the fray to protect her country, family, and closest allies.<ref>{{Cite web|url=https://overwatch.blizzard.com/en-us/heroes/ana/ |title=Overwatch 2 - Heroes - Ana |accessdate=2025-07-27}}</ref>
+
+Ana's versatile arsenal allows her to affect heroes all over the battlefield. Her [[Biotic Rifle]]'s is capable of firing long-range smart projectiles that heal allies and damage her enemies. The rifle is equipped with a scope that allows for more precise and instantaneous shots. Ana's [[Biotic Grenade]]s increases the healing received by her allies and denies healing from enemies hit. Her sidearm fires a [[Sleep Dart]] which tranquilizes key targets, and her ultimate, [[Nano Boost]], temporarily empowers one of her allies, granting them damage resistance and increasing the damage they deal or receive.
+
+<gallery>
+File:Icon-Ana.png|'''3D portrait'''
+File:Ana Hero.png|'''2D portrait'''
+</gallery>
+==Abilities==
+
+===Passive Abilities===
+{{Sub-Role passive|Tactician}}
+
+===Weapons===
+{{Ability_details
+| ability_name = Biotic Rifle
+| ability_image = Ability-ana1.png
+| old_description = Ana's rifle shoots darts that can restore health to her allies or deal ongoing damage to her enemies. She can use the rifle's scope to zoom in on targets and make highly accurate shots.
+| official_description = Long-range rifle that heals allies and damages enemies.
+| ability_type = Weapon;;Hip Fire
+| shot_type = {{proj|proj}}
+| damage = {{#vardefineecho: biotic rifle damage| {{tt|75 over 0.59 seconds|74.4 over 0.592 seconds: [2.4, 7.2, 28.8, 28.8, 7.8] damage per tick, [0.048, 0.192, 0.192, 0.16] seconds between ticks}} }}
+| headshot = ✕
+| heal = {{#vardefineecho: biotic rifle heal| {{tt|75 over 0.59 seconds|74.4 over 0.592 seconds: [2.4, 7.2, 28.8, 28.8, 7.8] damage per tick, [0.048, 0.192, 0.192, 0.16] seconds between ticks}} }}
+| pspeed = 125 m/s
+| fire_rate = {{#vardefineecho: biotic rifle fire rate| {{tt|1.25 shots/s|0.8 seconds recovery}} }}
+| ammo = {{#vardefineecho: biotic rifle ammo| 15}}
+| reload_time = {{#vardefineecho: biotic rifle reload time| {{tt|1.5 seconds|restores ammo after 0.592 seconds}} }}
+| duration = {{#vardefineecho: biotic rifle duration| {{tt|0.59 seconds effect|0.592 seconds}} }}
+| pradius = 0.15 meters<!-- 0.075 global? (not 0.12) -->
+| spread = None
+| dps = {{CalcDPS|d=75|t=0.8}} while firing<br>{{CalcDPS|d=75|t=0.8|a=15|r=1.5}} overall w/ reload
+| hps = {{CalcDPS|d=75|t=0.8}}<br>({{CalcDPS|d=75|t=0.8|a=15|r=1.5}} overall w/ reload)
+| ability_keywords = armor piercing::cleansable::travel time
+| ability_details = 
+* Damage/healing per second: {{CalcDPS|d=75|t=0.8}} while firing ({{CalcDPS|d=75|t=0.8|a=15|r=1.5}} overall w/ reload)
+* Shots pass through full health allies and do not affect them.
+* Ignores armor's damage reduction.
+* Applies a damage/heal-over-time effect that can be cleansed. [[Health Pack]]s cleanse the damage-over-time.
+* Using melee or zooming in/out stops fire recovery.
+* After the shot, the game raises the Ana camera (changes the facing angle) by 2 units, after which it starts lowering the character's camera to its previous value (a little bit changes it). Unlike Cassidy, Ana will not be able to shoot once the camera is back in position and will have to wait.
+}}
+
+{{Ability_details
+| ability_name = Zoom (ADS)
+| ability_image = Zoom_Ana_Secondary.png
+| key = secondary fire
+| official_description = Hold to zoom in.
+| ability_type = Weapon;;ADS
+| shot_type = {{proj|hitscan}}
+| damage = {{#var: biotic rifle damage}}
+| headshot = ✕
+| heal = {{#var: biotic rifle heal}}
+| fire_rate = {{#var: biotic rifle fire rate}}
+| ammo = {{#var: biotic rifle ammo| 15}}
+| reload_time = {{#var: biotic rifle reload time}}
+| duration = {{#var: biotic rifle duration}}
+| pradius = 0.07 meters (enemies)<!-- 0.07 global + 0 --><br>0.3 meters (allies)<!-- this is pre-season 9 ally ads radius, uncertain if it has changed with s9 as it is hard to test -->
+| spread = None
+| cast_time = 0.24 seconds for scope in<br>0.16 seconds for scope out
+| mspeed_pen = {{tt|-65%|1.925 m/s}}
+| dps = {{CalcDPS|d=75|t=0.8}} while firing<br>{{CalcDPS|d=75|t=0.8|a=15|r=1.5}} overall w/ reload
+| hps = {{CalcDPS|d=75|t=0.8}}<br>({{CalcDPS|d=75|t=0.8|a=15|r=1.5}} overall w/ reload)
+| ability_keywords = armor piercing::cleansable::hitscan
+| ability_details = * Besides following differences, scoped shots have the same properties as hip fire shots:
+** Scoped shots are instant and leave a tracer behind.
+** Ana's movement speed is reduced while aiming down sights.
+** While aiming down sights, projectile size larger for allies, making it easier to heal. It is smaller for enemies.
+}}
+
+===Special Abilities===
+{{Ability_details
+| ability_name = Sleep Dart
+| ability_image = Ability-ana2.png
+| old_description = Ana fires a dart from her sidearm, rendering an enemy unconscious (though any damage will rouse them).
+| official_description = Fires a dart that puts an enemy to sleep.
+| ability_type = Ability
+| key = ability 1
+| shot_type = {{proj|proj}}
+| cooldown = 14 seconds
+| damage = 5
+| headshot = ✕
+| cast_time = {{tt|0.24 + 0.75 seconds|0.240s startup + 0.752s recovery}}
+| duration = 0.5 seconds (sleep min)<br>5 seconds (sleep max, non-tanks)<br>3.5 seconds (sleep max, tanks)<br>0.5 seconds (wakeup)
+| pspeed = 60 m/s
+| pradius = 0.2 meters
+| ability_keywords = cleansable::sleep::travel time
+| ability_details =
+* If a slept target takes damage, they will wake up prematurely in 0.5 seconds.
+* During casting time, you can change the future flight path.
+* There is an additional 0.08s delay after the startup, during which the projectile is not yet fired, but the ability can no longer be interrupted.
+* Duration is reduced against heroes with the {{al|Role: Tank}} passive. This includes {{al|B.O.B.}}
+
+| 6v6_details =
+* No longer has reduced duration versus Tank heroes.
+* Cooldown reduced from 14 to 12 seconds.
+}}
+
+{{Ability_details
+| ability_name = Biotic Grenade
+| ability_image = Ability-ana3.png
+| old_description = Ana tosses a biotic bomb that deals damage to enemies and heals allies in a small area of effect. Affected allies briefly receive increased healing from all sources, while enemies caught in the blast cannot be healed for a few moments.
+| official_description = Throws a grenade that heals and increases healing on allies, while damaging and preventing healing on enemies.
+| ability_type = Ability
+| key = ability 2
+| shot_type = {{proj|arc}}<br>{{proj|aoe}}
+| cooldown = {{#vardefineecho: nade cooldown|12}} seconds
+| damage = 90
+| headshot = ✕
+| heal = 90
+| healing_mod = +50% received (allies)<br>-100% received (enemies)
+| pspeed = 30 m/s
+| pradius = 0.275 meters<!-- 0.075 global + 0.2 -->
+| radius = 4 meters
+| duration = 3 seconds
+| cast_time = {{tt|0.69 seconds recovery|0.686 seconds}}
+| ignores_matrix = partial
+| ignores_deflect = partial
+| ignores_boost = 1
+| ignores_window = partial
+| ability_keywords = area of effect;;spherical::cleansable::heal amp cap::travel time
+| ability_details = * Passes through full HP allies.
+* Affected allies receive 50% additional healing, including from [[Health Pack]]s, while affected enemies cannot be healed at all.
+* Does not stack with healing received amplification from {{al|Guardian Wave}}.
+* Healing received amplification stacks additively with the [[Global_Passive_Abilities#Healing_reduction_from_damage|Global passive]] healing received reduction.
+* Biotic Grenade's healing is unaffected by healing received amplification, but it can be affected by healing received reduction.
+* The regeneration of [[Hit points#Shields|shields]] is treated as a form of healing, meaning allies regenerate their shields 50% faster and enemies cannot regenerate their shields until the effect expires.
+* Has no effect on overhealth.
+* The projectile can be destroyed while in air by {{al|Defense Matrix}}, {{al|Kinetic Grasp}}, {{al|Javelin Spin}}, {{al|Power Matrix}} and {{al|Kekkai Sanctuary}}, but the explosion is unaffected.
+* Biotic grenade can be reflected by {{al|Deflect}}.
+* {{al|Amplification Matrix}} affects all damage and healing dealt, if the projectile passes through it. Splash damage/healing alone going through is not amplified.
+}}
+
+===Ultimate Ability===
+{{Ability_details
+| ability_name = Nano Boost
+| ability_image = Ability-ana4.png
+| old_description = After Ana hits one of her allies with a combat boost, they deal more damage, take less damage from enemies' attacks.
+| official_description = Increases an ally's damage, while reducing damage taken.
+| ability_type = Ultimate Ability
+| shot_type = {{proj|targeted}} (allies)
+| ult_req = 2300 points
+| heal = 250
+| damage_amp = +50% dealt
+| damage_red = -50% taken
+| duration = 8 seconds
+| range = 40 meters
+| cast_time = 0.128 seconds + {{tt|0.6 seconds recovery|0.608 seconds}}
+| ignores_barrier = 1
+| ignores_matrix = 1
+| ignores_deflect = 1
+| ignores_boost = 1
+| ignores_window = 1
+| ability_keywords = amp outgoing::ignore barrier;;target ally::reduction cap
+| ability_details =
+* Damage reduction buff stacking is capped at 50%. If any hero with a damage reduction effect, such as [[Bastion]] with {{al|Ironclad}}, gets Nano Boosted, the damage reduction is still 50%.
+* In FFA Deathmatch, Ana can use Nano Boost on herself.
+* Nano-boosted heroes' ability sounds are sped up, including [[Lúcio]]'s songs. The song effects do not get amplified, however.
+* Nano Boost is a non-hitscan projectile that cannot miss and cannot be blocked. However, if the target dies before the projectile reaches them, Nano Boost gets consumed and wasted.
+}}
+
+==Perks==
+===Minor Perks===
+A Minor [[Perk]] can be chosen at level 2.
+{{Ability details
+| ability_name = Groggy
+| ability_image = Perk_Groggy.png
+| ability_type = Minor Perk
+| official_description = Enemies waking up from Sleep Dart are slowed and take 50 damage for 2 seconds.
+| mspeed_slow = -50%
+| damage = {{tt|50|10 every 0.4 seconds}}
+| duration = 2 seconds
+| ability details = 
+* The movement slow cannot be removed by cleansing abilities, such as {{al|Protection Suzu}} or {{al|Projected Barrier}}.
+}}
+{{Ability details
+| ability_name = Speed Serum
+| ability_image = Perk_Speed_Serum.png
+| ability_type = Minor Perk
+| official_description = Nano Boost grants a 30% movement speed boost to both Ana and her target.
+| mspeed_buff = {{tt|+30%|7.15 m/s}}
+| ability_details = 
+}}
+===Major perks===
+A Major [[Perk]] can be chosen at level 3.
+{{Ability details
+| ability_name = Headhunter
+| ability_image = Perk_Headhunter.png
+| ability_type = Major Perk
+| official_description = Biotic Rifle can crit enemies. 
+| headshot = ✓
+| headshot_mod = 2
+| ability details =
+*Critical damage multiplier is 1.5x
+}}
+{{Ability details
+| ability_name = Biotic Bounce
+| ability_image = Perk_BioticBounce.png
+| ability_type = Major Perk
+| shot_type = {{proj|arc}} 
+| ignores_matrix = partial
+| ignores_deflect = partial
+| ignores_window = partial
+| official_description = After exploding, Biotic Grenade bounces and explodes again for 60 damage and healing.
+| damage = 60
+| heal = 60
+| ability details = 
+}}
+
+==Hero-specific options==
+{|class="listtable"
+!Setting name!!Options!!Description
+|-
+| rowspan="2"|'''Recoil recovery aim compensation'''
+| On (default)
+| Stops the recoil's downward pulling return motion, if the player applies enough vertical crosshair movement after the shot.
+|-
+| Off
+| Recoil's return motion is unaffected by player input, always pulling the crosshair back downwards the same amount as the recoil raised it.
+|-
+| rowspan="2"|'''Toggle zoom'''
+| Off (default)
+| Zoom deactivates when player stops holding the button.
+|-
+| On
+| Zoom deactivates when player presses the button again.
+|-
+| '''Relative aim sensitivity while zoomed'''
+| 0% ... 100% (default: 30%)
+| Multiplier to base aim sensitivity while zoomed.
+|-
+| rowspan="2"|'''Nano Boost requires target confirmation'''
+| Off (default)
+| Nano Boost is activated instantly on button press.
+|-
+| On
+| Activating Nano Boost must be confirmed by pressing Primary Fire. Prompt lasts 3 seconds, reduced to 1 second if the line of sight to the target is blocked by terrain. Can be canceled by pressing Secondary Fire.
+|-
+| '''Nano Boost sensitivity'''
+| 10% ... 100% (default: 100%)
+| Adjusts the targeting sensitivity of Nano Boost. Setting this to a lower value reduces the maximum view angle for acquiring a target.
+|}
+
+==Stadium==
+Ana is a playable hero in [[Stadium]] game mode. See [[Ana/Stadium]] for a list of hero-specific Items and Powers.
+
+==Strategy==
+Ana is a mid to long-range Support sniper, capable of healing at any range while also maintaining a fair level of damage output. Her Biotic Grenade lets her amplify healing effects from not only her own healing darts, but also from other Supports and environmental healing, such as Payloads and Health packs. She has a sidearm which will fire a Sleep Dart, which can render the enemy who's hit with it temporarily useless unless someone wakes them up. Nano Boost is a supportive ultimate that is used to provide strong buffs to an ally, allowing them to deal more damage while taking less damage from the enemy. She can also be an anti-healer, as her Biotic Grenade will prevent enemies hit by the blast from getting healed in any way, making her an outstanding support. Ana lacks any means of advanced mobility and only has her sidearm to protect herself, making it easy for her to be outflanked by flankers as well as other mobile heroes.
+
+===Weapons & Abilities===
+*'''{{al|Biotic Rifle}}:''' Ana's primary weapon. It is able to affect both teams, healing allies for a decent amount of HP and dealing the same amount as damage to enemies. It comes equipped with a scope which makes Ana's scoped shots hitscan, at the sacrifice of her field of view and movement speed.
+**Ana's rifle is unique in that it deals its damage and heals in rapid segments, rather than all at once. Even though it deals 4 rapid segments of damage within 1 shot, the damage over time effect is '''not''' mitigated by [[Armor|armor]].
+**While Ana does relatively less damage compared to [[Damage]] snipers, the Biotic Rifle allows Ana to quickly switch back and forth from the roles of combatant to healer, similar to [[Baptiste]] and [[Moira]].
+**Only scope in when you have to. While hip firing, your shots will be hardly visible and it will be more difficult for the enemy team to find your location, however the shots themselves will be [[Projectile|projectiles]], with travel time to reach their target. While scoped, your shots will instead be hitscan, but leave bullet trails which reveal where you are firing from. Consider quick-scoping in order to minimize the time you reveal your position and effectively burst an ally from long-range when needed.
+**Even though it is a sniper-rifle weapon, the Biotic Rifle can't deal a critical shot. Don't waste time trying to score headshots.
+
+*'''{{al|Sleep Dart}}:''' Ana's sidearm. It is her personal anti-flanker tool. Firing a single projectile that travels at high speeds, it will inflict the [[Sleep]] status effect on an enemy. While asleep, they cannot move, attack, or use abilities, and audio will sound lower-pitched and distorted. The effect lasts a short time but can be ended at any moment once the slept target takes any amount of damage.
+**Sleep Dart deals very little damage to the target but can still kill them (trying to get a kill with a Sleep Dart is not advisable).
+**Sleep Dart is excellent at mitigating [[channeled]] [[ultimate]] abilities such as [[Genji]]'s [[Dragonblade]] or [[Soldier: 76]]'s [[Tactical Visor]], and can make the work of large, mobile tanks who often attack snipers much harder.
+**Ana must be in constant communication with her allies to get the most out of Sleep Dart. Any amount of damage, whether it be a stray bullet or an explosion, is enough to rouse one who is under Sleep Dart's effects.
+**Much like with Mercy's Resurrect, certain targets are of a higher priority than others. Along with enemies using ultimate abilities, your main targets should either be the enemy tank or an immediate threat to your team (but make sure that your team isn't firing on them). Do not try to use Sleep Dart on faraway enemies.
+**If Sleep Dart hits a target in midair, they will continue to be carried along by their current momentum until they hit the ground, which can be used to make enemies [[Environmental kill|fall off the map]] in certain situations.
+**A sleeping enemy is also a complete sitting duck for extreme burst damage (such as [[Widowmaker]]'s [[Widow's Kiss]], [[Hanzo]]'s [[Storm Bow]], [[Tracer]]'s [[Pulse Bomb]], [[Reinhardt]]'s [[Charge]], and [[D.Va]]'s [[Self-Destruct]]) and map hazards such as the cars on [[Oasis]].
+
+*'''{{al|Biotic Grenade}}:''' The Biotic Grenade will heal allies within the explosion radius and additionally increase the healing rate of those allies. Meanwhile, enemies within the explosion radius will take damage and become [[Anti-heal|unable to receive healing at all]] for the duration (including shields).
+**The Biotic Grenade is the only way for Ana to heal herself outside of health packs.
+**In many cases, Biotic Grenade is much more useful as a anti-heal on enemies than as a heal on allies. 
+***If the enemy tank is being well-healed, or if an enemy is making good use of self-healing capabilities, using Biotic Grenade offensively is critical, and must usually be prioritized above using it to heal.
+**The Biotic Grenade is a fantastic tool for healing heroes with large health pools. Under the increased healing, a critically injured tank will only require a few darts to get back into the fight.
+**The grenade also serves well as an emergency burst heal for both allies and Ana herself, should an enemy flank her.
+**The blast radius of the grenade is fairly small, so one should throw the grenade directly onto teammates as opposed to near them.
+***It can still be helpful to use its blast radius to hit targets that are otherwise unreachable; for example, throwing the grenade at a wall behind Reinhardt's shield, rather than directly at him.
+**Biotic Grenade is a strong ability to use in team fights; throwing it directly to a group of enemies and allies alike can dramatically swing the fight in your team's favor.
+**Biotic Grenade can both counter an enemy [[Zenyatta]]'s [[Transcendence]], and synergize with a friendly one.
+**The grenade is a surefire way to counter [[Wrecking Ball]]'s [[Minefield]], as it deals more damage to the mines than they have health.
+
+*'''{{al|Nano Boost}} (Ultimate):''' Ana's [[Ultimate]] ability. Ana will temporarily empower an ally, giving them increased damage and decreases all damage taken for a good while before it expires. It also instantly heals the target a large amount, unless the target is afflicted with [[Anti-heal]].
+** Ana can instantly refill almost ANY Hero's health by combing Biotic Grenade's healing boost with the instant high Healing applied from Nanoboost.
+**Nano Boost cannot miss; it ignores Genji's [[Deflect]], Sigma's [[Kinetic Grasp]], D.Va's [[Defense Matrix]] and [[Barrier]]s. It can be wasted however, since it's a [[Abilities#Cast time|cast time]] ability that, so if timed right you can be stunned out of it, or the target can die before receiving the instant healing. 
+**While under Nano Boost's effect, one's character model will glow either {{tt|red (for enemies) or blue (for allies).|Respective team color in Overwatch League.}}
+**Try to save Nano Boost for allies with available ultimate abilities. Soldier: 76, Reinhardt, Genji, and Roadhog are all excellent choices for a Nano Boost. However, certain ultimates (such as Hanzo's) will not be affected by Nano Boost.
+***Remember that Nano Boost instantly heals a lot on use. Consider your situation when you have it available; would it be better to save an ally at critical health, or boost another teammate's damage?
+
+===General Strategies===
+*Ana has damage capabilities comparable to the damage role, though she is unable to deal any critical hits and suffers from low mobility. Play at medium to long range distances and around cover to avoid taking damage, and find angles that allow you to safely shoot at both your team and the enemy. Prioritize doing damage to the other team, but be ready to quickly switch to healing your teammates if they become at risk of dying.
+*Ana can provide more healing than other supports due to her fast fire-rate and Biotic Grenade. Playing her as a sole support will lead the enemy to prioritize you as the first target, so additional supports are recommended.
+*Biotic Grenade is a strong counter to all healing effects, such as Roadhog's Take a Breather, Zenyatta's Transcendence, or even an opposing Ana's Biotic Grenade. You can throw the grenade directly at the enemy and instruct your teammates to gang up on the affected target, as they can't be healed.
+*A target under the effect of Sleep Dart will be rendered useless and unable to take any actions. If your combo can't finish the target, communicate with your team to do so. Reinhardt's Charge is a great choice to finish the target if he doesn't need to cover your team with barrier at that time.
+*Don't let the other teammates interfere with your line-of-sight while activating Nano Boost on the target. Communicate with your teammates to whom you will give the ultimate and always have space in your line-of-sight, so you can avoid giving Nano Boost to an undesired target that can't make much use of it, such as Lúcio or Mercy.
+*The common targets for your Nano Boost will be damage dealers and tanks. Nano Boost works best when paired with damage-dealing ultimates like Soldier: 76's Tactical Visor or [[Reaper]]'s [[Death Blossom]]. Boosting tanks that are already brawling in enemy space gives them an excellent chance of surviving and picking up an elimination that could swing the fight in your favor. Boosting supports typically only happens as a last-ditch effort to save a teammate who is on the cusp of death and is about to take more damage than you can heal.
+*Even though the Nano Boosted hero will take 50% less damage, the affected hero can still die if the enemies focus on them. Make sure to continue providing the boosted hero with healing, so that they won't die in the most important engagement.
+*As Ana can both heal allies and damage enemies, along with Biotic Grenade's amplifying healing, she can charge up her Ultimate very quickly, so you can use your Nano Boost on your target to push or to defend (depending on the situation) much faster than other healers can use their Ultimates.
+*The Biotic Rifle's damage-over-time property can make it difficult to tell if any particular shot will be a killing blow. Since each shot deals 75 damage, 3 shots are enough to eliminate any of the enemy heroes with 200 HP or less (as long as they are not actively receiving healing). You can occasionally use this knowledge to your advantage, such as when you are being pressured in a duel. For example, after hitting the third shot on a Pharah you can immediately duck behind cover to ensure that you aren't killed by any of the rockets that are still in flight heading toward you.
+
+==Match-Ups and Team Synergy==
+<!--When proving match-up or team synergy advice, please write all advice from the perspective of someone playing as this hero, not as someone who wishes to counter this hero. Also, please try to be as objective as possible. Taking personal skill out of the equation, please provide advice that would apply to any player who knows how to play these characters well.-->
+
+===Tank===
+{|class="wikitable mw-collapsible mw-collapsed"
+|-
+!style="width:75px"|Hero
+! |Match-Up
+! |Team Synergy
+|-
+|<center>[[File:icon-dva.png|75px|link=D.Va]]<br>[[D.Va]]</center>
+|<small>D.Va's Defense Matrix can negate all of your projectiles, including your Biotic Grenade and Sleep Dart. Her Boosters give her extremely strong mobility, letting her pounce on you if she thinks you're vulnerable and quickly flee if the fight isn't turning out how she'd like. You'll need to be smart about when to use your abilities, waiting until after D.Va drops her Defense Matrix. D.Va is an extremely large target, so without Defense Matrix she'll be very easy to hit. Should you land a Sleep Dart on her, it's better to regroup with your team rather than trying to kill her, as her high health will make it very difficult for you to kill her once she awakens. At a distance, D.Va deals almost no damage, so feel free to fire away to chip at her health and build up Ultimate charge. If D.Va is distracted by someone else, she can easily be shot in the back or hit by Sleep Dart from behind with little risk. The best way to avoid being harassed by D.Va is to stick close to teammates who are good at dealing with her, such as Reaper, Mei and Roadhog.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-doomfist.png|75px|link=Doomfist]]<br>[[Doomfist]]</center>
+|<small>Doomfist is a problem for you at close range. He's mobile, making him harder to hit but his character model might add some ease compared to other mobile heroes. The bigger issue is that he can flank you and attack with abilities like Seismic Slam or Rising Uppercut. Doomfist can kill you with a full-charged Rocket Punch if you hit a wall. However, you do have a Sleep Dart that can stop him in his tracks. This also allows your team to pummel him. You're also a risk with Meteor Strike as he knows that you lack a movement ability to escape. As long as you keep your distance, you should be fine.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-hazard.png|75px|link=Hazard]]<br>[[Hazard]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-mauga.png|75px|link=Mauga]]<br>[[Mauga]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-orisa.png|75px|link=Orisa]]<br>[[Orisa]]</center>
+|<small>Orisa's Fusion Driver is excellent at laying down suppressive fire at your location to keep you from getting clean shots. Although she can close some distance with her Javelin Spin, you should typically be far enough away that it will not pose an immediate threat. However, you will want to look out for her thrown javelin if she gets close enough to get a clear shot. Fortify will render her completely immune to your Sleep Dart, so wait for her to use it before attempting to sleep her.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-ramattra.png|75px|link=Ramattra]]<br>[[Ramattra]]</center>
+|<small>As long as you play at a distance, you should be relatively safe from Ramattra. Your {{Al|Biotic Grenade}} and {{Al|Sleep Dart}} can pose a decent threat against him. Typically, you will want to throw Biotic Grenade during fights to give your team the upper hand. Ramattra can block your healing and damage with {{Al|Void Barrier}} so be mindful of that. If Ramattra enters {{Al|Nemesis Form}} and, by extension, {{Al|Annihilation}}, shoot him with your Sleep Dart to temporarily stop his advance. He will most likely target you first since you're a support with no movement abilities.</small>
+|<small>The combined power of Nano Boost and Annihilation is incredible. Make the full use of this ultimate combo and you'll blitz enemy teams. Synchronize your attacks to make the most out of this combination.</small>
+|-
+|<center>[[File:icon-reinhardt.png|75px|link=Reinhardt]]<br>[[Reinhardt]]</center>
+|<small>You and Reinhardt will both struggle to kill each other. His barrier will shut down all of your attacks, and his huge health total makes him hard to kill. However, he is very slow while using his shield and his only ranged attack is Fire Strike. He'll almost never be in a position to attack you unless he ambushes you or hits you with a Charge, and even if he's barreling your way, his very large hit box makes him extremely vulnerable to being put to sleep. While Sleep Dart can take Reinhardt out of the equation, killing him is another story entirely, so instead you should try to find your team and have them kill him. Biotic Grenade will also help deal with Reinhardt if he drops his shield, as it will prevent allied healers from healing him and make him easier to kill. If Reinhardt has his barrier up but is alone, you can simply walk past his shield and hit him point blank with a Sleep Dart. Beware Earthshatter, as once you're hit with it, you're as good as dead.</small>
+|<small>Reinhardt is one of the best potential choices for a Nano-Boost. Sturdier and stronger, he can Charge through a crowd of enemies and smash up the remains with his hammer. Aside from Ana's Ultimate, his hitboxes are massive and you move slowly, making him an easy target for continuous healing, and his barrier can help keep you safe.</small>
+|-
+|<center>[[File:icon-roadhog.png|75px|link=Roadhog]]<br>[[Roadhog]]</center>
+|<small>Roadhog is a huge threat in close quarters with his Chain Hook, but if you keep your distance he's an easy target. If he shows himself out in the open, fire away at a distance or even try to land a Sleep Dart shot if you're feeling lucky. If he gets into his Hook range, it's imperative to quickly hit him with a Sleep Dart; if you fail, he'll most likely grab and kill you. Unless you can remain at a safe distance, it's best to play around corners and barriers to stay safe from him. Biotic Grenade will completely nullify his Take a Breather's healing, drastically weakening his survivability. Try to quickly hit him with Sleep Dart if he activates Whole Hog.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-sigma.png|75px|link=Sigma]]<br>[[Sigma]]</center>
+|<small>While you are easily capable of staying out of the effective range of his Hyperspheres and Accretion, Sigma's Experimental Barrier and Kinetic Grasp are capable of blocking all your regular abilities, and the relatively mobile nature of his shield means he can use it to selectively block your sightlines. Try not to use important cooldowns like Sleep Dart or Biotic Grenade until he recalls his shield and/or his Kinetic Grasp is on cooldown. If you know or suspect Sigma has Gravitic Flux, save your Sleep Dart, as sleeping him during his ultimate will cancel it completely.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-wrecking_ball.png|75px|link=Wrecking Ball]]<br>[[Wrecking Ball]]</center>
+|<small>Wrecking Ball's combos can be extremely lethal if you are caught unaware, and he is nearly impossible for you to kill on your own due to his high mobility and health. However, his often predictable movement and large hitbox shouldn't make him too hard to sleep. If you are caught in his Minefield, you can use Biotic Grenade to quickly destroy a small portion of the mines to give yourself some breathing room, otherwise the mines can be destroyed with a single shot.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-winston.png|75px|link=Winston]]<br>[[Winston]]</center>
+|<small>Winston is one of your greatest threats due to his high health and excellent mobility. If he leaps on you with Jump Pack and drops his Projected Barrier, you'll need to either get inside the barrier and quickly hit him with a Sleep Dart or backpedal away from it so he's forced to leave its protection to continue attacking you. Without his barrier he's an easy target for Sleep Dart, but once he awakens he'll be exceedingly hard to kill, as well as to avoid being killed by. If Winston activates Primal Rage, quickly knock him out with a Sleep Dart and leave him be so his Ultimate's duration will be wasted.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-zarya.png|75px|link=Zarya]]<br>[[Zarya]]</center>
+|<small>Be careful around Zarya and her Barriers; they'll block your standard fire, Sleep Dart, and Biotic Grenade with ease, all while making her more powerful. She's lacking in mobility, but so are you, meaning if she advances on you it can be difficult to disengage. Try to stay far away from Zarya and watch for when her Particle Barrier is on cooldown. In a pinch, if you and your team are grabbed by Graviton Flux, you can hit yourself with Biotic Grenade to quickly heal some of the incoming damage your team is taking.</small>
+|<small>Nano-boosting a high-charged Zarya will assure that she can shred through enemies easier. The healing boost from Biotic Grenade can help sustain her in the fight with increase healing.</small>
+|}
+
+===Damage===
+{|class="wikitable mw-collapsible mw-collapsed"
+|-
+!style="width:75px"|Hero
+! |Match-Up
+! |Team Synergy
+|-
+|<center>[[File:icon-ashe.png|75px|link=Ashe]]<br>[[Ashe]]</center>
+|<small>(To be added)</small>
+|<small>In most cases, you'll end up Nano Boosting B.O.B. as his damage alone can wipe teams unsuspecting of where B.O.B. is. If they do notice him however, the damage reduction helps keep him alive longer as he already has 1000 health. Careful not to Nano Boost B.O.B. when there's someone on the enemy team who can deal will him such as Sombra Hacking him, Ana sleeping him, or an enemy who can knock him away such as Orisa. As for Ashe herself, her gun can do decent damage, with an ADS headshot dealing 225 which will one-shot most Damage and Support heroes.</small> 
+|-
+|<center>[[File:icon-bastion.png|75px|link=Bastion]]<br>[[Bastion]]</center>
+|<small>Bastion's large hit box makes him very easy to hit, even from around corners where he can't shoot back. Sleep Dart will immediately force him out of Sentry Configuration into Recon Configuration, and can also be used to put him out of commission during Configuration: Tank. If Bastion is behind a barrier, you'll need the rest of your team to deal with him, though a focused push together with your team can get you close enough to land Biotic Grenade on him without being killed. Otherwise, stay out of his field of view and only attack from behind cover.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-cassidy.png|75px|link=Cassidy]]<br>[[Cassidy]]</center>
+|<small>Cassidy's Peacekeeper is very accurate and deals high damage, making it relatively easy for him to pick you off at mid-range, and can easily threaten an elimination up close with his Flashbang. However, his lack of mobility and mediocre range make him a relatively easy target for you to hit, and at longer distances you'll be able to out-damage him. Sleep Dart can shut him down, especially if you hit him while he's preparing Deadeye. Keep your distance, and only approach tighter spaces with your team so you aren't ambushed.</small>
+|<small>Deadeye charges 50% faster due to Nano Boosts damage boost. Deadeye aside, his body shots will deal 105 and headshots will deal 210. This makes Cassidy lethal up close, as headshot - Flashbang combo takes out most Damage and Support Heroes and can cripple Tanks if multiple shots are landed consecutively.</small>
+|-
+|<center>[[File:icon-echo.png|75px|link=Echo]]<br>[[Echo]]</center>
+|<small>Since Echo is a flying character, you are one of the best possible counters. Your extreme range combined with high accuracy and reasonably high damage can make short work of Echo if she floats out in the open. An aware Echo would be harder to hit, especially with Sleep Dart. Be careful if she tried to flank as both Sticky Bombs and Focusing Beam can shred through your health quickly.</small>
+
+<small>While copying you might lower her survivability (since you have no movement abilities), she can still charge up Nano-Boost quickly and possibly empower one of her allies, especially a tank.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-genji.png|75px|link=Genji]]<br>[[Genji]]</center>
+|<small>Genji excels at flanking, and he has all the tools necessary to get into optimal range to hunt you down. Be careful when using Biotic Grenade and Sleep Dart, as he can use Deflect to turn them against you or nearby teammates. When using Biotic Grenade against Genji, aim for the ground near Genji rather than Genji himself, and you'll be less likely to have it Deflected. Sleep Dart is an excellent counter to disable Dragonblade. Should you hit him with a Sleep Dart, don't wake him unless your teammates are nearby and can help you gang up on and kill him.</small>
+|<small>Nano-Boost and Dragonblade, or "Nano-Blade", is extremely popular for a reason; with Genji's high dashing speed and already strong damage output combined with Nano-Boost's damage magnifier, he can easily slice through an unprepared enemy team.</small>
+
+<small>In other fights, make sure he's in your line of sight, just line case he's need healing from your rifle or Biotic Grenade.</small>
+|-
+|<center>[[File:icon-hanzo.png|75px|link=Hanzo]]<br>[[Hanzo]]</center>
+|<small>Hanzo's heavy damage afar and up close makes him a dangerous opponent. Hanzo can use Wall Climb and Lunge to attack from unexpected angles, so be vigilant. Like you, he has no range drop-off, though his accuracy is worse than yours at long range. Meanwhile, when up close you have the advantage of your Biotic Grenade, but he can burst you down with Storm Arrows. Sleep Dart can incapacitate him for an easy kill, but it may be difficult to land on him if he's situated at a higher ledge. This is a fairly even fight; while Hanzo does more damage, your weapon is more accurate than his, even if it doesn't do as much damage. Use your team to your advantage; snipe from behind the protection of a barrier so you can safely land your shots without being hit in return.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-junkrat.png|75px|link=Junkrat]]<br>[[Junkrat]]</center>
+|<small>Junkrat's Concussion Mine and Steel Trap won't be a major threat if you stick with your team and keep your distance from him. Try to avoid a direct confrontation with him, as his Frag Grenades, while inaccurate, are devastating if they hit and can kill you in two shots. However, if he is out in the open you can easily pick him off from a distance or hit him with a Sleep Dart. This is a very feast-or-famine match-up; if Junkrat is your line of fire, he can quickly be picked off, but if he stays out of your view, you'll need to watch for his area denial tactics.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-mei.png|75px|link=Mei]]<br>[[Mei]]</center>
+|<small>If a Mei is trying to freeze and kill an enemy, continuously heal them to make sure their health remains at a safe level to where an Icicle headshot won't kill them. Mei is at her most dangerous to you in close quarters, but her poor mobility can help you keep your distance while also making her an easy target for Sleep Dart. If Mei tries to fight you at a distance, you'll win every time. However, Mei's ability to create ice walls can severely disrupt your ability to both heal her allies and attack her enemies, all while allowing Mei's team to get closer to you while under cover. Ice Wall can also disrupt an ally hit with your Nano-Boost, cutting off their line of fire. Blizzard is very difficult to escape due to your lack of mobility, which is yet another reason to keep your distance from Mei as much as possible.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-pharah.png|75px|link=Pharah]]<br>[[Pharah]]</center>
+|<small>You are one of the best possible counters to Pharah. Your extreme range combined with high accuracy and reasonably high damage can make short work of Pharah if she floats out in the open. While it is difficult to hit Pharah with Sleep Dart if she's alert, should you hit her she'll be an easy target for your team to gang up on. If Pharah activates Rocket Barrage, a quick Sleep Dart can save your team, which will be easier to land due to her being stationary.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-reaper.png|75px|link=Reaper]]<br>[[Reaper]]</center>
+|<small>Watch your back when Reaper is around, as he can use Shadow Step and Wraith to move around the map and attack you from unexpected angles. He only needs a single headshot followed by a quick melee to kill you, and he can escape with Wraith Form should the fight go sour. However, he is a loud flanker and has a large, making him easy to hit with the Sleep Dart. Reaper has no means of attack at a distance, so if he's out in the open but far away he's an easy target. Biotic Grenade will prevents his self-healing from The Reaping. If Reaper uses Death Blossom, quickly hit him with a Sleep Dart to cut it off.</small>
+|<small>Try to keep an eye on Reaper. YOu need him to deal with flankers harassing you such as Wrecking Ball or Winston, but he also can't get healed by you if he's beyond your line of sight.</small>
+
+
+<small>Your Biotic Grenade will cause all sources of healing to be magnified, including his passive ability, The Reaping. He can be braver for a period of time with less risk of getting killed should he put out significant damage. He's a reasonable target for Nano-Boost, especially if you combine it with Death Blossom, which can rip through even the sturdiest of barriers to slaughter a group of enemies.</small>
+|-
+|<center>[[File:icon-Soldier 76.png|75px|link=Soldier:_76]]<br>[[Soldier: 76]]</center>
+|<small>Soldier: 76's excellent range, high accuracy, quick movement and rapid damage output will make him a devastating opponent if you run into him alone. However, you do have a few means of self-defense. His healing ability will be completely shut down with a Biotic Grenade, and because he cannot simultaneously shoot and sprint, he's vulnerable to attacks and Sleep Dart while he's shooting at you. Still, avoid needless one-on-one confrontations with Soldier: 76 and try to put your teammates between you and him.</small>
+|<small>Known by the community as "Nano-Visor", Nano Boosting Tactical Visor is a great way to score a kill for a Soldier. Its excellent at dealing with Heroes such as Mercy or Pharah and gives a little more value off of targeting Tanks.</small> 
+|-
+|<center>[[File:icon-sombra.png|75px|link=Sombra]]<br>[[Sombra]]</center>
+|<small>Sombra's ability to get behind your team to attack from unexpected angles using Stealth and Translocator makes her dangerous. If you and Sombra get in a fight and it is going poorly for Sombra, she can easily teleport away and save herself, with little ability for you to chase her down and finish her off. However, landing a Sleep Dart on Sombra will likely result in her death due to her low health. While you should be able to chase Sombra away, she can end up distracting you to the enemy team's advantage. Unless you can land a Sleep Dart on her, try not to engage with Sombra and instead stick close to your allies and have them gang up on her before she can teleport away.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-symmetra.png|75px|link=Symmetra]]<br>[[Symmetra]]</center>
+|<small>Your low mobility will make it very dangerous to walk through corridors if a Symmetra has Sentry Turrets in place. Unless you hit Symmetra with a Sleep Dart, she will fry you with her Photon Projector in a direct fight. Try to keep your distance, focusing on healing allies who are hit by Symmetra's turrets. Be careful about holding the back line, though; a Symmetra Teleporter can pop up from behind you, and if you're alone when her teammates come pouring out, you'll be out of luck. If Photon Barrier is active, try to wait before using Nano-Boost, as your ally's efforts will be much less effective with a huge barrier in the way.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-torbjörn.png|75px|link=Torbjörn]]<br>[[Torbjörn]]</center>
+|<small>Your unlimited range can allows you to attack Torbjörn's turret from far outside of its range in more wide-open areas, and your high accuracy allows you to quickly peek out, shoot the Turret, and then retreat to cover without taking damage. Torbjörn himself lacks mobility and is easy prey to both sniper fire and Sleep Dart at range. Torbjörn is dangerous at close range with Overload active, but a quick Sleep Dart can save you. Be especially careful about staying away from Torbjörn if you think he has Molten Core ready, as your low speed will make it difficult to escape his magma.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-tracer.png|75px|link=Tracer]]<br>[[Tracer]]</center>
+|<small>Tracer's extremely high mobility makes her difficult to hit, and her Recall allows her to undo damage and Biotic Grenade's anti-healing effect. While her low health will let you kill her in two hits, Tracer is likely to simply run away if hit and it is very difficult to prevent her from doing so. Tracer's ability to get behind your team and attack you point blank with her powerful weapons makes her very dangerous. Try to hit Tracer with a Sleep Dart if she's heckling you; if you miss, get your team to deal with her before they're down a healer.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-venture.png|75px|link=Venture]]<br>[[Venture]]</center>
+|<small>Venture's weapon has a much shorter range than your rifle, so they have no choice but to close the distance. Be mindful that while they're {{Al|Burrow|burrowing}}, they cannot be hit by any of your abilities. Burrow can also remove your anti-heal status effect. At close range, Venture can be a problem. They can damage your as they resurface from Burrow. Then, a {{Al|Drill Dash}} and shots from their primary fire can finish you off. Keep your {{Al|Sleep Dart}} on hand once they've emerge.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-widowmaker.png|75px|link=Widowmaker]]<br>[[Widowmaker]]</center>
+|<small>Widowmaker can kill you with two bodyshots or one headshot, giving her an overall advantage in sniping; however, Widowmaker herself is not a fast-moving target under normal circumstances and is vulnerable to being counter-sniped by your higher rate of fire and Sleep Dart. A splash of a Biotic Grenade can hit Widowmaker hard should you end up in close combat, but he Grappling Hook can get her back into a position where she's more comfortable fighting you. If attempting to counter-snipe Widowmaker, it's imperative that you wisely use cover or barriers, as Widowmaker doesn't need to land as many shots as you do to finish the fight.</small>
+|<small>(To be added)</small>
+|}
+
+===Support===
+{|class="wikitable mw-collapsible mw-collapsed"
+|-
+!style="width:75px"|Hero
+! |Match-Up
+! |Team Synergy
+
+|-
+|<center>[[File:icon-ana.png|75px|link=Ana]]<br>[[Ana]]</center>
+|<small>Sleep Dart is the best tool to stop a Nano-Boosted enemy, meaning that enemy Anas will have to watch each other very carefully. Biotic Grenade's ability to cut off healing makes you a great anti-support character; try to hit a group of enemies Ana is trying to heal, while also making sure to not be hit by her own Biotic Grenade. Whoever is hit will be unaffected by their team's Ana's healing, which includes her own Biotic Grenade. If you encounter each other without your teams and enter a sniper duel, just be sure to smartly use cover to stay safe from her shots. While killing the enemy Ana is nice, you staying alive for your team is more important, so prioritize her safety over her death if you must.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-baptiste.png|75px|link=Baptiste]]<br>[[Baptiste]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-brigitte.png|75px|link=Brigitte]]<br>[[Brigitte]]</center>
+|<small>Brigitte is a close-range hero, so if you are at further distance than a Shield Bash + Whip Shot combo can reach you then she poses no threat to you. If she is holding up her Barrier Shield to block your damage, you might want to look for other targets that you can deal immediate damage to. Otherwise, you can destroy her full health shield in four shots, at which point she will be vulnerable.</small>
+|<small>Brigitte is a vital ally when playing against a dive composition. Ana's low mobility leaves her extremely vulnerable to coordinated dive attacks, since Sleep Dart—her only means of self-defense—can only neutralize one target per use. The best way to survive against these compositions is with a Brigitte acting as a personal guard for Ana. Ana's long range and immense healing output enables her to keep her team alive single-handedly, while Brigitte protects her from threats by Shield Bashing and Whip Shotting away any incoming divers and shielding her from ranged attacks. This team-up is especially effective when holding high ground, where Brigitte's Whip Shot can knock diving opponents off, completing neutralizing the attack.</small>
+|-
+|<center>[[File:icon-illari.png|75px|link=Illari]]<br>[[Illari]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-juno.png|75px|link=Juno]]<br>[[Juno]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-kiriko.png|75px|link=Kiriko]]<br>[[Kiriko]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-lifeweaver.png|75px|link=Lifeweaver]]<br>[[Lifeweaver]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-lúcio.png|75px|link=Lúcio]]<br>[[Lúcio]]</center>
+|<small>As with all healers, Ana's Biotic Grenade can cut off Lúcio's healing ability, and its wide area of effect makes it easier to hit the wily and mobile Lúcio. However, even when effected by Biotic Grenade, Lúcio can provide a speed boost to his team to keep them mobile. Sound Barrier is also treated as shields, not healing, meaning that any enemies effected by Biotic Grenade will still gain massive amounts of health. Outside of Biotic Grenade, you'll need to predict Lúcio's path while Wall Riding if you want to hit him with rifle shots, which can be difficult with his high speed. Lúcio has no means of fighting you at a distance, though, so if he's in your sights, pelt him with bullets to quickly take him down. Be careful around cliffs; a wily Lúcio can easily use Soundwave to send you to your doom.</small>
+|<small>(To be added)</small>
+|-
+|<small><center>[[File:icon-mercy.png|75px|link=Mercy]]<br>[[Mercy]]</center>
+|<small>Biotic Grenade will completely cripple Mercy's ability to heal, leaving her with only her damage boosting and her pitiful Caduceus Blaster. If she's out in the open, try to make her a priority.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-moira.png|75px|link=Moira]]<br>[[Moira]]</center>
+|<small>You can use Biotic Grenade to cut off Moira's huge amount of heals, and to eliminate her after she uses Fade. If Moira is constantly harassing you, try to stay near your other support. Hit your shots on her and only throw a Biotic Grenade at her after she uses Fade, then finish her off. If you miss, you always have your sleep dart as a back-up. A good Moira will prioritise eliminating Ana when possible. Make use of cover to force her to get closer to you or waste her time trying to eliminate you instead of healing her team.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-zenyatta.png|75px|link=Zenyatta]]<br>[[Zenyatta]]</center>
+|<small>Zenyatta's Orb of Harmony and Transcendence can both be cancelled out by hitting his teammates with Biotic Grenade. While you and Zenyatta both excel at a distance, you're more suited for peeking in and out of corners to safely land hits on him. Try not to stay out in the open with Zenyatta is around, as he can quickly take you down with a succession of Orb of Destruction shots. Allies hit with Orb of Discord will take much more damage, making it harder for you to keep them alive, so use Biotic Grenade if you need to and get your teammates to stay behind cover or a barrier. A Nano-Boosted ally will have much more difficulty if Zenyatta uses Transcendence, so try to either kill him first or hit his allies with Biotic Grenade.</small>
+|<small>(To be added)</small>
+|}
+
+==Map Strategies==
+
+===Control===
+{{MapStrategyTable/Control
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Antarctic_rating = 
+| Antarctic_feature = 
+| Antarctic_strategy = 
+| Antarctic_Labs_strat = 
+| Antarctic_Sublevel_strat = 
+| Antarctic_Icebreaker_strat = 
+
+| Busan_rating = 
+| Busan_feature = 
+| Busan_strategy = 
+| Busan_Downtown_strat = 
+| Busan_Sanctuary_strat = 
+| Busan_MEKA_strat = 
+
+| Ilios_rating = 
+| Ilios_feature = 
+| Ilios_strategy = 
+| Ilios_Lighthouse_strat = 
+| Ilios_Well_strat = 
+| Ilios_Ruins_strat = 
+
+| Lijiang_rating = 
+| Lijiang_feature = 
+| Lijiang_strategy = 
+| Lijiang_ControlCenter_strat = 
+| Lijiang_Garden_strat = 
+| Lijiang_NightMarket_strat = 
+
+| Nepal_rating = 
+| Nepal_feature = 
+| Nepal_strategy = 
+| Nepal_Village_strat = 
+| Nepal_Shrine_strat = 
+| Nepal_Sanctum_strat = 
+
+| Oasis_rating = 
+| Oasis_feature = 
+| Oasis_strategy = 
+| Oasis_CityCenter_strat = 
+| Oasis_Gardens_strat = 
+| Oasis_University_strat = 
+
+| Samoa_rating = 
+| Samoa_feature = 
+| Samoa_strategy = 
+| Samoa_Beach_strat = 
+| Samoa_Downtown_strat = 
+| Samoa_Volcano_strat = 
+}}
+
+===Escort===
+{{MapStrategyTable/Escort
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| CircuitRoyal_rating = 
+| CircuitRoyal_feature = 
+| CircuitRoyal_strategy = 
+| CircuitRoyal_Attack_strat = 
+| CircuitRoyal_Defense_strat = 
+
+| Dorado_rating = 
+| Dorado_feature = 
+| Dorado_strategy = 
+| Dorado_Attack_strat = 
+| Dorado_Defense_strat = 
+
+| Havana_rating = 
+| Havana_feature = 
+| Havana_strategy = 
+| Havana_Attack_strat = 
+| Havana_Defense_strat = 
+
+| Junkertown_rating = 
+| Junkertown_feature = 
+| Junkertown_strategy = 
+| Junkertown_Attack_strat = 
+| Junkertown_Defense_strat = 
+
+| Rialto_rating = 
+| Rialto_feature = 
+| Rialto_strategy = 
+| Rialto_Attack_strat = 
+| Rialto_Defense_strat = 
+
+| Route66_rating = 
+| Route66_feature = 
+| Route66_strategy = 
+| Route66_Attack_strat = 
+| Route66_Defense_strat = 
+
+| Shambali_rating = 
+| Shambali_feature = 
+| Shambali_strategy = 
+| Shambali_Attack_strat = 
+| Shambali_Defense_strat = 
+
+| Gibraltar_rating = 
+| Gibraltar_feature = 
+| Gibraltar_strategy = 
+| Gibraltar_Attack_strat = 
+| Gibraltar_Defense_strat = 
+}}
+
+===Hybrid===
+{{MapStrategyTable/Hybrid
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| BlizzardWorld_rating = 
+| BlizzardWorld_feature = 
+| BlizzardWorld_strategy = 
+| BlizzardWorld_Attack_strat = 
+| BlizzardWorld_Defense_strat = 
+
+| Eichenwalde_rating = 
+| Eichenwalde_feature = 
+| Eichenwalde_strategy = 
+| Eichenwalde_Attack_strat = 
+| Eichenwalde_Defense_strat = 
+
+| Hollywood_rating = 
+| Hollywood_feature = 
+| Hollywood_strategy = 
+| Hollywood_Attack_strat = 
+| Hollywood_Defense_strat = 
+
+| KingsRow_rating = 
+| KingsRow_feature = 
+| KingsRow_strategy = 
+| KingsRow_Attack_strat = 
+| KingsRow_Defense_strat = 
+
+| Midtown_rating = 
+| Midtown_feature = 
+| Midtown_strategy = 
+| Midtown_Attack_strat = 
+| Midtown_Defense_strat = 
+
+| Numbani_rating = 
+| Numbani_feature = 
+| Numbani_strategy = 
+| Numbani_Attack_strat = 
+| Numbani_Defense_strat = 
+
+| Paraiso_rating = 
+| Paraiso_feature = 
+| Paraiso_strategy = 
+| Paraiso_Attack_strat = 
+| Paraiso_Defense_strat = 
+}}
+
+===Push===
+{{MapStrategyTable/Push
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Colosseo_rating = 
+| Colosseo_feature = 
+| Colosseo_strategy = 
+| Colosseo_Pushing_strat = 
+| Colosseo_Defending_strat = 
+
+| Esperanca_rating = 
+| Esperanca_feature = 
+| Esperanca_strategy = 
+| Esperanca_Pushing_strat = 
+| Esperanca_Defending_strat = 
+
+| NewQueenStreet_rating = 
+| NewQueenStreet_feature = 
+| NewQueenStreet_strategy = 
+| NewQueenStreet_Pushing_strat = 
+| NewQueenStreet_Defending_strat = 
+
+| Runasapi_rating = 
+| Runasapi_feature = 
+| Runasapi_strategy = 
+| Runasapi_Pushing_strat = 
+| Runasapi_Defending_strat = 
+}}
+
+===Flashpoint===
+{{MapStrategyTable/Flashpoint
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Aatlis_rating = 
+| Aatlis_feature = 
+| Aatlis_strategy = 
+| Aatlis_Bazaar_strat = 
+| Aatlis_Garden_strat = 
+| Aatlis_Resort_strat = 
+| Aatlis_Station_strat = 
+| Aatlis_TownCentre_strat = 
+
+| NewJunkCity_rating = 
+| NewJunkCity_feature = 
+| NewJunkCity_strategy = 
+| NewJunkCity_Arena_strat = 
+| NewJunkCity_Foundation_strat = 
+| NewJunkCity_Refinery_strat = 
+| NewJunkCity_Scrapyard_strat = 
+| NewJunkCity_Waterworks_strat = 
+
+| Suravasa_rating = 
+| Suravasa_feature = 
+| Suravasa_strategy = 
+| Suravasa_Gardens_strat = 
+| Suravasa_Market_strat = 
+| Suravasa_Palace_strat = 
+| Suravasa_Ruins_strat = 
+| Suravasa_Temple_strat = 
+}}
+
+==Achievements==
+{{AchievementTable/Start}}
+{{Achievement|Naptime|Ability-ana2.png|Interrupt an enemy Ultimate Ability with Ana's [[Sleep Dart]] in Quick or Competitive play.|Spray Ana Pixel.png|Pixel}}
+{{Achievement|Enabler|Ability-ana4.png|Get 4 kills or assists with a single use of Ana's [[Nano Boost]] in Quick or Competitive play.|Spray Ana Cute.png|Cute}}
+{{AchievementTable/End}}
+
+==Trivia==
+*Ana was the first hero, and support hero specifically, to be added to the roster following the launch of ''Overwatch 1''.
+*Ana's story draws parallels with the story of Horus from Egyptian mythology. During an altercation with a former friend (in this case, Widowmaker), she lost her eye. Additionally, both her and Pharah possess an eye of Horus tattoo.
+* Her voice actress is an Egyptian woman who was recorded from Cairo.<ref>2016-07-13, [http://me.ign.com/en/pc/121331/news/blizzard-hired-egyptian-actress-to-voice-ana-in-overwatch BLIZZARD HIRED EGYPTIAN ACTRESS TO VOICE ANA IN OVERWATCH]. ''IGN'', accessed on 2016-08-11</ref> The voice actress' name, Aysha Selim, was not revealed until September 29, 2016 in a reply on the official forums.<ref>2016-09-29, [http://us.battle.net/forums/en/overwatch/topic/20746644497?page=2#post-30 "We were extremely fortunate to work with a very talented Egyptian actress named Aysha Selim on the voice of Ana (who we recorded all the way from Cairo!)"] Michael Chu. ''Battle.net forums'', accessed on 2016-09-29</ref>
+*Ana is the sixth playable ''Overwatch'' hero in ''[[Heroes of the Storm]]''.<ref>2017-09-15, [http://heroes.blizzplanet.com/blog/comments/ana-junkrat-volskaya-foundry-map-coming-nexus Blizzard Virtual Press Tour: Ana, Junkrat and Volskaya Foundry Map coming to the Nexus]. ''Blizzplanet'', accessed on 2017-09-17</ref>
+*As of October 2023, Ana is the most played hero in the series.<ref>2023-10-07, [https://www.reddit.com/r/Overwatch/comments/1701c6m/whoever_didnt_go_outside_this_year_needs_to/ whoever didn't go outside this year needs to confess now]. ''Reddit'', accessed on 2023-10-12</ref>
+
+===Misc. Character Information===
+*In Cassidy/Baptiste interactions in ''Overwatch 2'', it is confirmed that Talon has a bounty on Ana's head, and that it is larger than the one on Cassidy's. Assuming that this is the same bounty [[Orisa]] mentions in the original game, the price on Ana is over $60 million.
+*Ana has expressed interest in going to a number of vacation spots, including [[Lagos]], Crete, Malibu, and Fiji. She has visited Copacabana at least once.<ref name="AnaQuotesOW2"/>
+*Ana's memories were used to create the [[A-7000 Wargod]].
+*Night ops used to be her favorite type of mission.<ref name="LostGhosts"/>
+*The [https://en.wikipedia.org/wiki/Caracal caracal] is Ana's favorite animal.<ref name="AnaQuotesOW2"/>
+*Ana's Bastet mask is over 3000 years old.<ref name="AnaQuotesOW2"/>
+
+===Development===
+[[File:Ana Amari Concept.png|thumb|right|Concept art of Ana and her daughter, [[Fareeha Amari]]]]
+Ana was the first hero added to the game after its launch. Blizzard began with the knowledge that they needed another healer, since [[Lucio]] and [[Mercy]] were showing up in every game. A concept was the Alchemist, a character who could drink from a decanter and then jump really high, or provide an extra-long heal over time. Meanwhile, the team were struggling to place the personality of Ana, which they'd conceived independently. Her backstory positioned her as a crack sniper, but the game already had [[Widowmaker]]. It was thus decided that the hero would be both a healer and a crack shot, using her rifle both offensively and defensively. The Alchemist concept was phased out within a few weeks.<ref>2016-08-11, [https://www.pcgamesn.com/overwatch/overwatch-ana-prototype Overwatch's Ana was nearly a potion-swigging alchemist]. ''PC Games'', accessed on 2017-07-11</ref> Influences for Ana's visual design were post-apocalyptic themes and imagery. The designers wanted to show her as someone who was rugged and resourceful, living on the edges of society. Her "Wasteland" skin is based entirely around this idea. Strap, pipe, and cannister designs in the skin were used to emphasize a character that was scrounging anything she could to survive.<ref>''[[The Art of Overwatch]]''</ref>
+
+Prior to being revealed, it was widely speculated that Ana and [[Sombra]] were the same character, resulting from the photographs of her Shrike mask being misidentified as Sombra.<ref>2016-05-19, [http://www.eurogamer.net/articles/2016-05-19-community-believes-a-new-overwatch-hero-called-sombra-could-be-unveiled-on-monday Fans believe a new Overwatch hero called Sombra could be unveiled on Monday]. ''Eurogamer'', accessed on 2016-08-11</ref><ref>2016-07-06, [http://www.polygon.com/2016/7/6/12108222/overwatch-new-character-sombra-sniper-support Blizzard releases major hint about Overwatch's next character (update)]. ''Polygon'', accessed on 2016-08-11</ref><ref>2016-07-06, [http://kotaku.com/overwatch-is-still-hiding-clues-about-a-mysterious-char-1781137255 Overwatch Is Still Hiding Lots of Clues About A Mysterious Character]. ''Kotaku'', accessed on 2016-08-11</ref>
+
+[[File:Ana Wasteland and Captain Amari skin concept arts.jpg|thumb|left|Ana Wasteland and Captain Amari skin concepts]]
+Several PR assets on Blizzard's press center website for Ana are labeled "Shrike" instead of "Ana", suggesting that her placeholder name during development was Shrike.<ref>[http://blizzard.gamespress.com/Overwatch Overwatch Games Press], ''Blizzard Entertainment''. Accessed on 2016-08-11</ref> The name Shrike was used for one of her epic skins, in which she wears a mask previously seen in pre-release easter eggs.
+Ana was teased on [[Temple of Anubis]], with an opened document picturing her wearing her Shrike mask.<ref>[https://abload.de/img/sombra_or_not6wog7.jpg Documents depicting Ana wearing her Shrike mask]. ''Temple of Anubis''.</ref> Her scope could be seen being worked on in a GameSpot video.<ref>2016-04-21, [https://youtube.com/watch?v=jq-HwvYjLLg?#t=00m09s ''The Story of Overwatch: The Fall of Titan'', 00:09] ''Youtube''. Accessed on 2016-07-10</ref> Also in the video was an early prototype with a modified Widowmaker model seen in the character selection screen, in the support section.<ref>2016-04-21, [https://youtube.com/watch?v=jq-HwvYjLLg?#t=15m25s ''The Story of Overwatch: The Fall of Titan'', 15:25] ''Youtube''. Accessed on 2016-07-10</ref>
+
+Ana was added to the PTR on July 12, 2016.<ref>2016-07-12, [https://playoverwatch.com/en-us/blog/20178523#patchnotes OVERWATCH PTR NOW AVAILABLE - JULY 12, 2016] ''Playoverwatch'', accessed on 2016-11-06</ref> She was added to the live PC version of the game on July 19, 2016.<ref>2016-07-19, [http://us.battle.net/forums/en/overwatch/topic/20747185139#post-2 [PC] Overwatch Patch Notes – July 19, 2016] ''Battle.net forums'', accessed on 2016-11-06</ref>
+{{Clear}}
+
+====Removed abilities====
+
+===== Removed Perks =====
+{{Ability details
+| removed = 1
+| ability_name = Shrike
+| ability_image = Perk Shrike.png
+| ability_type = Major Perk
+| official_description = Using Nano Boost also casts it on Ana.
+| duration = 6 seconds
+| ability_details = 
+* ''Removed in Season 18.''
+}}
+
+==Media==
+===Former Portrait===
+<gallery>
+OW1Icon Ana.png|Overwatch 1 Hero portrait
+</gallery>
+
+===Concept Art===
+<gallery>
+Ana Cabana skin concept art.png|Cabana Skin Concept Art by Anh Dang
+Ana Cabana gun skin  concept art.jpeg|Cabana Skin Weapon Concept Art by Anh Dang
+Ana Corsair skin concept art.jpg|Corsair Skin Concept Art by Hicham Habchi
+Ana Sniper skin concept art.jpg|Sniper Skin Concept Art by Daryl Tan
+Ana Sniper gun skin concept art.jpg|Sniper Skin Weapon Concept Art by Daryl Tan
+Ana Haroeris skin concept art.jpg|Haroeris Skin Concept Art
+A-7000 Wargod.jpg|A-7000 Wargod Skin Concept Art
+</gallery>
+
+===Videos===
+{{#ev:youtube|ZcCGKrYgr0k|400|inline}}
+{{#ev:youtube|yzFWIw7wV8Q|400|inline}}
+
+==Balance Change Logs==
+{{ChangelogsTabber
+| owpvp =
+{{PatchTableElement|2026-07-14|
+{{al|Biotic Grenade}}
+*Explosion damage and healing increased from 75 to 90.
+
+{{DevComment|Ana's self-sustain has decreased following the removal of the Support passive's reduced health regeneration delay. Increasing Biotic Grenade's healing strengthens its defensive utility while also increasing its offensive impact.}}
+}}
+{{PatchTableElement|2026-06-16|
+{{al|Speed Serum}} – Minor Perk
+*Movement speed bonus reduced from 40% to 30%.
+}}
+{{PatchTableElement|2026-04-14|
+{{DevComment|With the removal of the Support passive, Ana has become more dependent on Biotic Grenade for self‑healing. Lowering its cooldown gives her more frequent access to the ability while supporting both offensive and defensive use cases.}}
+
+{{al|Biotic Grenade}}
+* Cooldown reduced from 14 to 12 seconds.
+}}
+{{PatchTableElement|2025-10-14|
+{{al|Headhunter}}
+* Critical damage multiplier increased from 1.5x to 2x.
+}}
+{{PatchTableElement|2025-08-26|
+{{al|Speed Serum}} - Minor Perk
+* New Minor Perk.
+* Nano Boost grants a 40% movement speed boost to both Ana and her target.
+
+{{al|Shrike}} - Major Perk
+* Removed.
+
+{{al|Biotic Bounce}} - Major Perk
+* Changed to a Major Perk.
+* Now deals 60 damage and healing (up from 25).
+}}
+{{PatchTableElement|2025-04-22|
+{{al|Groggy}}
+* Reduced initial slow from 75% to 50%.
+* Now also deals 50 damage over the duration.
+
+{{al|Biotic Bounce}}
+* Second bounce damage and healing reduced from 50 to 25.
+}}
+{{PatchTableElement|2025-03-25|
+{{al|Biotic Grenade|}}
+* Cooldown increased from 12 to 14 seconds for non-6v6 games modes.
+
+{{al|Shrike}}
+* Self-Nano Boost duration reduced from 8 to 6 seconds.
+}}
+{{PatchTableElement|2025-02-18|
+;Hero Perks
+
+{{al|Groggy}}
+* Enemies waking from Sleep Dart are slowed for 2 seconds.
+
+{{al|Biotic Bounce}}
+* After exploding, Biotic Grenade bounces and explodes again for 50 damage and healing.
+
+{{al|Headhunter}}
+* Biotic Rifle can crit enemies.
+
+{{al|Shrike}}
+* Using Nano Boost also casts it on Ana.
+}}
+{{PatchTableElement|2025-01-21|
+{{DevComment|Developer Comment: Recent changes to her rifle have made Ana a highly impactful support. Reducing the damage of her Biotic Grenade will adjust some of her breakpoints and slightly affect her self-sustainability.}}
+
+{{al|Biotic Grenade}}
+* Explosion damage and healing decreased from 90 to 75.
+}}
+{{PatchTableElement|2024-12-10|
+; Global Projectile Size Bonus
+* Hitscan radius large reduced from 0.08 to 0.07 meters.
+}}
+{{PatchTableElement|2024-11-12|
+{{DevComment|Developer Comments: This damage value has gone back and forth a few times as it's a significant break point for the number of shots to eliminate some heroes. }}
+{{al|Biotic Rifle}}
+* Damage and Healing increased from 70 to 75.
+}}
+{{PatchTableElement|2024-07-09|
+{{DevComment|Developer Comments: Rather small change here but we'd like to minimize the amount of time Tanks can be taken out of the fight for and they are also the easiest targets to hit with Sleep Dart.}}
+{{al|Sleep Dart}}
+* Duration of effect on Tank heroes decreased from 3.5 to 3 seconds.
+}}
+{{PatchTableElement|2024-03-12|
+;General updates
+* Global projectile size modifier for travel time projectiles with a speed greater than 50 meters per second reduced from 0.1 to 0.075 meters.
+
+;Hero updates
+{{al|Biotic Grenade}}
+* Explosion damage and healing increased from 60 to 90.
+}}
+{{PatchTableElement|2024-02-13|
+;General updates
+Most damage-dealing projectile sizes have been increased by a new global modifier added to their base size.
+
+* +0.05 meters for hitscan projectiles with a high rate of fire or spread (e.g., Tracer's Pulse Pistols or Reaper's Hellfire Shotguns).
+* +0.08 meters for hitscan projectiles that are more precise (e.g., Cassidy's Peacekeeper or Soldier:76's Heavy Pulse Rifle).
+* +0.05 meters for travel time projectiles that are shotguns or have a very high rate of fire (e.g., Roadhog's Scrap Gun or Ramattra's Void Accelerator).
+* +0.10 meters for travel time projectile with a speed greater than 50 meters per second (e.g., Zenyatta's Destruction Orb).
+* +0.15 meters for travel time projectile with a speed less than or equal to 50 meters per second (e.g., Pharah's Rocket Launcher).
+* Very large projectiles with a base size greater than 0.5 meters have been excluded from these increases (e.g., Orisa's Energy Javelin or Reinhardt's Fire Strike).
+
+Hero combined HP (base health/armor/shields) increased by 15-25%.
+
+* 150-175 HP heroes increased by 25 HP.
+* 200-300 HP heroes increased by 50 HP.
+* 300+ HP (Tanks) increased by 75-100 HP.
+* Each hero's precise health increases are listed in their patch notes below.
+
+Ultimate Charge
+
+* All Ultimate ability costs increased by 10%.
+
+Regenerative Passive for All Heroes
+
+* All heroes now regenerate 20 health per second after 5 seconds of not taking damage.
+
+Support Role Passive
+
+* Now reduces the delay before regeneration begins by half (2.5 seconds).
+
+Quick Melee
+
+* Damage increased from 30 to 40.
+
+;Hero updates
+
+* Health increased from 200 to 250.
+}}
+{{PatchTableElement|2024-01-09|
+{{al|Biotic Grenade}}
+* Effect duration reduced from 3.5 to 3 seconds.
+}}
+{{PatchTableElement|2023-10-31|
+{{al|Biotic Grenade}}
+* Cooldown increased from 10 to 12 seconds.
+}}
+{{PatchTableElement|2023-08-10|
+{{DevComment|Developer Comment: Ana's damage breakpoint change has proven too effective overall given her long range so we are reverting it back to its previous value. We are also increasing the size of unscoped projectiles when firing at enemies (her projectiles have always had a larger size for allies) which should help them land more consistently against close-ranged threats.}}
+
+{{al|Biotic Rifle}}
+* Damage and healing per projectile reduced from 75 to 70.
+* Unscoped projectile size increased from 0 to 0.1.
+}}
+{{PatchTableElement|2023-05-09|
+{{DevComment|Developer Comments: Ana's survivability has improved significantly ever since the addition of the support passive. We are reducing the amount of healing provided by the Biotic Grenade explosion as she doesn't need to rely on it for self-healing as much as before.}}
+
+{{Al|Biotic Grenade}}
+* Explosion healing decreased from 100 to 60
+}}
+{{PatchTableElement|2023-04-11|
+{{DevComment|Developer Comment: We've been watching how effective Sleep Dart has been in 5v5 gameplay. It hasn't been overly disruptive as a whole, but since it is significantly more reliable to land against Tank heroes due to their large hit boxes and even more valuable to do so with only one tank on the field, we're reducing its maximum duration against those targets.}}
+{{Al|Sleep Dart}}
+* Maximum duration on Tank heroes reduced 30%, from 5 to 3.5 seconds
+}}
+{{PatchTableElement|2023-02-07|
+{{Al|Biotic Grenade}}
+*Effect duration reduced from 4 to 3.5 seconds
+}}
+{{PatchTableElement|2022-12-15|
+{{Al|Biotic Rifle}}
+* Damage and Healing increased from 70 to 75
+
+{{Al|Biotic Grenade}}
+* Effect duration increased from 3 to 4 seconds
+}}
+{{PatchTableElement|2022-12-06|
+{{DevComment|Sleep Dart is still one of the most powerful crowd control abilities in 5v5, though with the addition of cleanse mechanics to offer a potential counter to this effect we're more comfortable with reducing the cooldown here to improve Ana's personal survivability.}}
+{{Al|Sleep Dart}}
+*Cooldown reduced from 15 to 14 seconds
+}}
+{{PatchTableElement|2022-05-05|
+{{DevComment|Ana's Biotic Grenade was too effective with one less tank and more infrequent barriers, so we are reducing the duration of the ability. We also saw Ana using her grenade less frequently on herself because of the new support passive ability. To help compensate for her grenade, we wanted to give her power back through increasing her Biotic Rifle's ammo.}}
+
+{{Al|Biotic Rifle}}
+*Ammo increased from 12 to 15
+{{Al|Biotic Grenade}}
+*Duration reduced from 4 to 3 seconds
+|beta=1}}
+{{PatchTableElement|2022-04-26|
+{{Al|Sleep Dart}}
+*Cooldown increased from 12 to 15 seconds
+|beta=1}}
+
+|owstadium={{#section-h:Ana/Stadium|Balance Change Log}}<!-- this section is transcluded from the /Stadium page and must be edited from there -->
+
+| ow1 =
+{{PatchTableElement|2021-06-22|
+{{al|Biotic Rifle}}
+* (Parity Adjustment) Darts no longer have increased projectile size on console platforms
+}}
+{{PatchTableElement|2020-11-19|{{al|Biotic Grenade}}
+*Projectile now passes through allies with full health
+''Developer Comment: A significant number of Biotic Grenades are blocked by allies accidentally intercepting it. Having it collide with allies in the same manner as Ana's primary fire will enable more deliberate placement of the ability.''
+}}
+{{PatchTableElement|2020-08-31|{{al|Biotic Rifle}}
+*Ammo reduced from 14 to 12
+}}
+{{PatchTableElement|2020-05-19|{{al|Biotic Rifle}}
+* Healing reduced from 75 to 70
+}}
+{{PatchTableElement|2020-04-29|{{al|Sleep Dart}}
+* Sleep duration lowered from 6 to 5 seconds
+}}
+{{PatchTableElement|2020-02-12|
+{{al|Biotic Rifle}}
+
+General
+* [Console-Only Update] Allied projectile size increased from 0.3 to 0.4
+}}
+{{PatchTableElement|2019-03-19|{{Al|Nano Boost}}
+*Heal reduced from 300 to 250
+
+''Developer Comments: Giving Nano Boost an instant heal effect enabled players to survive longer and made Ana's ultimate valuable. However, it was a bit too strong when healing heroes with large health pools.''
+}}
+{{PatchTableElement|2018-09-11|{{Al|Biotic Rifle}}
+*Increased the precision of the Relative Aim Sensitivity While Zoomed slider. This can be found under Options > Controls > Hero > Ana
+}}
+{{PatchTableElement|2018-08-09|{{Al|Nano Boost}}
+*Now also instantly heals the target for 300 health
+*Range increased from 30 to 40 meters
+
+''Developer Comments: These changes help Ana's Nano Boost be usable in more situations. Previously it was almost entirely used to combo with other allies' ultimates, just before they use them. With this change Nano Boost can now alternatively be used to save an ally from near death in the middle of a big fight.''
+}}
+{{PatchTableElement|2018-05-22|{{Al|Biotic Rifle}}
+*Projectiles will now pass through allies with full health
+*Ammo increased from 10 to 14
+
+''Developer Comments: These changes should help Ana when she is trying to land clutch heals in the middle of a big fight. Allies that do not need healing will no longer potentially block shots meant for teammates that do need it. Increasing her magazine size makes it less likely that Ana will be forced into a reloading in the middle of an important fight.''
+}}
+{{PatchTableElement|2017-11-16|{{Al|Biotic Rifle}}
+*Damage increased from 60 to 70
+
+''Developer Comments: Ana has been outshined by other support heroes lately. Boosting her damage will help her defend herself and make her more threatening to the enemy team.''
+}}
+{{PatchTableElement|2017-05-23|
+*Recoil Recovery Aim Compensation can now be disabled for Ana, McCree, and Widowmaker. The option can be found under the "Control" tab in the "Options" menu. Simply select the appropriate hero under the dropdown menu and look for the "Hero" section
+
+''Developer Comments: By default, weapon recoil recovery is overruled by downward crosshair movement. This means that downward movement during the weapon's recoil recovery phase will override the weapon's natural recoil recovery. This option allows you to remove this functionality, meaning a weapon's natural recoil recovery movement acts independently from downward crosshair movement. In practice, this will make your crosshair move faster if you aim downward during the recoil recovery window.''
+}}
+{{PatchTableElement|2017-03-21|{{Al|Biotic Rifle}}
+*Damage decreased from 80 to 60
+
+''Developer Comments: Ana's kit has several strong components, which makes her difficult to replace. Reducing her damage output will make her less threatening on attack and reduce her dueling capabilities.''
+}}
+{{PatchTableElement|2017-02-28|
+*New Hero Option: Nano Boost Sensitivity
+**Allows players to adjust Nano Boost's targeting sensitivity
+}}
+{{PatchTableElement|2017-01-24|{{Al|Biotic Grenade}}
+*Effect duration has been reduced from 5 seconds to 4 seconds
+*Healing boost on allies has been decreased by 50%
+''Developer Comments: The healing boost from Ana's Biotic Grenade was providing too much healing, especially when used on targets with large health pools.''
+}}
+{{PatchTableElement|2016-11-15|
+{{Al|Nano Boost}}
+*No longer increases move speed
+''Developer Comment: The increased speed from Ana's Nano Boost made the ability feel unstoppable and forced Ana players to select targets that could really take advantage of the speed boost. Removing the speed boost means that Ana has a reason to apply Nano Boost to a larger variety of heroes, and enemies can fend off the attack more easily''.
+}}
+{{PatchTableElement|2016-10-11|{{Al|Nano Boost}}
+*Ultimate cost has been increased by 20%
+{{Al|Biotic Grenade}}
+*Radius has been increased from 3 to 4 meters
+''Developer Comments: So far, we haven't seen any indication that Ana is too strong overall, but her ultimate charges a little too fast, especially considering the impact it can have on a match. Also, her Biotic Grenades are getting a small boost to help her hit multiple targets.''
+}}
+{{PatchTableElement|2016-07-26|{{Al|Biotic Rifle}}
+*Rate of fire increased by 20%
+*Magazine size increased from 8 to 10
+''Developer Comments: While Ana has been very well received, she was showing to be a little bit weaker overall. In addition to helping her feel better to play, these changes should also increase her healing and damage output.''
+}}
+{{PatchTableElement|2016-07-19|New Hero: Ana (Support)<br>
+After being out of the fight for several years, one of [[Overwatch (group)|Overwatch]]'s founding members is returning. Introducing Ana — a battle-scarred veteran who supports her teammates from a distance using a unique and highly specialized collection of weapons.
+}} |ow6v6={{PatchTableElement|2025-03-25|
+{{al|Biotic Grenade|}}
+* Cooldown increased from 10 to 12 seconds for 6v6 games modes.
+}}
+{{PatchTableElement|2025-03-18|
+{{al|Biotic Rifle}}
+* Ammo increased from 12 to 15. (undocumented)
+}}
+{{PatchTableElement|2024-12-17|
+{{al|Biotic Rifle}}
+* Maximum ammo reduced from 15 to 12.
+
+{{al|Biotic Grenade}}
+* Cooldown reduced from 12 to 10 seconds.
+
+{{al|Sleep Dart}}
+* No longer has reduced duration versus Tank heroes.
+* Cooldown reduced from 14 to 12 seconds.
+}}}}
+
+==References==
+<References/>
+
+==External links==
+*[https://playoverwatch.com/en-us/heroes/ana/ Official Site - Ana]
+
+{{Heroes}}
+[[Category:Ana| ]]
+[[Category:Heroes]]
+[[Category:Overwatch members|Amari, Ana]]
+[[Category:Egyptian characters]]
+[[Category:Cyborgs]]

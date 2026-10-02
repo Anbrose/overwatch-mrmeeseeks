@@ -1,0 +1,1095 @@
+{{Infobox character
+| name = Junkrat
+| image = <gallery>
+OW2 Junkrat.png|Overwatch
+OW Junkrat.png|Overwatch Classic
+</gallery>
+| caption = "Plenty of bombs to go around!"
+| realname = Jamison Fawkes
+| age = 27
+| birth = February 29th
+| nationality = {{flag|au}} Australian
+| occupation = Anarchist, Thief, Demolitionist, Mercenary, Scavenger
+| baseofoperations = [[Junkertown]], [[Australia]]
+| affiliation = [[Junkers]]
+| relations = Unnamed mother
+| cosmetics = 1
+| quotes = 1
+| stadium = 1
+| type = 
+| role = [[Damage]]
+| sub-role = [[Specialist]]
+| health = 250
+| minor_perk_xp = 1675
+| major_perk_xp = 4185
+| video = {{#ev:youtube|mFGQG8I68h8|325|inline}}
+| voice = {{VA stack
+| english = [[Chris Parson]]
+| other = [[Stéphane Ronchewski]] (French)
+<br>Manuel Straube (German, main)
+<br>Artur Weimann (German, stand-in)
+<br>Matteo Zanotti (Italian)
+<br>Hiroki Gotō (Japanese)
+<br>Jin Jeong-il (Korean)
+<br>Zhang Xin (Mainland Mandarin)
+<br>Niu Kai-yang (Taiwanese Mandarin)
+<br>Krzysztof Plewako-Szczerbiński (Polish)
+<br>Christiano Torreão (Brazilian Portuguese)
+<br>Danil Schelbanov (Russian)
+<br>César Díaz Capilla (European Spanish)
+<br>Alfonso Obregón (Latin American Spanish, main voice)
+<br>Geezus González (Latin American Spanish, temp. voice)
+<br>Tommy Rojas (Latin American Spanish, temp. voice)
+}}
+}}
+{{HeroTabs}}
+'''Junkrat''' is a [[Sub-Roles#Specialist|Specialist]] [[Roles#Damage|Damage]] [[Heroes|hero]] in ''[[Overwatch 2|Overwatch]]''. He is one of the 21 heroes included in the game's release on 24 May 2016.
+
+==Overview==
+[[File:Junkrat HS.mp4|left|thumb]] Junkrat's area-denying armaments include a Frag Launcher that lobs bouncing grenades, Concussion Mines that send enemies flying, and Steel Traps that stop foes dead in their tracks.
+
+<gallery>
+File:Icon-Junkrat.png|'''3D portrait'''
+File:Junkrat Hero.png|'''2D portrait'''
+</gallery>
+==Abilities==
+
+===Passive Abilities===
+{{Sub-Role passive|Specialist}}
+
+{{Ability_details
+| ability_name = Total Mayhem
+| ability_image = Ability-Junkrat4.png
+| old_description = Junkrat's deranged sense of humor persists past his death. If killed, he drops several live grenades.
+| official_description = Deals no damage to self with explosives. Drop bombs on death.
+| ability_type = Passive Ability
+| shot_type = {{proj|arc}}<br>{{proj|aoe}}
+| damage = 50
+| pellets = 6
+| radius = 2 meters
+| cast_time = 0.7 seconds (detonation)
+| headshot = ✕
+| ignores_barrier = partial
+| ignores_matrix = partial
+| ignores_deflect = partial
+| ignores_window = partial
+| ability_video = tIF8sSY3pM0
+| ability_keywords = area of effect;;spherical::travel time
+| ability_details = 
+* The grenades will be dropped at wherever Junkrat was killed, and do not inherit his momentum. Being killed while flying through the air will drop the grenades straight down to the ground.
+* The grenades can be negated by [[D.Va]]'s {{Al|Defense Matrix}}, [[Orisa]]'s {{Al|Javelin Spin}}, [[Sigma]]'s {{Al|Kinetic Grasp}}, [[Doomfist]]'s {{al|Power Matrix}} and [[Mizuki]]'s {{al|Kekkai Sanctuary}} and they can be deflected by [[Genji]]'s {{Al|Deflect}} before exploding.
+* {{al|Amplification Matrix}} affects all damage dealt, if the projectile passes through it. Splash damage alone going through is not amplified.
+* The grenades can penetrate [[barrier]]s, but their explosions cannot.
+}}
+
+===Weapons===
+{{Ability_details
+| ability_name = Frag Launcher
+| ability_image = Ability-Junkrat1.png
+| old_description = Junkrat's Frag Launcher lobs grenades a significant distance. They bounce to reach their destination, and blow up when they strike an enemy.
+| official_description = Bouncing explosive projectile weapon.
+| ability_type = Weapon
+| shot_type = {{proj|arc}}<br>{{proj|aoe}}
+| damage = {{tt|45|125 total}} (direct hit)<br>80 - 10 (splash, enemy)
+| pspeed = 30 m/s
+| pradius = {{tt|0.32 meters|0.2 base + 0.12 global}} (0.16 meters after second bounce)
+| kbspeed = {{tt|9.4 m/s|H: 5 m/s, V: 8 m/s}} (max, enemy)<br>{{tt|4.7 m/s|H: 2.5 m/s, V: 4 m/s}} (max, self)
+| radius = 0.5 - 2 meters (falloff start - max)
+| fire_rate = 1.5 shots/s <br>recovery stops while using melee
+| ammo = 5
+| reload_time = {{tt|1.5 seconds animation|restores ammo after 0.848 seconds}}
+| headshot = ✕
+| spread = None
+| ignores_matrix = partial
+| ignores_deflect = partial
+| ignores_window = partial
+| ability_video = SdGx4KK-Nrk
+| ability_keywords = area of effect;;spherical::travel time
+| ability_details = * Damage per second: 180 while firing (124.13 overall w/reload)
+* The grenades explode after:
+** 2 times bouncing off the ground.
+** Bouncing off the surroundings and landing on the ground afterwards.
+** Getting contact with an enemy hitbox.
+** 4.5 seconds of flight without hitting solid objects.
+* Before a nade detonates, an audio cue is played and can be heard if nearby. The nade then freezes in place for 0,3 second pre-detonation, during which the explosion can't be stopped by any means. If the nade is shot bouncing on the ground, or just bounce off a wall/an object, it'll explode if it bounces a second time less than 1,5 second after the first bounce. Nades can bounce on walls and objects several times without exploding.
+* The projectile size is decreased after its second bounce.
+* The velocity of the projectile is slightly reduced after each bounce.
+* The projectile can be destroyed while in air by {{al|Defense Matrix}}, {{al|Kinetic Grasp}}, {{al|Javelin Spin}}, {{al|Power Matrix}} and {{al|Kekkai Sanctuary}} and reflected by {{al|Deflect}}, but the splash is unaffected.
+* {{al|Amplification Matrix}} affects all damage dealt, if the projectile passes through it. Splash damage alone going through is not amplified.
+| dps = 180 while firing (124.13 overall w/reload)
+}}
+
+===Special Abilities===
+{{Ability_details
+| ability_name = Concussion Mine
+| ability_image = Ability-Junkrat2.png
+| old_description = After placing one of his homemade Concussion Mines, Junkrat can trigger it to damage enemies and send them flying... or propel himself through the air.
+| official_description = Throw a knockback mine with {{key|{{#var:Concussion Mine key}}}} then detonate it with {{key|secondary fire}}.
+| ability_type = Ability
+| key = ability 1
+| shot_type = {{proj|arc}}<br>{{proj|aoe}}
+| cooldown = 7 seconds
+| charges = 2
+| damage = 120 – 55
+| pspeed = 25 m/s
+| pradius = 0.2 meters
+| kbspeed = {{tt|21.2 m/s|H: 15 m/s, V: 15 m/s}}
+| radius = 1 - 3 meters (falloff start - max)
+| cast_time = 0.128 second for throw + 0.112 s. recovery for detonation
+| duration = Until detonated or replaced
+| health = 25
+| headshot = ✕
+| ignores_barrier = partial
+| ignores_matrix = partial
+| ignores_deflect = partial
+| ignores_window = partial
+| ability_video = 0wcahJdwI9w
+| ability_keywords = area of effect;;spherical::deployable::travel time
+| ability_details = * The mine sticks to any terrain and bounces off of players and [[objects]] other than {{al|Petal Platform}}.
+* The mine bounces once upon hitting a [[barrier]] for the first time, but can then pass through it. The explosion is blocked by barriers.
+* The mine can be destroyed by enemy players, causing no explosion. 
+* The projectile can be destroyed by {{al|Defense Matrix}}, {{al|Kinetic Grasp}},{{al|Javelin Spin}}, {{al|Power Matrix}} and {{al|Kekkai Sanctuary}} and reflected by {{al|Deflect}} before it attaches to a surface. The explosion is unaffected.
+* {{al|Amplification Matrix}} affects all damage dealt, if the projectile passes through it. Explosion damage alone going through is not amplified.
+* Upon cast time ends, you can change the future flight path.
+* If the ability is interrupted before the mine begins to exist, the cooldown will not start and the charge will not be spent.
+* If Junkrat throws another mine while one is already deployed the first mine will instantly and silently disappear. 
+* The mine does not deal self-damage, but still applies the knockback, making it usable as a mobility tool.
+* Junkrat and enemies caught in the blast are knocked up 45° vertically, regardless of their position relative to the mine.
+* Horizontal knockback is away from the center of the mine.
+*If Junkrat is hacked, the remote will be disabled.
+}}
+
+
+{{Ability_details
+| ability_name = Steel Trap
+| ability_image = Ability-Junkrat3.png
+| old_description = Junkrat tosses out a giant, metal-toothed trap. Should an enemy wander too close to the trap, it clamps on, injuring and immobilizing them.
+| official_description = Place an immobilizing trap.
+| ability_type = Ability
+| key = ability 2
+| shot_type = {{proj|arc}}
+| damage = 100
+| health = 100 
+| radius = 1 meter
+| pspeed = 17 m/s
+| pradius = None
+| cooldown = 10 seconds
+| cast_time = instantly + 0.33 s recovery <br> .75 second arming time
+| duration = Until triggered or replaced (trap)<br>2.5 seconds (root)
+| headshot = ✕
+| ignores_barrier = partial
+| ignores_matrix = 1
+| ignores_deflect = 1
+| ignores_boost = 1
+| ignores_window = 1
+| ability_video = DewTVB5AAEU
+| ability_keywords = deployable;;strong projectile::fixed::hinder::immobilize
+| ability_details = 
+* Similarly to his {{al|Concussion Mine}}, deploying a second Steel Trap will remove the first.
+* The trap sticks to ground and [[objects]] with a walkable surface, and bounces off of players, walls and other object surfaces.
+* The trap bounces once upon hitting a [[barrier]] for the first time, but can then fall through it.
+* An unactivated trap can be destroyed by enemy players. 
+* Junkrat can see the trap's location through walls.
+* The player receives a cue when an enemy triggers or destroys the trap.
+* Being in phased out state or affected by Zarya's {{al|Particle Barrier|text=Particle/Protective Barrier}} will prevent a trap from triggering, but will not free a player that is already trapped.
+* Orisa can break free from the trap by activating {{al|Fortify}}.
+* Lifeweaver can pull the target free with {{al|Life Grip}}.
+* Sombra can escape from the trap with {{al|Translocator}}, however it must be in air when the trap activates, as it is a movement ability that gets disabled by the trap.
+* If a trapped player is moved sufficiently far from it, e.g. by using Symmetra's {{al|Teleporter}} or being lifted by {{al|Petal Platform}} or {{al|Ice Wall}}, the trap will break and the target will be freed. However, if the trap was placed on the object, the player will remain trapped even if lifted, as the trap can move with it.
+}}
+
+===Ultimate Ability===
+{{Ability_details
+| ability_name = RIP-Tire
+| ability_image = Ability-Junkrat5.png
+| ability_video = -RkhEO40DG8
+| old_description = Junkrat revs up a motorized tire bomb and sends it rolling across the battlefield, climbing over walls and obstacles. He can remotely detonate the RIP-Tire to deal serious damage to enemies caught in the blast, or just wait for it to explode on its own.
+| official_description = Drive and detonate an exploding tire.
+| ability_type = Ultimate Ability
+| shot_type = {{proj|aoe}}
+| ult_req = 2100 points
+| health = 100
+| damage = 600 - 60
+| mspeed = None (Junkrat)<br>12 m/s (RIP-Tire)
+| kbspeed = {{tt|8.5 m/s|H: 6 m/s, V: 6 m/s}} (max, enemy only)
+| radius = 10 - 2 meters (falloff start - max)
+| duration = 10 seconds (max)
+| cast_time = {{tt|1.58 + 0.08 seconds|1.58s startup + 0.08s recovery}} (activation)<br>{{tt|0 + 1.0 seconds|0s startup + 1.0s recovery}} (detonation)
+| headshot = ✕
+| ignores_barrier = partial
+| ignores_matrix = 1
+| ignores_deflect = 1
+| ignores_boost = 1
+| ignores_window = 1
+| ability_keywords = area of effect;;spherical::deployable::fixed::transformation::reloads
+| ability_details = * Can be interrupted during the startup, but upon gaining control of the tire, the ability will continue and can be detonated regardless of whether Junkrat or the tire is hit by any [[crowd control]] or if Junkrat dies.
+* If the tire is destroyed, no detonation occurs and the ability ends early.
+* Junkrat is rooted while this ability is active.
+* RIP-Tire can jump and climb walls.
+* The explosion is blocked by [[barrier]]s, but the tire itself can travel through them.
+}}
+
+== Perks ==
+=== Minor Perks ===
+A Minor [[Perk]] can be chosen at level 2.
+{{Ability details
+| ability_name = Nitro Boost
+| ability_image = Perk_NitroBoost.png
+| ability_type = Minor Perk
+| official_description = During RIP-Tire, use (LSHIFT) to gain a quick boost of speed. Doing so reduces RIP-Tire’s damage by 50%.
+| ability_details = *Increases RIP-Tire's Movement speed by 100% during boost
+}}
+
+{{Ability details
+| ability_name = Bomb Voyage
+| ability_image = Bomb_Voyage.png
+| ability_type = Minor Perk
+| official_description = After launching with Concussion Mine, Junkrat gains 35% increased attack speed for 3 seconds.
+| ability_details = * Does not stack. Subsequent launches refresh the duration.
+}}
+
+=== Major perks ===
+A Major [[Perk]] can be chosen at level 3.
+{{Ability details
+| ability_name = Mine Recycling
+| ability_image =Mine_Recycling.png 
+| ability_type = Major Perk
+| official_description = Eliminations with Concussion Mine restore one charge.
+| ability_details =
+}}
+
+{{Ability details
+| ability_name = Frag Cannon
+| ability_image = Perk_FragCannon.png
+| ability_type = Major Perk
+| shot_type = {{proj|arc}}<br>{{proj|aoe}}
+| pspeed = 30 → 37.5 m/s
+| ignores_matrix = partial
+| ignores_deflect = partial
+| ignores_window = partial
+| official_description = Frag Launcher’s projectile speed is increased by 25%
+| ability_details = 
+}}
+
+== Hero-specific options ==
+{|class ="listtable"
+! Setting name !! Options !! Description
+|-
+| rowspan="2"| '''RIP-Tire automatically climb walls'''
+| Off (default)
+| While facing a wall, hold Jump to wall climb.
+|-
+| On
+| Face a wall to wall climb.
+|}
+
+==Strategy==
+Junkrat is a hero that excels at defending an area through the use of traps and indirect fire; he is valued for his damage output and area denial capabilities. He has strong mobility thanks to {{al|Concussion Mine}} and deals high (if inaccurate) damage with his {{al|Frag Launcher}}. He also can push objectives as well, and he can still change the battle after death thanks to {{al|Total Mayhem}}. The explosive and arcing projectile nature of his weapon, however, makes it challenging for him to fight at close range with most heroes. 
+
+===Weapons & Abilities===
+
+{{al|Total Mayhem}} 
+*If you're about to die and confronting an enemy at close range, do your best to stay near to them, as Total Mayhem can net you a kill even after death.
+*If you see a friendly Zarya use {{al|Graviton Surge}}, run into the Surge only as a last resort. you might just get a few people.
+*Do not worry about getting too close to your own bombs, as they cannot hurt you.
+*When Junkrat dies, his bombs can still be {{al|Deflect|deflected}} by Genji or destroyed by D.Va's {{al|Defense Matrix}}.
+
+{{al|Frag Launcher}}
+*While these grenades deal high damage, they are hard to aim properly, especially at small targets or targets that are above Junkrat. They are best used to provide indirect fire, flooding an area with grenades in order to make traveling through it as dangerous as possible for Junkrat's opponents. 
+*The explosion from these grenades won't damage Junkrat due to Total Mayhem's passive.
+*The fact that the grenades arc makes it difficult to attack characters such as [[Pharah]], as she can move in the air and dodge your grenades easily.
+
+{{al|Concussion Mine}}
+*Since Junkrat takes no damage from his own Concussion Mine, he can use its explosion to blow himself into the air to travel faster or reach higher ground.
+*Try to lead the mine and predict the enemy movement as the mine has damage-falloff when the target isn't near the center of the explosion.
+*The knockback effect can also be used to knock enemies into pits, or to knock them away from Junkrat in order to give him some distance. 
+*If you can't reach flying enemies like Pharah, using Concussion Mines would be recommended over the inaccuracy of Frag Launcher.
+*The mines can be used immediately at an enemy in close-quarters combat, dealing way more damage along with Frag Launcher.
+*The mine is ineffective for surprises since its flashing light is easily noticeable even at further distances.
+
+{{al|Steel Trap}}
+*Try to plant the trap in shadowed areas or around corners where enemies will be less likely to spot it. In a pinch, you can toss the trap in the hopes of an enemy accidentally stepping on it.
+*The trap could be noticed due to its teeth and pedal, but intense fights can take the attention of some enemies away from it.
+
+{{al|RIP-Tire}}
+
+* Junkrat's [[Ultimate]] ability. When activated, Junkrat temporarily gains control of a fast-moving, explosive tire. His view switches to the RIP-Tire, which can be steered with your normal movement controls, and can climb walls by holding the jump button while next to them (much like [[Genji]] or [[Hanzo|Hanzo's]] passives). Pressing either your primary or secondary fire will cause the tire to detonate, dealing heavy damage in a decent area, or exploding automatically once the tire's duration runs out. The RIP-Tire has a Health pool that, if depleted, will cause the tire to disappear with no explosion.
+*If Junkrat is killed while steering the RIP-Tire, he will still retain control of it until the tire either explodes or is destroyed.
+*Make sure to steer the RIP-Tire left and right so enemy players will have a harder time trying to destroy it.
+*The {{Al|name=Nitro Boost}} Perk can give it a new element of surprise, although the speed boost reduces its damage.
+
+===General Strategies===
+*While Junkrat can deal tremendous damage with his {{al|Frag Launcher}}, it takes a considerable amount of skill and practice to accurately land grenades. In general, it's best to launch your grenades at an area, rather than at a specific target, as Junkrat's biggest strength comes from his ability to make any area hazardous to travel through. If you're forced to fight an opponent head on, try to lead your Frag Launcher shots so that your enemy will run into them.
+*Placing your {{al|Steel Trap}} and {{al|Concussion Mine}} well are key when playing Junkrat. Your Steel Trap should be placed in spots without much room to maneuver in order to force enemies to either destroy the trap or step on it. This can be used to protect your flank by telling you when an enemy is coming through the area where you dropped your trap. Place your Concussion Mine above a doorway or next to a wall that you know your opponents will be traveling by. The explosion can be used to both damage and separate the enemy team, allowing your team to pick off whoever gets blown towards you.
+*RIP-Tire's loud engine can be heard clearly by your opponents, giving them a general idea of where it is. Avoid driving it straight at your enemies, as they'll most likely be able to destroy it before it gets to them, wasting your ultimate. Instead, use side routes to get the tire behind your enemies, either by driving the tire through these routes, or taking the routes yourself and then unleashing the tire once you're behind them. Keep in mind that Junkrat is completely helpless while controlling the tire and easily killed, so try to activate RIP-Tire from a safe position.
+*A {{Al|name=Steel Trap}} and {{Al|name=Frag Launcher}} combo can instantly kill enemies with 225 HP or less, assuming no Supports are protecting the target.
+**Against enemies with 250-300 HP, add a {{Al|name=Concussion Mine}} somewhere.
+**This strategy works best when placing it over a health pack or at a choke point.
+*Junkrat excels at destroying stationary targets from a distance.
+*Professionals use RIP-Tire to take out Supports. This is a very undermined tactic, as a team without any healing will be greatly disadvantaged.
+*Junkrat's sit emote can be used to hide in a bush or cart, staying hidden while contesting the payload.
+
+==Match-Ups and Team Synergy==
+<!--When proving match-up or team synergy advice, please write all advice from the sake of someone playing as this hero, not as someone who wishes to counter this hero. Also, please try to be as objective as possible. Taking personal skill out of the equation, please provide advice that would apply to any player who knows how to play these characters well.-->
+
+===Tank===
+{| class="wikitable mw-collapsible mw-collapsed" width="100%"
+|-
+! style="width:10%" |Hero
+! style="width:45%" |Match-Up
+! style="width:45%" |Team Synergy
+|-
+! <center>[[Image:icon-dva.png|75px|link=D.Va]][[D.Va]]</center> 
+|<small>D.Va's massive health and armor supply can make it difficult for your Frag Launcher to chew through, and Defense Matrix can negate fired grenades or even Total Mayhem's bombs. Her mobility with Boosters can also make her hard to hit. However, D.Va's Mech is a large target that is easy to land direct hits on in both close to mid range skirmishes. If you take advantage of Defense Matrix's limited use and reload while it's active, you may be able to catch her in its down period and spam grenades on her in that brief window of opportunity.</small> <small>Overall, though, the matchup can be very difficult, and unless you catch D.Va on cooldown and/or with low health, you should try to stick with your teammates and gang up on her instead of letting her fight you one on one, as is preferred for her. Once D.Va is out of her Mech, catching her with Steel Trap can lead to a quick finishing blow.</small>
+| <small>(To be added)</small>
+|-
+!<center>[[Image:icon-doomfist.png|75px|link=Doomfist]][[Doomfist]]</center>
+|<small>Steel Trap is your best friend against shieldless, mobile tanks - and Doomfist is one of the perfect examples of this. Placing a Steel Trap where you think a Doomfist might use his Rocket Punch to traverse through is an easy way to kill him, and if your whole team is present - can be melted even through his Power Block.</small> <small>Note that similarly in the Zarya matchup, you should not thoughtlessly spam a Doomfist during the pre-fight, as even one grenade is enough to charge his Power Block. Instead, throw some spam at the Doomfist's team as a bluff, then, when he uses his Power Block, throw a Concussion Mine behind him and detonate it to bounce him up in the air, forcing him to use a mobility cooldown to get out of sight of your team. Using a Concussion Mine to bounce a Doomfist about to punch you or one of your teammates is also a rarer, but no less viable way to deny him value.</small>
+|<small>(To be added)</small>
+|-
+!<center>[[Image:icon-hazard.png|75px|link=Hazard]][[Hazard]]</center>
+| <small>If a Hazard is giving your team a rough time, consider hanging back (but not too much) with them to throw a couple of grenades at Hazard. He will want to avoid prolonged engagements with you, so make sure to manage your health and position when he confronts you. Your Frag Launcher forces him to spend much more of his time using his valuable Spike Guard rather than shooting your team, and even moreso if you shoot him in the back, making you excellent at denying him from diving your team.</small>
+| <small>(To be added)</small>
+|-
+!<center>[[Image:icon-junker queen.png|75px|link=Junker Queen]][[Junker Queen]]</center> 
+|<small>Junker Queen's lack of a shield or effective mitigation against your grenades makes her easy to spam at, as long as you are not within her effective range. Always make sure to punish her if she becomes too aggressive, keep your distance and have a Concussion Mine ready if she decides to use Commanding Shout or Jagged Knife to close the distance with you.</small>
+|<small>(To be added)</small> 
+|-
+!<center>[[Image:icon-mauga.png|75px|link=Mauga]][[Mauga]]</center> 
+|<small>Though Mauga similarly has no shield or good mitigation like Junker Queen against you, you will still want to be careful as he can still do a fair bit of damage to you at mid-range. Keep in mind that in all times, exposing yourself in the open to a Mauga is the worst possible thing you can do, as he will feed off of your health using his Cardiac Overdrive or run you over with Overrun, so always find natural cover against him.</small>
+|<small>(To be added)</small>
+|-
+!<center>[[Image:icon-orisa.png|75px|link=Orisa]][[Orisa]]</center>
+|<small>Your Frag Launcher's damage and the immobilization of Steel Trap, combined with Orisa's large hitbox easily forces abilities out of her, such as her Javelin Spin and Fortify, which can make her engagements more difficult. Therefore, pressuring her during the early stages of the fight can be beneficial and helpful for your team.</small> <small>However, this should not mean you should get careless when fighting her and stand out in the open while spamming, as her Energy Javelin can kill you faster than you can. Play in positions where the Orisa cannot easily reach you, and abuse the fact that she has little mobility and verticality by taking multiple angles on her, where she will either be forced to use her cooldowns early or divert her attention towards you instead of your Tank.</small>
+|<small>(To be added)</small>
+|-
+!<center>[[Image:icon-ramattra.png|75px|link=Ramattra]][[Ramattra]]</center>
+|<small>Without his Nemesis form, Ramattra is food for you and gets easily shredded by the damage of your grenades, and your Concussion Mine can also go over his Void Barrier to be detonated on him or his team. The key in this matchup is to predict when Ramattra will use Nemesis form, as he is the most threatening to you in it, and it will greatly improve your odds of surviving once he does. Always make sure to have an escape route ready if you know he has Ravenous Vortex, and place a Steel Trap down as you retreat when he attempts to chase you.</small>
+|<small>(To be added)</small>
+|-
+!<center>[[Image:icon-reinhardt.png|75px|link=Reinhardt]][[Reinhardt]]</center> 
+|<small>While Reinhardt's Barrier Field is capable of withstand several grenades, its large area of coverage makes it a prime target for you to lob grenades at, and it's only a matter of time until you destroy it. Reinhardt can do little against your grenade spam other than block it; once his barrier is destroyed, with his slow speed and short attack range, his only options are to run or get hit by a volley of direct hits.</small> <small>Be careful about getting too close, though, as an accurate Charge will result in your death. If you're focusing on a Reinhardt at close range, a quick toss of a Steel Trap can snag him up, making him even easier to finish off. A quick Steel Trap can even stop Charge, so be ready to toss it should he come your way. While Concussion Mine can get behind his barrier for some solid damage, the knockback against Reinhardt will be minimal, but any teammates he's protecting will be knocked away. Reinhardt is one of your top priorities to kill with RIP-Tire, so try to get as close to him as possible with it without being blocked by his barrier. Be careful of his Fire Strike, as it can destroy RIP-Tire in one hit.</small>
+| <small>(To be added)</small>
+|-
+!<center>[[Image:icon-roadhog.png|75px|link=Roadhog]][[Roadhog]]</center>
+|<small>Roadhog's large hitbox allows and lack of barrier makes him an easy target to lob grenades at. As long as you stay behind cover or a barrier, you can keep yourself safe from Roadhog's Chain Hook. Your traps aren't as effective on Roadhog, since Take a Breather can help Roadhog reduce oncoming damage even when under fire.</small>
+|<small>(To be added)</small>
+|-
+!<center>[[Image:icon-sigma.png|75px|link=Sigma]][[Sigma]]</center> 
+|<small>Sigma's Experimental Barrier will be destroyed with only a few hits from your Frag Launcher, however his Kinetic Grasp will be his strongest tool against you, as your spam damage is easy for him to absorb, granting him a large amount of bonus shield health, allowing him to withstand more of your fire.</small> <small>Try to disorient him and knock him out of position with Concussion Mines, but avoid using them to jump directly into him, as your predictable movement path makes it easy for him to stun you with his Accretion. You can also use Concussion Mines to jump out of the radius of his Gravitic Flux before he finishes casting it. Despite Sigma's floating character model, he will still be affected by Steel Trap if he passes over it.</small>
+|<small>(To be added)</small> 
+|-
+!<center>[[Image:icon-wrecking_ball.png|75px|link=Wrecking Ball]][[Wrecking Ball]]</center>
+|<small>Steel Trap is an excellent tool to counter Wrecking Ball. He will be travelling at high speeds and might not check his path, so place your Steel Trap in an area where you suspect he will attempt to flank from. If he gets trapped, immediately start firing at him, and try and get your teammates to shoot him too.</small>
+|<small>(To be added)</small>
+|-
+!<center>[[Image:icon-winston.png|75px|link=Winston]][[Winston]]</center>
+|<small>While Winston's damage output his minimal, the consistent fire of his Tesla Cannon can inadvertently destroy your traps. If Winston decides you are his prime target, his Jump Pack can help him advance on you, so be ready to launch a Concussion Mine to widen the distance between the two of you.</small> <small>His Barrier Projector will only be able to block a few grenades before it's destroyed, but it may be enough for him to deal substantial damage to you before you manage to kill him.</small> <small>If his barrier is down and you have some distance between you, feel free to spam away, as his large hitboxes will make him an easy target to quickly kill. When Winston activates Primal Rage, a smart Steel Trap can freeze him in place, forcing him to waste a good amount of his Ultimate's duration while also rendering him an easy target.</small>
+|<small>(To be added)</small>
+|-
+!<center>[[Image:icon-zarya.png|75px|link=Zarya]][[Zarya]]</center>
+|<small>Don't spam grenades willy nilly when Zarya is around, as she can easily gain a large amount of Energy from absorbing your grenades. She can just walk into oncoming fire with her active barrier or let her teammates be hit by grenades while under her Projected Barrier's protection. Zarya's secondary attack can hit you while you are on higher ground, and at high enough energy she can deal significant damage this way.</small> 
+* <small>But, while your grenades easily charge Zarya up, you can play mind games with her knowing this. By overshooting and purposefully missing the Zarya, most Zaryas will use a shield once they see a volley of Junkrat's grenades, and sometimes look and jump up towards them to try and catch them. In the best case scenario, the Zarya will have wasted her time and a shield, and have gotten no energy.</small> 
+
+<small>As long as you keep your distance from her, you should be able to stay out of range of her primary fire.  If you do end up in a close-quarters situation, try to trip her up with Steel Trap and Concussion Mine.</small> <small>If these fail and you're forced into a close range fight, you're most likely going to end up run down. If you stop her movement with Steel Trap, be wary before spamming grenades; if she puts her barrier up, stop attacking, back off, reload, and be ready to attack again once the barrier goes down. If you catch her at very low health, though, it is sometimes worth it to brute force your way through her barrier; it may temporarily empower her, but if you can kill her before she can kill you, that won't mean anything.</small>
+|<small>(To be added)</small>
+|}
+===Damage===
+{| class="wikitable mw-collapsible mw-collapsed" width="100%"
+|-
+! style="width:10%" |Hero
+! style="width:45%" |Match-Up
+! style="width:45%" | Team Synergy
+|-
+!<center>[[Image:icon-ashe.png|75px|link=Ashe]][[Ashe]]</center>
+|<small>Pressuring hitscans out of positions they want to be in is the best thing you can do against them, especially if they rely on their longer range, and your best way of doing that as a Junkrat is to deny that space in advance or at least throw some close to mid range spam at it.</small><small>Due to Ashe being a sniper, she’s an effective counter to you. She’ll usually stay out of your effective range and shoot at you freely, so do try and close the distance with her, but don't do it by jumping around in the open with your Concussion Mines, for she will shoot you down. Instead, try and predict where the Ashe wants to position, take the necessary (and if possible, the safest) route to get there, and then deny her that space, or at least make her fight you for it.</small> 
+|<small>(To be added)</small>
+|-
+!<center>[[Image:icon-bastion.png|75px|link=Bastion]][[Bastion]]</center>
+|<small>Bastion is usually an easy target for you to spam at due to his large hitbox and slow mobility. Still, you should be cautious around his Configuration and A-36 Tactical Grenade, so play near cover accordingly. Don't attempt to fight Bastion from greater distances, as your grenades will be incapable of reaching him while his bullets will have no problem reaching you.</small>
+| <small>(To be added)</small>
+|-
+!<center>[[Image:icon-Cassidy.png|75px|link=Cassidy]][[Cassidy]]</center>
+|<small>When you are attempting to go on flanks, it is not uncommon to meet a Cassidy contesting you. The Cassidy vs Junkrat matchup largely depends on the element of surprise, as whoever jumps who first is very likely to win.</small><small>Take advantage of the fact that you outdamage him at close range with your primary fire and Concussion Mines, but also be careful that he beats you in mid range. Otherwise, if he is sitting with his team, lobbing grenades at him will suffice. If he is using Deadeye, '''NEVER''' use a concussion mine against him unless you are certain it will finish him off, as it will bounce him up and potentially kill your teammates.</small>
+| <small>(To be added)</small>
+|-
+!<center>[[Image:icon-echo.png|75px|link=Echo]][[Echo]]</center>
+|<small>You should put flying heroes at the bottom of your priority list, as you cannot effectively or consistently deal with any of them with your kit without unrealistic amounts of mechanical skill. Play inside tight, enclosed spaces as much as you can against them to avoid being out-poked and finished off, and instead fish for opportunities on other members of the enemy team. You should still try and catch them out whenever possible if they are distracted and vulnerable, however.</small> <small>Echo will usually try to assassinate you by sneaking on you in the air with her Glide, then send her Sticky Bombs and Focusing Beam on you to kill you quickly. Always make sure to look up and behind you every now and then to prevent this, and possibly turn the tables on her instead.</small> 
+|<small>(To be added)</small>
+|-
+!<center>[[Image:icon-genji.png|75px|link=Genji]][[Genji]]</center>
+|<small>Concussion Mine is Genji's worst enemy - as it stops him from doing everything he wants to do. It is easy damage and displacement on him that is difficult to dodge or Deflect, which forces him to retreat quickly. This is no exception with Dragonblade, as simply bouncing him will deny him a kill on one of your teammates, as he will have already used a dash to close the distance once, and render his ultimate useless.  Your Rip-Tire is also an effective tool at preventing Genjis from pushing in with their ultimate, as keeping it near you or your team will make Genji think twice before dashing, even if he is under Nano-Boost.</small> <small>Aside from this, in a 1v1 scenario, Genjis are very likely to use their Deflect against you in point-blank range, so be careful when you are dueling him and keep track of it. When he does use his Deflect, simply throw and detonate a Concussion Mine over his head and he will be an easy kill by then.</small>
+|<small>(To be added)</small>
+|-
+! <center>[[Image:icon-hanzo.png|75px|link=Hanzo]][[Hanzo]]</center>
+|<small>Do not try to spam a Hanzo in large, open areas, as he will always beat you in those scenarios. Flanking and surprising him by popping out of rooms, doorways or tunnels is an effective way of dealing with Hanzo, whether you kill or make him retreat. Be wary that his Sonic Arrow can be used to reveal your location during flanks, so try switching up your positions to throw him off.</small>
+|<small>(To be added)</small> 
+|-
+!<center>[[Image:icon-junkrat.png|75px|link=Junkrat]][[Junkrat]]</center>
+|<small>In Junkrat mirror-matches, you should be denying the other Junkrat's RIP-Tire as much as possible by spamming tight areas where you predict the tire might come from. Otherwise, this matchup is also another one dependent on who attacks who first. Switch up your positions as much as you can to ensure you can have the upper hand.</small> 
+|<small>(To be added)</small>
+|-
+!<center>[[Image:icon-mei.png|75px|link=Mei]][[Mei]]</center>
+| <small>Your high burst damage makes you pose as one of the greater threats against Mei as it can easily force Cryo-Freeze and Ice Wall out of her. Make sure to use this to your advantage, especially if a member of your team has been walled off by quickly breaking it. Another technique to secure a free kill on her, is while Mei is using Cryo-Freeze, putting a Steel Trap right at the edges of her block will trap her once she exits. Do also make sure that you have a Concussion Mine ready to jump out of her Blizzard.</small>
+|<small>(To be added)</small>
+|-
+!<center>[[Image:icon-pharah.png|75px|link=Pharah]][[Pharah]]</center> 
+|<small>You should put flying heroes at the bottom of your priority list, as you cannot effectively or consistently deal with any of them with your kit without unrealistic amounts of mechanical skill. Play inside tight, enclosed spaces as much as you can against them to avoid being out-poked and finished off, and instead fish for opportunities on other members of the enemy team. You should still try and catch them out whenever possible if they are distracted and vulnerable, however.</small> <small>Unlike Echo, Pharahs tend to stay more far back from you, unless they are directly going to use Barrage on you, in which case you should be prepared to both take cover, and use the mine-combo to instantly kill her while she is immobile. Always be suspicious if a Pharah is missing or going near you, and have a Concussion Mine ready for it.</small>
+|<small>(To be added)</small>
+|-
+!<center>[[Image:icon-reaper.png|75px|link=Reaper]][[Reaper]]</center>
+|<small>As long as you are not caught off-guard, Reaper is easily harassed by your Frag Launcher and Concussion Mines forcing him to use Wraith early, and when caught by a Steel Trap - becomes an easy kill as he cannot use Wraith to escape. Be wary and track his ultimate, as Death Blossom can shred through you if you're unprepared.</small>
+|<small>(To be added)</small>
+|-
+! <center>[[Image:icon-Soldier 76.png|75px|link=Soldier: 76]][[Soldier: 76]]</center>
+| <small>Pressuring hitscans out of positions they want to be in is the best thing you can do against them, especially if they rely on their longer range, and your best way of doing that as a Junkrat is to deny that space in advance or at least throw some close to mid range spam at it.</small> <small>Soldier outranges you in open areas, but if you are able to gain distance on him, he has no choice but to use Helix Rockets or run, so always get on him through flanks and tunnels as much as you can. He will always want to be on elevated ground, so position ahead of time to catch him or throw spam at him in flanks. His Tactical Visor hard counters your RIP-Tire, so make sure you are certain their Soldier does not have his ultimate, or that the tire can reach the Soldier before he can mow it down when you use it.</small>
+| <small>(To be added)</small>
+|-
+!<center>[[Image:icon-sojourn.png|75px|link=Sojourn]][[Sojourn]]</center>
+|<small>Pressuring hitscans out of positions they want to be in is the best thing you can do against them, especially if they rely on their longer range, and your best way of doing that as a Junkrat is to deny that space in advance or at least throw some close to mid range spam at it.</small> <small>Sojourn's Disruptor Shot can flush you out of spots and flanks that you would normally want to be in, which can make engaging her a bit more difficult compared to dealing with other hitscans. You do not need to necessarily kill the Sojourn in this matchup, but force her to retreat from a good position, or even better, make her use Power Slide, both of which can help your team pick her off.</small>
+|<small>(To be added)</small>
+|-
+!<center>[[Image:icon-sombra.png|75px|link=Sombra]][[Sombra]]</center>
+| <small>Sombra will always try to go for a pick on you if you are isolated or out in the open, so it's best to play in spaces where you can receive support from your team if you know she is currently being active. Otherwise, she poses little to no threat to you and a mine combo can shut her down from trying anything else. Hiding in enclosed spaces can also help against her EMP.</small>
+|<small>(To be added)</small>
+|-
+!<center>[[Image:icon-symmetra.png|75px|link=Symmetra]][[Symmetra]]</center>
+| <small>If Symmetra's places her Sentry Turrets close to the ground, splash damage from rogue grenades will often be sufficient to destroy them. An accurate Concussion Mine can also help wipe Sentry Turrets out, ensuring safe passage for you and your team. Her Teleporter can be easily destroyed if you spot it. While you should be able to quickly kill Symmetra in a close range fight, be careful of her laser powering up, as once it's fully charged, her damage will exceed yours. Photon Barrier will be able to shrug off all of your grenades during its duration, so try to keep a fight on one side of the barrier, or retreat to your team if necessary.</small>
+|<small>(To be added)</small>
+|-
+!<center>[[Image:icon-torbjörn.png|75px|link=Torbjörn]][[Torbjörn]]</center> 
+|<small>Although your weapon suffers from a long arc when shooting anything in long range, Torbjörn's Turret is stationary, making your low-accuracy shots a non-issue. As long as you can get in a position where you can safely fire at it from behind cover, you can quickly take it out in a few shots, so long as it's not being protected by a barrier. If Torbjörn is near his Turret, you can get him caught in the splash damage of your grenades. If Torbjörn activates Molten Core, try to use Concussion Mine to make a hasty retreat so you aren't splashed with magma.</small>
+|<small>(To be added)</small>
+|-
+!<center>[[Image:icon-tracer.png|75px|link=Tracer]][[Tracer]]</center> 
+|<small>Tracer will always try to heckle you at ranges where your grenades cannot quite reach her, and eventually swoop in for the kill on you with her Blink. To mitigate this issue - play inside closed spaces where the Tracer has less room to dodge in, or jump up to high ground, taking advantage of her lack of verticality. If neither of those are possible, play near areas where you will receive help from your supports. One grenade or concussion mine is enough to scare a Tracer into using Recall or her Blinks to run away, though she may play mind games with you to throw your aim off, so it's important to keep calm and predict her movements based on your previous engagements with her.</small>
+|<small>(To be added)</small>
+|-
+!<center>[[Image:icon-venture.png|75px|link=Venture]][[Venture]]</center>
+|<small>With both of their abilities, Venture has the upper hand against you in a 1v1 - even in an enclosed space, however, if you dodge their initial damage from the Burrow with a Concussion Mine jump, they will be forced to use Drill Dash to reach you, or disengage with you - both of these situations playing into your favor if your team is nearby. Treat Venture as a slightly more deadly Tracer to you, but with less options to get themselves out.</small>
+|<small>(To be added)</small> 
+|-
+!<center>[[Image:icon-widowmaker.png|75px|link=Widowmaker]][[Widowmaker]]</center>
+|<small>Pressuring hitscans out of positions they want to be in is the best thing you can do against them, especially if they rely on their longer range, and your best way of doing that as a Junkrat is to deny that space in advance or at least throw some close to mid range spam at it.</small> <small>By her nature, Widowmaker hard counters your whole kit, especially on maps that favor long sightlines. There is not much you can do in most situations against Widowmaker, though it is still worth a try to flank her by setting up an ambush in positions she wants to be in. Be wary of her Infra-Sight as it can remove your element of surprise, so try not to isolate yourself from your team too much when you know it is up. If you are going to RIP-Tire against a Widowmaker, always make sure it is a close-range tire that gives the Widowmaker as little time to react to increase your chances of getting a kill with it.</small>
+|<small>(To be added)</small>
+|}
+===Support===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero
+! |Match-Up
+! |Team Synergy
+</small>
+|-
+|<center>[[File:icon-ana.png|75px|link=Ana]]<br />[[Ana]]</center>
+|<small>As a sniper, Ana is perfectly capable of heckling you from a distance. However, with her lack of mobility and headshots, she won't be quite as dangerous as the likes of Widowmaker or Hanzo. If you can catch her unaware from above, some grenade spam or traps can quickly kill her before she can notice you. If you catch her at close range, you have higher firepower than her, but you still need to be wary of both her Sleep Dart and Biotic Grenade. She has few means of destroying or escaping RIP-Tire, making her a prime target for it and any teammates near her.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-baptiste.png|75px|link=Baptiste]]<br />[[Baptiste]]</center>
+|<small>Wait until Baptiste has used his Immortality Field before using RIP-Tire. However, even if he does deny kills, anyone caught by the blast will be momentarily left with very low health, and will be easy pickings for your team if they do not get quickly healed up.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-brigitte.png|75px|link=Brigitte]]<br />[[Brigitte]]</center>
+|<small>Unless you're caught by surprise or you're at low health, Brigitte shouldn't cause much trouble, Both of you need to be in close range to deal effective damage, and while she has her whip shot, it isn't enough to kill you directly if you are above half health, If you see her approaching directly at you, place a steel trap directly infront of you to try to trap her should she use shield bash, in which case she's easy enough to throw grenades at, If the fight is turning against your favor place a concussion mine between you two to create distance, to which she has no means to catch up to you unless she's using Rally or try to use whip shot as a last resort to finish you off.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-lúcio.png|75px|link=Lúcio]]<br />[[Lúcio]]</center>
+|<small>As Lúcio commonly stays with his team, targeting him will usually mean targeting several heroes at the same time. He excels at slowly recovering his team from damage over time, which makes your burst damage ideal for quickly killing him. If you catch him in your Steel Trap (which, due to his constant movement, can easily happen), you can quickly blow him away. If Lúcio attempts to knock you off a cliff with Soundwave, a quick Concussion Mine may be able to save you.</small>
+|<small>(To be added)</small>
+|-
+|<small><center>[[File:icon-mercy.png|75px|link=Mercy]]<br />[[Mercy]]</center>
+|<small>Mercy can't heal her teammates at a high enough rate to withstand consecutive grenades. She may keep her teammate alive long enough to fight back against you, but in a group fight her healing will mean very little. Trapping her with Steel Trap can keep her from escaping with Guardian Angel. In some situations, Mercy might stay mid-air to support her teammate, which will make her a harder target to hit with your grenades.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-moira.png|75px|link=Moira]]<br />[[Moira]]</center>
+|<small>In a 1v1 scenario at close range, you should come on top, she can’t heal herself quick enough to survive your grenades, however Moira will usually play mid range to avoid your grenades, and her primary fire easily allows her to play at a distance, should you try to close the distance with a concussion mine, she can just fade away, during coalescence, using your Rip-Tire on her is a good trade off, don’t worry about her fading since she can’t do so during her ultimate.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-zenyatta.png|75px|link=Zenyatta]]<br />[[Zenyatta]]</center>
+|<small>Zenyatta's Orb of Discord will allow him to keep tab or your position from behind cover while it is attached to you. This will help him and his team force you out of cover, so try to hide long enough for the Orb to be forced off of you. Zenyatta has the upper hand at long distances with his powerful orbs. However, at close to mid-range scenarios when you can ambush Zenyatta, his low mobility and health makes him easy to kill. Your trap combo will instantly kill Zenyatta. Transcendence can outheal the damage from your grenades, but not the burst damage from RIP-Tire; don't be shy about using RIP-Tire during Transcendence, as while Zenyatta will survive due to his invincibility, without his teammates to protect him he's a prime target.</small>
+|<small>(To be added)</small>
+|}
+
+==Map Strategies==
+
+===Control===
+{{MapStrategyTable/Control
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Antarctic_rating = 
+| Antarctic_feature = 
+| Antarctic_strategy = 
+| Antarctic_Labs_strat = 
+| Antarctic_Sublevel_strat = 
+| Antarctic_Icebreaker_strat = 
+
+| Busan_rating = 
+| Busan_feature = 
+| Busan_strategy = 
+| Busan_Downtown_strat = 
+| Busan_Sanctuary_strat = 
+| Busan_MEKA_strat = 
+
+| Ilios_rating = 
+| Ilios_feature = 
+| Ilios_strategy = 
+| Ilios_Lighthouse_strat = 
+| Ilios_Well_strat = 
+| Ilios_Ruins_strat = 
+
+| Lijiang_rating = 
+| Lijiang_feature = 
+| Lijiang_strategy = 
+| Lijiang_ControlCenter_strat = 
+| Lijiang_Garden_strat = 
+| Lijiang_NightMarket_strat = 
+
+| Nepal_rating = 
+| Nepal_feature = 
+| Nepal_strategy = 
+| Nepal_Village_strat = 
+| Nepal_Shrine_strat = 
+| Nepal_Sanctum_strat = 
+
+| Oasis_rating = 
+| Oasis_feature = 
+| Oasis_strategy = 
+| Oasis_CityCenter_strat = 
+| Oasis_Gardens_strat = 
+| Oasis_University_strat = 
+
+| Samoa_rating = 
+| Samoa_feature = 
+| Samoa_strategy = 
+| Samoa_Beach_strat = 
+| Samoa_Downtown_strat = 
+| Samoa_Volcano_strat = 
+}}
+
+===Escort===
+{{MapStrategyTable/Escort
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| CircuitRoyal_rating = 
+| CircuitRoyal_feature = 
+| CircuitRoyal_strategy = 
+| CircuitRoyal_Attack_strat = 
+| CircuitRoyal_Defense_strat = 
+
+| Dorado_rating = 
+| Dorado_feature = 
+| Dorado_strategy = 
+| Dorado_Attack_strat = 
+| Dorado_Defense_strat = 
+
+| Havana_rating = 
+| Havana_feature = 
+| Havana_strategy = 
+| Havana_Attack_strat = 
+| Havana_Defense_strat = 
+
+| Junkertown_rating = 
+| Junkertown_feature = 
+| Junkertown_strategy = 
+| Junkertown_Attack_strat = 
+| Junkertown_Defense_strat = 
+
+| Rialto_rating = 
+| Rialto_feature = 
+| Rialto_strategy = 
+| Rialto_Attack_strat = 
+| Rialto_Defense_strat = 
+
+| Route66_rating = 
+| Route66_feature = 
+| Route66_strategy = 
+| Route66_Attack_strat = 
+| Route66_Defense_strat = 
+
+| Shambali_rating = 
+| Shambali_feature = 
+| Shambali_strategy = 
+| Shambali_Attack_strat = 
+| Shambali_Defense_strat = 
+
+| Gibraltar_rating = 
+| Gibraltar_feature = 
+| Gibraltar_strategy = 
+| Gibraltar_Attack_strat = 
+| Gibraltar_Defense_strat = 
+}}
+
+===Hybrid===
+{{MapStrategyTable/Hybrid
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| BlizzardWorld_rating = 
+| BlizzardWorld_feature = 
+| BlizzardWorld_strategy = 
+| BlizzardWorld_Attack_strat = 
+| BlizzardWorld_Defense_strat = 
+
+| Eichenwalde_rating = 
+| Eichenwalde_feature = 
+| Eichenwalde_strategy = 
+| Eichenwalde_Attack_strat = 
+| Eichenwalde_Defense_strat = 
+
+| Hollywood_rating = 
+| Hollywood_feature = 
+| Hollywood_strategy = 
+| Hollywood_Attack_strat = 
+| Hollywood_Defense_strat = 
+
+| KingsRow_rating = 
+| KingsRow_feature = 
+| KingsRow_strategy = 
+| KingsRow_Attack_strat = 
+| KingsRow_Defense_strat = 
+
+| Midtown_rating = 
+| Midtown_feature = 
+| Midtown_strategy = 
+| Midtown_Attack_strat = 
+| Midtown_Defense_strat = 
+
+| Numbani_rating = 
+| Numbani_feature = 
+| Numbani_strategy = 
+| Numbani_Attack_strat = 
+| Numbani_Defense_strat = 
+
+| Paraiso_rating = 
+| Paraiso_feature = 
+| Paraiso_strategy = 
+| Paraiso_Attack_strat = 
+| Paraiso_Defense_strat = 
+}}
+
+===Push===
+{{MapStrategyTable/Push
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Colosseo_rating = 
+| Colosseo_feature = 
+| Colosseo_strategy = 
+| Colosseo_Pushing_strat = 
+| Colosseo_Defending_strat = 
+
+| Esperanca_rating = 
+| Esperanca_feature = 
+| Esperanca_strategy = 
+| Esperanca_Pushing_strat = 
+| Esperanca_Defending_strat = 
+
+| NewQueenStreet_rating = 
+| NewQueenStreet_feature = 
+| NewQueenStreet_strategy = 
+| NewQueenStreet_Pushing_strat = 
+| NewQueenStreet_Defending_strat = 
+
+| Runasapi_rating = 
+| Runasapi_feature = 
+| Runasapi_strategy = 
+| Runasapi_Pushing_strat = 
+| Runasapi_Defending_strat = 
+}}
+
+===Flashpoint===
+{{MapStrategyTable/Flashpoint
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Aatlis_rating = 
+| Aatlis_feature = 
+| Aatlis_strategy = 
+| Aatlis_Bazaar_strat = 
+| Aatlis_Garden_strat = 
+| Aatlis_Resort_strat = 
+| Aatlis_Station_strat = 
+| Aatlis_TownCentre_strat = 
+
+| NewJunkCity_rating = 
+| NewJunkCity_feature = 
+| NewJunkCity_strategy = 
+| NewJunkCity_Arena_strat = 
+| NewJunkCity_Foundation_strat = 
+| NewJunkCity_Refinery_strat = 
+| NewJunkCity_Scrapyard_strat = 
+| NewJunkCity_Waterworks_strat = 
+
+| Suravasa_rating = 
+| Suravasa_feature = 
+| Suravasa_strategy = 
+| Suravasa_Gardens_strat = 
+| Suravasa_Market_strat = 
+| Suravasa_Palace_strat = 
+| Suravasa_Ruins_strat = 
+| Suravasa_Temple_strat = 
+}}
+
+==Achievements==
+{{AchievementTable/Start}}
+{{Achievement|Mine Like A Steel Trap|Ability-Junkrat3.png|Knock an enemy into your steel trap using Junkrat's [[Concussion Mine]] in Quick or Competitive play.|Spray Junkrat Pixel.png|Pixel}}
+{{Achievement|Roadkill|Ability-Junkrat5.png|Kill 4 enemies with a single use of Junkrat's [[RIP-Tire]] in Quick or Competitive play.|Spray Junkrat Cute.png|Cute}}
+{{AchievementTable/End}}
+
+==Trivia==
+*Junkrat is 6'5" tall, and weighs 155 lbs (196 cm and 70 kg).<ref name = "SpecialReport">2015-09-21, [https://www.youtube.com/watch?v=l5kTATxt7bE A Moment in Crime Special Report: "The Junkers" | Overwatch]. ''YouTube'', accessed on 2015-09-27</ref> However, he appears shorter than he actually is in-game due to normally being hunched over.
+*Junkrat eats his own toenails.<ref name = "JunkratQuotesOW2">''[[Overwatch 2]]'', ''[[Junkrat/Quotes|Junkrat Quotes]]''</ref>
+*Junkrat keeps Milk Tea with Boba half sweetened in his canteen.<ref>2016-06-09, [https://us.battle.net/forums/en/overwatch/topic/20745185373#post-17 What is in Junkrat's canteen?]. ''Blizzard Entertainment'', accessed on 2017-10-26</ref>
+*Junkrat is a big fan of [[Wrecking Ball]], and was inspired to build his Rip-Tire by watching him compete in the [[Scrapyard]].<ref>[https://www.twitch.tv/videos/283871833 Wrecking Ball Live-Drawing & Art Discussion]</ref>
+*Junkrat's buckle in his Fool and Jester skins have the letters "JSTR" on it (presumably standing for ''"Jester"'').
+*Junkrat is the seventh playable hero in ''[[Heroes of the Storm]]''.<ref>2017-09-15, [http://heroes.blizzplanet.com/blog/comments/ana-junkrat-volskaya-foundry-map-coming-nexus Blizzard Virtual Press Tour: Ana, Junkrat and Volskaya Foundry Map coming to the Nexus]. ''Blizzplanet'', accessed on 2017-09-17</ref>
+*Junkrat blew off his own right leg. How he lost his right arm is still unknown.<ref name = "HotS">''[[Heroes of the Storm]]''</ref><ref>2017-05-18, [https://www.polygon.com/2017/5/18/15655804/overwatch-jeff-kaplan-interview-pharah-symmetra-junkrat-roadhog Overwatch director wants more story for Symmetra and Pharah]. ''Polygon'', accessed on 2018-10-21</ref> Junkrat also is now missing his index finger on his remaining hand as of ''[[Overwatch 2]]''. All of his lost limbs have been replaced by makeshift junker prothetics.
+*Junkrat made his own grenade launcher.<ref name = "HotS"/>
+*Oddly, Junkrat appears exactly the same in ''[[The Wastelander]]'' as he does in the original game, despite the fact the cinematic takes place at least a decade in the past (when he would have been around fifteen).
+
+===Cultural References===
+*Junkrat and Roadhog's shared backstory of Australia becoming a wasteland apocalypse bears strong resemblance to the setting of the ''Mad Max'' series.
+*Junkrat's surname 'Fawkes' could be a reference to [[Wikipedia:Guy Fawkes|Guy Fawkes]]. This is evidenced by a voice line that references the opening line of the Guy Fawkes Day song [http://www.potw.org/archive/potw405.html "The Fifth of November"]<ref>2016-01-09, [https://www.youtube.com/watch?v=g80yrGbijcA: Junkrat Voice Lines: (at 2:08) "Remember, remember... What the heck was I saying again?"]</ref> that has a chance to trigger when he get a triple-kill or higher with his RIP-Tire. 
+*Junkrat's Fool and Jester skins as well as his Haystack and Scarecrow skins have some similarities to the DC Comics characters the Joker and Scarecrow respectively.
+**The fact all three characters are in some way psychotic, reinforces the similarities.
+**Additionally, his Elimination quote "Why so Serious?" is a quote used by the Joker in the 2008 superhero film [https://en.wikipedia.org/wiki/The_Dark_Knight The Dark Knight]. 
+*Junkrat's Rip-Tire Ultimate ability is a possible play on the design of the rip-cord car toys.
+**In ''[[World of Warcraft]]'', another game produced by [[Blizzard Entertainment]], the Iron Horde faction uses iron stars; giant rolling bombs that, once primed, would roll and crush anything in their path before exploding with enough force to wipe out whole squadrons. Considering the similarity between these iron stars and the RIP-Tire, it is possible that one of them may have influenced the other.
+
+===Merchandise===
+[[File:JunkratNendoroid.jpg|thumb|The Nendoroid Junkrat figure]]
+*A Junkrat Funko Pop figure went on sale in 2018.<ref>2018-02-19, [https://blizzardwatch.com/2018/02/19/new-overwatch-toys-figurines-toy-fair-2018/ New Overwatch toys and figurines coming to Toy Fair 2018]. ''Blizzard Watch'', accessed on 2018-02-20</ref> 
+*A Nendoroid Junkrat figure went on sale in Q1 2019.<ref>2018-06-29, [https://blizzardwatch.com/2018/06/29/new-junkrat-nendoroid-adorably-terrifying/ The new Junkrat Nendoroid is adorably terrifying]. ''Blizzard Watch'', accessed on 2018-07-01</ref>
+*A Dr. Junkenstein figure is available for sale from Hot Topic and Box Lunch.<ref>2018-10-09, [https://playoverwatch.com/en-us/news/22553327 OVERWATCH HALLOWEEN TERROR GEAR AVAILABLE NOW]. ''Blizzard Entertainment'', accessed on 2018-10-10</ref>
+
+===Development===
+[[File:Junkrat and Sombra original concept.png|thumb|An early iteration of Junkrat]]
+*Junkrat went through numerous designs, beginning with a set of early concepts depicting him as a bulky robot, a cyborg, a mutant, and even an alien. The team then gravitated toward designs in which he wore heavy bomb disposal armor, one of which inspired the initial prototype for [[Wrecking Ball]], but gradually peeled away the layers of armor to showcase more of his maniacal personality, eventually settling on a silhouette similar to his final incarnation. They explored several different flavors of this design with a variety of different possible origin stories, including ones with military overtones and a version of him as a member of [[Los Muertos]], but ultimately decided to make him one of the [[Junkers]].<ref name="Artbook">''[[The Art of Overwatch]]''</ref>
+*Junkrat's original ultimate ability was a giant shoulder-mounted missile, but it was considered visually confusing during gameplay and the RIP-Tire was developed instead.<ref name="Artbook"/>
+*Junkrat was implemented in the game at some point after [[Torbjörn]].<ref name = "90s">2016-04-22, [https://www.youtube.com/watch?v=bTMnJ5XJH6Q The Story of Overwatch: Return of the 90s Shooter]. ''YouTube'', accessed on 2016-09-08</ref>
+
+====Removed abilities====
+
+===== Removed Perks =====
+{{Ability details
+|removed =1
+| ability_name = Aluminium Frame
+| ability_image = Perk_AluminiumFrame.png
+| ability_type = Minor Perk
+| official_description = Steel Trap's throw range is increased by 50% and trapped enemies cannot be healed.
+| ability_details =
+* ''Removed in Season 18.''
+* [[Anti-heal]] from Aluminium Frame is tied to the trapped status. Only effects that completely free the target from the trap can remove it:
+** This includes {{al|Life Grip}}, {{al|Fortify}}, {{al|Translocator}} (pre-thrown), being lifted by {{al|Petal Platform}} or {{al|Ice Wall}} and teleporting with {{al|Teleporter}}.
+** {{al|Protection Suzu}}, {{al|Cryo-Freeze}} and {{al|Particle Barrier|text=Particle/Projected Barrier}} - which normally could cleanse anti-heal and be used while trapped - cannot remove the anti-heal from Aluminum Frame due to not being able to remove the "Trapped" status.
+}}
+{{Ability details
+|removed =1
+| ability_name = Tick Tock
+| ability_image = Perk_TickTock.png
+| ability_type = Major Perk
+| official_description = Concussive Mine strengthens 0.25 second after landing, increasing damage by 50%, explosion radius by 50%, and health by 200%. 
+| ability_details = 
+* ''Removed in Season 18.''
+}}
+==Media==
+===Former Portrait===
+<gallery>
+File:OW1Icon_Junkrat.png|Overwatch 1 Hero portrait
+</gallery>
+
+===Concept Art===
+<gallery>
+File:Water Rat Junkrat skin concept art.png|Beachrat Skin Concept Art by Anh Dang
+File:Water Rat weapon concept art.jpg|Beachrat Skin Weapon Concept Art by Anh Dang
+File:Pirate Junkrat skin concept art.jpg|Bilgerat Skin Concept Art by Lipan Liu
+File:Pirate Junkrat weapon concept art.jpg|Bilgerat Skin Weapon Concept Art by Lipan Liu
+File:Dr. Junkenstein Junkrat skin concept art.jpg|Dr. Junkenstein Skin Concept Art by Ben Zhang
+File:Emily-siu-honghaier-junkrat-p1.jpg|Hong Hai Er Skin Concept Art by Emily Siu
+File:Emily-siu-weapon-junkrat.jpg|Hong Hai Er Skin Weapon Concept Art by Emily Siu
+File:Junkbot 1.jpg|Junkbot Skin Concept Art by Yiming Liu
+File:Junkbot 2.jpg|Junkbot Skin Weapon Concept Art by Yiming Liu
+File:Junkbot 3.jpg|Junkbot Skin Abilities Concept Art by Yiming Liu
+File:Junkfood skin concept art.png|Junkfood Skin Concept Art by David Kang
+File:King Jamison skin concept art.jpg|King Jamison Skin Concept Art by David Kang 
+File:King Jamison Weapon concept art.jpg|King Jamison Skin Weapon Concept Art by David Kang
+</gallery>
+
+===Videos===
+{{#ev:youtube|mFGQG8I68h8|400|inline}}
+{{#ev:youtube|DqhiLbRXGUQ|400|inline}}
+{{#ev:youtube|l5kTATxt7bE|400|inline}}
+{{#ev:youtube|_q0QGtk_AM0|400|inline}}
+
+==Balance Change Logs==
+{{ChangelogsTabber
+| owpvp =
+{{PatchTableElement|2026-06-16|
+{{al|Bomb Voyage}} – Minor Perk
+*Attack speed bonus increased from 25% to 35%.
+}}
+{{PatchTableElement|2026-04-14|
+{{al|Mine Recycling}} – Major Perk
+* Moved from Minor to Major Perk.
+* Eliminations with Concussion Mine restore one charge.
+
+{{al|Bomb Voyage}} – Minor Perk
+* Moved from Major to Minor Perk.
+* Attack speed bonus reduced from 35% to 25%.
+}}
+{{PatchTableElement|2025-12-09|
+{{DevComment|The travel speed of Junkrat’s grenades is limiting, especially with the overall increase in hero mobility. Increasing projectile speed without altering the arc should improve consistency while preserving weapon feel. The Frag Cannon perk adjustments keep its bonus within reasonable bounds while removing the perk’s downside.}}
+
+{{al|Frag Launcher}}
+* Projectile speed increased from 25 to 30.
+
+{{al|Frag Cannon}} (Perk)
+* Projectile speed increase reduced from 40% to 25%.
+* No longer reduces ammo capacity.
+}}
+{{PatchTableElement|2025-08-26|
+{{al|Aluminium Frame}} - Minor Perk
+* Removed.
+
+{{al|Mine Recycling}} - Minor Perk
+* New Minor Perk.
+* Killing blows with Concussion Mine restore one charge.
+
+{{al|Tick Tock}} - Major Perk
+* Removed.
+
+{{al|Bomb Voyage}} - Major Perk
+* New Major Perk.
+* After launching with Concussion Mine, Junkrat gains 35% increased attack speed for 3 seconds.
+}}
+{{PatchTableElement|2025-07-22|
+{{al|Aluminium Frame|text=Aluminum Frame}} - Minor Perk
+* Now prevents trapped enemies from being healed instead of revealing them through walls.
+
+{{al|Tick Tock}} - Major Perk
+* Concussion Mine arming time reduced from 0.5 to 0.25 seconds.
+}}
+{{PatchTableElement|2025-04-22|
+{{al|Aluminium Frame|text=Aluminum Frame}}
+* Now also reveals trapped enemies to allies.
+
+{{al|Tick Tock}}
+* The description has been changed to "Concussive Mine strengthens .5 seconds after landing, increasing damage by 50%, explosion radius by 50%, and health by 200%."
+}}
+{{PatchTableElement|2025-02-18|
+;Hero Perks
+
+{{al|Aluminium Frame}}
+* Steel Trap's throw range is increased by 50%.
+
+{{al|Nitro Boost}}
+* During RIP-Tire, use Ability 1 to gain a quick boost of speed. Doing so reduces RIP-Tire's damage by 50%.
+
+{{al|Frag Cannon}}
+* Frag Launcher's projectile speed is increased by 40%, but its max ammo is reduced by 1.
+
+{{al|Tick Tock}}
+* Concussive Mine arms .5 seconds after landing, increasing damage by 50%, explosion radius by 50%, and health by 200%.
+}}
+{{PatchTableElement|2024-12-10|
+; Global Projectile Size Bonus
+* Projectile radius large reduced from 0.15 to 0.12 meters.
+}}
+{{PatchTableElement|2024-11-12|
+{{DevComment|Developer Comments: We're increasing the cooldown on Concussion Mine to reduce the frequency of both Junkrat's mobility and burst damage combo.}}
+
+{{al|Concussion Mine}}
+* Cooldown increased from 7 to 8 seconds.}}
+{{PatchTableElement|2024-08-20|
+{{DevComment|Developer Comment: This is mostly a reversion back to how Junkrat's grenades used to ricochet in early Overwatch, which enables more control over the angle of the bounce and helps the weapon better control spaces with some tricky shots, but the projectile size is now reduced after a couple of bounces so there will be fewer random feeling direct impacts near the end of the projectiles lifetime.}}
+
+{{al|Frag Launcher}}
+* Projectile size is now reduced by half after the second ricochet.
+* Projectiles preserve slightly more velocity on ricochet.
+}}
+{{PatchTableElement|2024-05-14|
+{{DevComment|Developer Comment: Junkrat's weapon has great damage output but is unreliable outside of close range due to its slow projectile speed, which is an intended drawback to its high output. The Season 9 health changes affected Junkrat more than most other heroes since it now requires one more shot to secure an elimination. We're increasing the damage on direct impacts to return to 2 direct hits for an elimination, without making his combo with Concussion Mine as deadly as before since that one is much easier to execute.}}
+
+{{al|Frag Launcher}}
+* Impact damage increased from 40 to 45 (Total damage increased from 120 to 125).
+}}
+{{PatchTableElement|2024-02-21|
+{{al|Concussion Mine}}
+* Cooldown decreased from 8 to 7 seconds.
+* Maximum damage increased from 110 to 120.
+* Minimum damage increased from 20 to 55.
+}}
+{{PatchTableElement|2024-02-13|
+;General updates
+Most damage-dealing projectile sizes have been increased by a new global modifier added to their base size.
+
+* +0.05 meters for hitscan projectiles with a high rate of fire or spread (e.g., Tracer's Pulse Pistols or Reaper's Hellfire Shotguns).
+* +0.08 meters for hitscan projectiles that are more precise (e.g., Cassidy's Peacekeeper or Soldier:76's Heavy Pulse Rifle).
+* +0.05 meters for travel time projectiles that are shotguns or have a very high rate of fire (e.g., Roadhog's Scrap Gun or Ramattra's Void Accelerator).
+* +0.10 meters for travel time projectile with a speed greater than 50 meters per second (e.g., Zenyatta's Destruction Orb).
+* +0.15 meters for travel time projectile with a speed less than or equal to 50 meters per second (e.g., Pharah's Rocket Launcher).
+* Very large projectiles with a base size greater than 0.5 meters have been excluded from these increases (e.g., Orisa's Energy Javelin or Reinhardt's Fire Strike).
+
+Hero combined HP (base health/armor/shields) increased by 15-25%.
+
+* 150-175 HP heroes increased by 25 HP.
+* 200-300 HP heroes increased by 50 HP.
+* 300+ HP (Tanks) increased by 75-100 HP.
+* Each hero's precise health increases are listed in their patch notes below.
+
+Ultimate Charge
+
+* All Ultimate ability costs increased by 10%.
+
+Regenerative Passive for All Heroes
+
+* All heroes now regenerate 20 health per second after 5 seconds of not taking damage.
+
+Damage Role Passive
+
+* Reload speed bonus on elimination has been removed.
+* New role passive: Dealing damage reduces enemy healing received by 20% for 2 seconds.
+
+Quick Melee
+
+* Damage increased from 30 to 40.
+
+;Hero updates
+
+* Health increased from 200 to 250.
+
+{{al|Frag Launcher}}
+* Base projectile size reduced from 0.25 to 0.2 meters.
+}}
+{{PatchTableElement|2023-05-09|
+{{DevComment|Developer Comments: The previous adjustment to Concussion Mine's maximum damage lowered the effectiveness of Junkrat's grenade and mine combos too much so we are increasing the damage amount slightly.}}
+
+{{Al|Concussion Mine}}
+* Maximum damage increased from 100 to 110
+}}
+{{PatchTableElement|2023-02-07|
+{{DevComment|Developer Comment: As the Concussion Mine already has damage falloff the further from the explosion the enemy player is, lowering the maximum damage will require Junkrat to be slightly more accurate *to achieve the same lethality with some of his combos.}}
+{{Al|Concussion Mine}}
+*Maximum damage reduced from 120 to 100
+}}
+{{PatchTableElement|2022-11-17|
+{{Al|Steel Trap}}
+*Arming time increased from .5 to .75 seconds
+*Trapped duration reduced from 3 to 2.5 seconds
+}}
+{{PatchTableElement|2022-06-28|
+{{Al|Steel Trap}}
+*Fully locks movement again
+*Projectile speed increased from 10 to 15
+{{Al|Frag Launcher}}
+*Projectile size increased from 0.2 to 0.25
+|beta=1}}
+{{PatchTableElement|2022-04-26|
+{{Al|Steel Trap}}
+*No longer prevents all movement for its target
+*Now slows its target by 65% until they reach its max chain length, then it breaks
+*Still prevents movement abilities from being activated
+*Damage increased from 80 to 100
+*Projectile speed increased from 10 to 17
+|beta=1}}
+
+|owstadium={{#section-h:Junkrat/Stadium|Balance Change Log}}<!-- this section is transcluded from the /Stadium page and must be edited from there -->
+
+| ow1 =
+{{PatchTableElement|2020-08-31|
+{{Al|Frag Launcher}}
+* Impact damage reduced from 50 to 40 (Total 130 to 120)
+}}
+{{PatchTableElement|2020-06-30|
+{{Al|Concussion Mine}}
+*Trigger delay reduced from 0.156 to 0.1 seconds
+{{al|RIP-Tire}}
+*Time to take control of Junkrat post detonation has been reduced from 1.5 to 0.9 seconds
+''Developer Comment: These are a couple quality of life changes for Junkrat. This makes it possible to do some Concussion Mine jumps that were no longer possible after a previous increase to its projectile speed.''
+}}
+{{PatchTableElement|2020-05-19|
+{{Al|Frag Launcher}}
+*Projectiles maintain slightly more velocity on ricochet
+{{Al|Concussion Mine}}
+*Projectile speed increased from 20 to 25
+*Ricochet distance off of enemy players greatly reduced
+{{Al|Total Mayhem}}
+*Bomb detonation time reduced from 1 sec to 0.7
+*Bombs spread increased 50%
+}}
+{{PatchTableElement|2019-04-16|
+{{Al|Frag Launcher}}
+*Projectile speed increased from 20 to 25
+*Grenades now bounce less but explode sooner
+
+''Developer Comments: With this change, we’re looking to slightly increase the range at which Junkrat can land direct hits. The speed of his bombs has increased, but we tuned it so this wouldn’t affect the arc of his projectile. This means that aiming with it will feel the same. The grenades bounce less and explode sooner, which will allow Junkrat to aim them more deliberately. This will reduce the amount of rolling grenade spam when playing against him.''
+}}
+{{PatchTableElement|2019-03-19|
+{{Al|Frag Launcher}}
+*Impact damage increased from 40 to 50
+{{Al|RIP-Tire}}
+*Cost increased by 10%
+
+''Developer Comments: Junkrat is one of the best barrier and tank busters in the game, and this change will help solidify this role. This doesn’t change the Frag Launcher’s explosive damage, which remains at 80. The total damage for direct impact is now 130, up from 120. Since we increased Frag Launcher’s damage output, Junkrat builds his ultimate too quickly. We’re increasing the cost of his ultimate to balance this change with his increased damage-dealing capabilities.''
+}}
+{{PatchTableElement|2018-08-09|
+{{Al|RIP-Tire}}
+*Now restores ammunition after completion
+
+''Developer Comments:The change removes the need to immediately reload after a long duration ultimate.''
+}}
+{{PatchTableElement|2018-05-03|
+{{Al|Frag Launcher}}
+*Projectile size decreased from 0.3 to 0.2
+{{Al|RIP-Tire}}
+*Tire movement speed decreased from 13 to 12
+
+''Developer Comments: These changes are aimed at lowering some of the most frustrating parts about playing against Junkrat. Decreasing the Frag Launcher’s projectile size means he will have to aim a bit more carefully to land powerful direct hits and slowing the RIP-Tire’s movement speed gives his opponents slightly more time to destroy it before it detonates.''
+}}
+{{PatchTableElement|2018-01-30|
+{{Al|Concussion Mine}}
+*Now will deal less damage to targets farther away from the explosion’s center
+
+''Developer Comments: Junkrat has been enjoying the flexibility his double-charge Concussion Mine provides, but it has become a bit too easy to throw out huge bursts of damage in a large area. With this change he can still dish out similar damage but he must now be more accurate with his tosses.''
+}}
+{{PatchTableElement|2017-08-29|
+{{Al|Concussion Mine}}
+*Junkrat can now hold two mines
+{{Al|RIP-Tire}}
+*Tire’s movement speed has been increased by 30%
+*There is no longer a time limit when wall climbing
+
+''Developer Comments: Giving the Junkrat the ability to store two concussion mines adds some much-needed flexibility and versatility to his kit, particularly when using the mines for mobility. RIP-Tire’s damage has always been very good, but it was often difficult to steer the tire into position before it was destroyed. Increasing its speed will allow players to effectively detonate the tire more often and decrease the amount of time that Junkrat is vulnerable while controlling it.''
+}}
+{{PatchTableElement|2017-03-21|
+{{Al|Total Mayhem}}
+*Junkrat’s explosions no longer hurt himself
+
+''Developer Comments: Previously, Junkrat’s projectile speed made him difficult to use at long ranges, but the damage he took from his own explosions made him difficult to use at close ranges. This change makes him more effective at close ranges, allowing Junkrat players to explore new strategies.''
+}}
+{{PatchTableElement|2016-10-11|
+{{Al|RIP-Tire}}
+*Ability now activates more quickly
+
+''Developer Comments: Junkrat can be an extremely effective hero in the right hands, but RIP-Tire often felt underpowered when compared to his counterparts.''
+}} }}
+
+==References==
+<references/>
+
+==External links==
+* [http://playoverwatch.com/en-us/heroes/junkrat/ Official Site - Junkrat]
+* [http://www.icy-veins.com/overwatch/junkrat-strategy-gameplay-guide Junkrat Guide on Icy Veins]
+
+{{Heroes}}
+[[Category: Heroes]] [[Category: Junkrat| ]] [[Category: Junkers]]
+[[Category:Australian characters]]
+[[Category:Cyborgs]]

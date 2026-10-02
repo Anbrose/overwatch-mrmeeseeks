@@ -323,6 +323,8 @@ journalctl -u mrmeeseeks -f      # 查看日志
 | `WS_HOST` | 否 | `0.0.0.0` | WebSocket 监听地址；用反向代理时改为 `127.0.0.1` |
 | `WS_PORT` | 否 | `8765` | WebSocket 端口 |
 | `MIN_SNAPSHOT_INTERVAL` | 否 | `5` | 同一客户端两次分析的最短间隔（秒） |
+| `HERO_DATA_PATH` | 否 | `server/data/heroes.json` | 英雄数据缓存文件。Docker 部署时位于 `herodata` 卷 |
+| `HERO_REFRESH_HOURS` | 否 | `24` | 每隔多少小时从 Overwatch Wiki 刷新英雄数据 |
 
 ### 客户端参数
 
@@ -352,6 +354,7 @@ python client\client.py --help
 | `@mrmeeseeks status` | 查看所有在线客户端和绑定情况 |
 | `@mrmeeseeks disconnect` | 解绑本频道的客户端 |
 | `@mrmeeseeks help` | 显示帮助 |
+| `@mrmeeseeks <问题>` | 英雄问答：数值（血量、子弹体积）、最近的补丁、N 米处几枪击杀。例如 `@mrmeeseeks 卡西迪最近被削了吗`、`@mrmeeseeks 卡西迪 30 米爆头几枪杀毛加`。需要 `ANTHROPIC_API_KEY` |
 
 ### 配对规则
 
@@ -370,6 +373,10 @@ python client\client.py --help
 pip install -r server/requirements.txt
 python tests/test_units.py     # 分析器两步流程、Tab 截图时序
 python tests/test_e2e.py       # 真实服务器 + 真实客户端：握手、配对、错码、过期、截图转发、限流
+python tests/test_heroparse.py # Wiki 英雄页面解析
+python tests/test_damage.py    # 伤害衰减、护甲、几枪击杀
+python tests/test_herodata.py  # 英雄数据缓存、刷新、名字解析
+python tests/test_hero_qa.py   # 英雄问答工具与对话循环、bot 路由
 ```
 
 每个脚本最后一行显示 `N/N passed`，全部通过时退出码为 0。

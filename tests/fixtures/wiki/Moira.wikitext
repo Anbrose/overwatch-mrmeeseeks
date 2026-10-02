@@ -1,0 +1,1088 @@
+{{Infobox character
+| name = Moira
+| image = <gallery>
+OW2 Moira.png|Overwatch
+Moira.png|Overwatch Classic
+</gallery>
+| caption = "Humanity is shackled. I will find the key."
+| realname = Moira O'Deorain
+| aliases = 
+| status = Active
+| age = 50 (''[[Overwatch 2]]'')<br/>48 (''[[Overwatch]]'')
+| birth = April 4th
+| nationality = {{flag|ie}} Irish
+| occupation = Geneticist<br>[[Ministries|Minister of Genetics]]<br/>[[Talon]] council member
+| baseofoperations = [[Oasis]], Iraq<ref name="StoryMoira">[https://www.youtube.com/watch?v=FitbWgQ6CYw Moira Details, Animations, Sounds and More (Overwatch)].</ref>
+| affiliation = [[Blackwatch]] (formerly)<br/>[[Talon]]<br/>The [[Ministries]]
+| cosmetics = 1
+| quotes = 1
+| stadium = 1
+| relations = 
+| type = 
+| role = [[Support]]
+| sub-role = [[Medic]]
+| health = 225
+| minor_perk_xp = 2295
+| major_perk_xp = 5740
+| video = {{#ev:youtube|8tLopqeL9s8|325|inline}}
+| voice = {{VA stack
+| english = [[Genevieve O'Reilly]]<ref>''[https://twitter.com/westofhouse/status/926650160238575616 Michael Chu on Twitter]""</ref>
+| other = [[Déborah Perret]] (French)
+<br> Alexandra Lange (German)
+<br> Marcella Silvestri (Italian)
+<br> Mie Sonozaki (Japanese)
+<br> Lee Mi-na (Korean)
+<br> Li Shirong (Chinese Mandarin)
+<br> Fu Chi-huei (Taiwanese Mandarin)
+<br> Magdalena Cielecka (Polish, 1st voice)
+<br> Wiktoria Gorodeckaja (Polish, 2nd voice)
+<br> [[Isis Koschdoski]] (Brazilian Portuguese)
+<br> Natalia Kolodyazhnaya (Russian)
+<br> Esther Solans (European Spanish)
+<br> Sarah Souza (Latin American Spanish)
+}}
+}}
+{{HeroTabs}}
+'''Moira''' is a [[Sub-Roles#Medic|Medic]] [[Roles#Support|Support]] [[Heroes|hero]] in ''[[Overwatch 2|Overwatch]]''. Released on 16 November 2017, she is the 26th hero to be added to the game.
+
+==Overview==
+[[File:Moira HS.mp4|left|thumb|Hero Selection Screen]] Moira’s biotic abilities enable her to contribute healing or damage in any crisis. While Biotic Grasp gives Moira short-range options, her Biotic Orbs contribute longer-range, hands-off damage and healing; she can also Fade to escape groups or remain close to allies in need of support. Once she’s charged Coalescence, Moira can save allies from elimination, with healing, while also damaging several enemies at the same time.
+
+<gallery>
+File:Icon-Moira.png|'''3D portrait'''
+File:Moira Hero.png|'''2D portrait'''
+</gallery>
+==Abilities==
+===Passive Abilities===
+{{Sub-Role passive|Medic}}
+
+===Weapons===
+{{Ability_details
+| ability_name = Biotic Grasp
+| ability_image = Ability Moira Biotic Grasp.png
+| old_description = Using her left hand, Moira expends biotic energy to heal allies in front of her.
+| official_description = Hold to heal all allies in front of you. Consumes biotic energy.
+| ability_type = Weapon;;Primary Fire
+| shot_type = {{proj|beam}} (projectile)
+| heal = {{tt|80 per second|4 per 0.05 seconds}} (impact)<br>{{tt|17 per second|3.26 per 0.192 seconds}} (over time)
+| energy = 12.5% per second (cost)<br>2.4% per second (passive regen)<br>15.6% per second (secondary fire regen)
+| duration = 3 seconds (HoT)<br>0.45 seconds (energy regen delay)
+| cast_time = {{tt|0.08 + 0 seconds|0.08s startup + 0s recovery}}
+| range = 15 meters
+| pradius = None
+| pspeed = 40 m/s
+| ignores_matrix = 1
+| ignores_deflect = 1
+| ignores_window = 1
+| ability_keywords = beam;;armor included::energy::piercing
+| ability_details = * Causes a heal over time that begins upon the last impact of the spray healing. This allows Moira to heal without expending resources.
+* Passes through allies and enemies, but not enemy [[barrier]]s.
+* Line of sight blocked by terrain and terrain-like objects.
+* Like {{proj|proj}}, there is travel time for the spray to reach its destination.
+* Collision against map geometry and enemy barriers is pinpoint, much like Reinhardt's {{al|Fire Strike}}.
+* Needs at least 8 biotic energy to activate.
+* Can destroy fences and other breakables.
+| hps = 80 per second
+}}
+
+{{Ability_details
+| ability_name = Biotic Grasp Alt Fire
+| ability_image = Ability Moira Biotic Grasp_Alt fire.png
+| old_description = Her right hand fires a long-range beam weapon that saps enemies’ health, healing Moira and replenishing her biotic energy.
+| official_description = Long range beam weapon. Damage dealt heals you and replenishes your biotic energy.
+| ability_type = Weapon;;Secondary Fire
+| key = secondary fire
+| shot_type = {{proj|beam}} (no target indicator, soft lock-on)
+| damage = {{tt|65 per second|12.48 every 0.192 seconds}}
+| headshot = ✕
+| heal = {{tt|30 per second|5.76 every 0.192 s.}} (self)
+| ammo = ∞
+| range = 20 meters
+| ignores_matrix = 1
+| ignores_deflect = 1
+| ignores_window = 1
+| ability_keywords = beam
+| ability_details = * Biotic Grasp has a 0.7 meter target acquisition radius against enemy heroes.
+* Self-healing and damage are completely separate. Altering the damage does not affect the self heal.
+* Generates 21.875 biotic energy per second. When combined with the passive regeneration, this becomes 25.715 biotic energy per second (or 16% per second).
+**Spamming Biotic Grasp Increase the biotic energy regeneration faster than a continuous press.
+* Alternating between Secondary Fire and Melee will help you eliminate targets faster.
+| dps = 65 while firing
+}}
+
+===Special Abilities===
+{{Ability_details
+| ability_name = Fade
+| ability_image = Ability Moira Fade.png
+| old_description = Moira's movement speed increases while making her invulnerable to damage.
+| official_description = Disappear, move faster, and become invulnerable, but you cannot shoot.
+| ability_type = Ability
+| shot_type = {{proj|movement}}
+| key = ability 1
+| cooldown = 6 seconds
+| duration = 0.752 seconds + 0.048 s. recovery
+| mspeed_buff = {{tt|+250%|19.25 m/s}}
+| mspeed = +6 m/s (jump)
+| range = 15 meters (max)
+| ignores_speedcap = 1
+| ability_keywords = lesser cleanse;;stunnable::invulnerable::phased::strong movement
+| ability_details = 
+* Moira becomes [[invisible]] and [[phased out]], cleansing her of most negative [[status effect]]s and making her immune to damage.
+** Moira can still be hit by {{al|Graviton Surge}} and {{al|Gravitic Flux}} while phased, however these will only lock her movement, and will not deal any damage or interrupt the ability.
+** {{al|Cage Fight}} will prevent Fade from being activated, however she cannot be trapped by it during Fade.
+* Moira can still pick up [[Health Pack]]s during Fade.
+* While in Fade, Moira jumps higher than normal, reaching up to 4 meter height.
+* Can be used while {{Al|Coalescence}} is active.
+* Jump speed bonus stacks additively with base jump speed.
+* Fade's [[movement speed]] buff does not count towards global movement speed buff cap.
+}}
+
+{{Ability_details
+| ability_name = Biotic Orb
+| ability_image = Ability Moira Biotic Orb.png
+| old_description = Moira launches a rebounding biotic sphere; she can choose between a regeneration effect that heals the allies it passes through, or a decay effect that deals damage to enemies.
+| official_description = Launch a bouncing sphere that either heals nearby allies or damages nearby enemies.
+| ability_type = Ability
+| key = ability 2
+| shot_type = {{proj|proj}}<br>{{proj|beam}}
+| damage = {{tt|60 per second|Deals 11.52 damage every 0.192 seconds}}, up to {{tt|250|204}}
+| headshot = ✕
+| heal = {{tt|75 per second|Heals 14.4 every 0.192 seconds}}, up to {{tt|300|302.6}}
+| cooldown = 8 seconds
+| pspeed = 20 m/s (default)<br>5.5 m/s (while tethered)
+| duration = 7 seconds (max)
+| cast_time = 0 + 0.4 seconds
+| range = 4 meters (damage)<br>5 meters (healing)
+| ignores_barrier = partial
+| ignores_boost = partial
+| ignores_window = partial
+| ability_keywords = area of effect;;spherical::barrier piercing::travel time::beam;;projectile
+| ability_details = * Bounces off walls and pierces heroes.
+* The orb itself pierces [[barrier]]s, but does not target enemies or allies through them.
+* Dealing damage with Biotic Orb restores a small amount of Biotic Energy.
+* Damage Orb does not affect enemy [[objects]].
+* If [[Damage amplification|amplified]], only the rate of damage/healing per second is increased, not the total amount.
+* Bounces off of and destroys fences and other breakables.
+}}
+
+===Ultimate Ability===
+{{Ability_details
+| ability_name = Coalescence
+| ability_image = Ability Moira Coalescence.png
+| old_description = Moira channels a long-range beam that heals allies, damages enemies, and bypasses barriers.
+| official_description = Fire a beam that heals allies and damages enemies.
+| ability_type = Ultimate Ability
+| shot_type = {{proj|beam}}
+| ult_req = 2700 points
+| damage = {{tt|85 per second|16.32 per 0.192 seconds}}
+| headshot = ✕
+| heal = {{tt|140 per second|26.88 per 0.192 seconds}} (allies)<br>{{tt|55 per second|10.56 per 0.192 seconds}} (self)
+| duration = 8 seconds
+| cast_time = {{tt|0.5 seconds|0.496}}
+| mspeed_buff = {{tt|+40%|7.7 m/s}}
+| pradius = 1.375 meters
+| range = 30 meters
+| ignores_barrier = 1
+| ignores_matrix = 1
+| ignores_deflect = 1
+| ignores_window = 1
+| ignores_speedcap = 1
+| ability_keywords = barrier piercing::beam::channel
+| ability_details = * Passive Biotic Energy regen rate is increased by +200% during the ultimate.
+* Coalescence's healing has a miss forgiveness behavior: If no allied heroes are hit, the beam's healing will be increased by 50% for a short duration depending on how long it hasn't hit an ally for. 
+** This behavior does not affect the damage of Coalescence.
+** Not hitting an ally means that no allied hero may be touching the beam in this time. For example, if a full HP ally is in the beam, they will still count as hit by it and the bonus will not apply when the beam starts healing.
+** Hitting an enemy does not prevent the bonus from applying.
+* Moira can use {{al|Fade}} while channeling Coalescence. The beam will be temporarily disabled while in Fade.
+* Line of sight blocked by terrain and terrain-like objects.
+* Coalescence is a [[channeled]] ability; Moira cannot shoot or use abilities - other than Fade - and getting [[stunned]], [[knocked down]] or [[hacked]] immediately ends the ability.
+* Moira's self-healing starts immediately upon activating Coalescence, this helps her to self-sustain.
+* Coalescence's [[movement speed]] buff does not count towards global movement speed buff cap.
+* Damage bonuses, such as Ana's [[Nano Boost]] , Mercy's [[Caduceus Staff]] and Juno's [[Orbital Ray]], will increase the damage dealt by coalescence but not the heal.
+* Heals or Damage are not increased if allies and enemies are touched by it at the same time.
+}}
+
+== Perks ==
+=== Minor Perks ===
+A Minor [[Perk]] can be chosen at level 2.
+{{Ability details
+| ability_name = Destruction's Divide
+| ability_image = Perk_Destruction's_Divide.png
+| ability_type = Minor Perk
+| official_description = Coalescence can be toggled between pure healing or pure damage, with 30% greater effect.
+| damage = 85 → 110.5 per second
+| heal = 140 → 182 per second (allies)<br>55 → 71.5 per second (self)
+| ability_details = * Holding {{key|primary fire}} or {{key|secondary fire}} toggles pure healing or pure damage, respectively. Releasing both buttons reverts to the original functionality.
+}}
+{{Ability details
+| ability_name = Ethical Nourishment
+| ability_image = Perk_EthicalNourishment.png
+| ability_type = Minor Perk
+| official_description = Biotic Orb’s first 30 healing is instant on each ally it encounters.
+| ability_details =
+}}
+
+=== Major perks ===
+A Major [[Perk]] can be chosen at level 3.
+{{Ability details
+| ability_name = Reversal
+| ability_image =Perk_Reversal.png
+| ability_type = Major Perk
+| official_description = Reactivating Biotic Orb reverses its direction.
+| ability_details = 
+}}
+{{Ability details
+| ability_name = Phantom Step
+| ability_image =Perk_Uprush.png
+| ability_type = Major Perk
+| official_description = Fade lasts 0.5 seconds longer and boosts jump height by 50%.
+| duration = 0.75 → 1.25 seconds
+| mspeed = +6 → +9 m/s (jump)
+| ability_details = 
+* Also allows Fade to be cancelled by reactivating the ability.
+* Increases jump height from 4 to 6.3 meters.
+}}
+
+== Hero-specific options ==
+{| class="listtable"
+!Setting name!!Options!!Description
+|-
+| rowspan="2" |'''Swap Biotic Orb heal and damage inputs'''
+|Off (default)
+| Primary fire throws a heal orb, Secondary fire throws a damage orb.
+|-
+|On
+|Secondary fire throws a heal orb, Primary fire throws a damage orb.
+|-
+| rowspan="2" |'''Hide Coalescence timer'''
+|Off (default)
+|Timer UI element is displayed around the crosshair.
+|-
+|On
+|Timer UI element is hidden.
+|-
+|'''Relative aim sensitivity during Coalescence'''
+|0% ... 500% (default: 100%)
+|Multiplier to base aim sensitivity during Coalescence.
+|}
+
+== Stadium ==
+Moira is a playable hero in [[Stadium]] game mode. See [[Moira/Stadium]] for a list of hero-specific Items and Powers.
+
+==Strategy==
+
+Moira is a support hero that can easily reposition amongst her allies with her immense mobility. {{al|Biotic Grasp}} can heal multiple allies simultaneously, granting her higher average healing per second when compared to other supports. However, this powerful healing is limited by a resource meter similar to D.Va's [[Defense Matrix]]; this meter refills very slowly over time, but Biotic Grasp's alternate fire refills it much faster, along with healing Moira herself. {{al|Fade}} provides her a very strong movement tool and invulnerability that makes her very hard to lock down. {{al|Biotic Orb}} can allow Moira to apply both damage and healing at the same time, and is very powerful in enclosed spaces where it will not simply fly past its targets. {{al|Coalescence}} can both heal allies and damage enemies, but perhaps most importantly it can pierce [[barrier]]s, preventing enemy tanks from blocking your ultimate with various shields. Her alternate fire gives her amazing sustain, particularly in 1v1 fights, and her {{al|Fade}} gives her excellent escapes, greatly aiding her survivability against enemy flankers, though she remains weak to large burst damage such as enemy Snipers or [[Junkrat]]. Her kit, though very strong, lacks the utility other healers provide, making her focused though not particularly versatile.<br />
+
+===General Strategies===
+*''Priorities:''
+**<u>0. Think</u> - the list below is not set in stone. During a course of teamfight you must make your own decisions based on the circumstances you are facing.
+**<u>1. Your own safety</u> – while keeping your team alive is a reason you play healer, if you die your allies will soon follow, as they will not have a way to sustain themselves in a teamfight. Use {{al|Fade}} to avoid attackers and dodge lethal damage and keep your health high with the combination of basic abilities.
+**<u>2. Healing ally in immediate risk of dying</u> - when one of your teammates is receiving damage very quickly or is on low health, you should prioritize healing them to prevent their death. {{al|Biotic Grasp}} is one of the strongest healing effects in the game, and will be able to outheal many sources of damage. Be careful with using {{al|Biotic Orb}} in these situations though – time that is needed to cast it and resume healing with Primary Fire may cost your ally life.
+**<u>3. Healing a group of allies</u> - when multiple allies take spread damage while standing close to each other, Moira is the best healer to deal with it. The combination of {{al|Biotic Grasp}} and {{al|Biotic Orb|Orb}} healing effects will allow you to reach a short burst of a stunning 140 health per second healing. This will outpace nearly all non-Ultimate damage that enemies may throw at you. Healing in this scenario charges Moira’s ultimate at break-neck pace.
+**<u>4. Damaging low health targets</u> - Moira’s lock-on {{al|Biotic Grasp|Secondary Fire}} and damaging {{al|Biotic Orb}} will allow her to fairly effectively secure eliminations on low health enemies. If the target is receiving any healing though, Moira’s damage alone is likely not going to be enough to burn through their healthpool.
+**<u>5. Damage enemies that are not behind barriers</u> - it will allow you to recharge your healing resource quicker, heal yourself and help your damage dealers in burning targets down. This also builds up your ultimate charge. When you are certain that the enemy will not engage in the next 10 seconds, you may also use your {{al|Biotic Orb}} to harass targets behind barriers.
+**<u>6. Damage barriers</u> - to put it simply: it’s not your job and you are terrible at it. If there is precisely nothing else for you to do, you may attack barriers with your {{al|Biotic Grasp|Secondary Fire}}, but it will neither heal you nor restore your healing resource.
+
+===Fade Jump===
+
+Moira jumps higher while in {{al|Fade}}. You can get a ton of height from jumping while fading, even getting up to 2nd story platforms, but it requires precise timing and positioning. 
+* Press jump approximately 0.25 seconds after initiating fade.
+** Try saying "bubble". The "bu" is when you start fade, and the "bble" is when you jump.<ref>[https://www.youtube.com/watch?v=OBmDIHgKwOY Learn to FADE JUMP in under 2 Minutes! | Overwatch 2 Moira Tips and Tricks]</ref>
+* To get more height, fade into a climbable object (like a car or railing). You should climb the object just as you are jumping.
+* You can then change directions in the air to get to high ground.
+* Practice this until you get the timing and positioning down.
+* You can get a second jump with fade's bonus height if you jump onto a higher object > land > jump again before the fade animation has finished, though this is difficult to pull off.
+
+==Match-Ups and Team Synergy==
+<!--When proving match-up or team synergy advice, please write all advice from the sake of someone playing as this hero, not as someone who wishes to counter this hero. Also, please try to be as objective as possible. Taking personal skill out of the equation, please provide advice that would apply to any player who knows how to play these characters well.-->
+
+===Tank===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero
+! |Match-Up
+! |Team Synergy
+|-
+|<center>[[File:icon-dva.png|75px|link=D.Va]]<br />[[D.Va]]</center>
+|<small>While in her mech, D.Va is strong against Moira because she can destroy your Biotic Orbs with Defense Matrix and in a 1v1 scenario, kill you quite quickly with her high burst damage. Since your Biotic Grasp damage is negligible against her high HP and armour, focus on using Fade to run away if she tries rushing you; for maximum distance, use Fade at the end of her Boosters ability. Interestingly, if D.Va loses her mech, she can suddenly become very vulnerable to Moira because she only has a measly 175 HP and only her pistol to defend herself with. For this reason, if she uses Self-Destruct, you can rush her with a damage orb and focus Biotic Grasp on her to kill her before she gets another mech, and then use Fade to survive the blast.</small>
+|Moira and D.Va can have a good team synergy. D.Va's boosters allow her to quickly dive into the enemy team and pick off low-HP heroes. Moira can dive in with her with fade and help whittle down the enemy's HP or get a kill on a squishy. D.Va's defense matrix can help protect Moira if she is overwhelmed with damage and Moira hasn't gotten her fade back.
+|-
+|<center>[[File:Icon-Doomfist.png|75x75px]]<br />[[Doomfist]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:Icon-Hazard.png|75px|link=Hazard]]<br />[[Hazard]]</center>
+|<small>Hazard can quickly close the gap and deal high burst damage with his {{al|Violent Leap}} combo, however you can evade it easily with {{al|Fade}} which is on the same cooldown. As such, you need to be wary of him if you have already used Fade and be ready to toss a healing orb at your feet if he jumps at you.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:Icon-Junker Queen.png|link=link=Junkerqueen|75x75px]]<br />[[Junker Queen]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:Icon-mauga.png|75px|link=mauga]]<br />[[Mauga]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-orisa.png|75px|link=Orisa]]<br />[[Orisa]]</center>
+|<small>Orisa is a poor target for Moira to challenge to a 1v1, because she has a lot of armour and defensive abilities to lower your damage on her, which is already quite low. Don't waste your time trying to contribute damage to her unless they are low on health, and instead focus on supporting your allies here. If Orisa uses her ultimate {{al|Terra Surge}}, quickly lob a healing orb to provide sustain to your allies that are trying to get out of range and use {{al|Fade}} to get safely out of the range yourself. </small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:Icon-Ramattra.png|75px|link=Ramattra]]<br />[[Ramattra]]</center>
+|<small>Like most other tanks, Ramattra is very bulky and it is not a very good target unless he is low on health. In Omnic Form, Ramattra isn't much of a threat to you as he deals slow trickle damage, but in {{al|Nemesis Form}} he gains burstier punches that have a decent range, which can be threatening if you are too close. Try to heal any allies he is focusing. If Ramattra uses his ultimate, {{al|Annihilation}}, your own ultimate Coalescence can be used to used to outheal any damage he does and he has no way of interrupting it. However, keep in mind that Annihilation can outlast Coalescence, so in that time you need to be able to eliminate him or get away from him.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-reinhardt.png|75px|link=Reinhardt]]<br />[[Reinhardt]]</center>
+|<small>Moira can't reliably apply pressure to Reinhardt with her low damage, however forcing him to turn his barrier to you for just a second can allow your team to initiate a push, so look for opportunities to distract him, though you'll rarely get much damage, let alone a kill. It's also easy to react to and dodge Earthshatter with Fade, and then use Healing Orb + Biotic Grasp or Coalescence to negate any follow-up damage on your allies when stunned. When you do have Coalescence, it can actually pressure Reinhardt significantly, as it will ignore his barrier and do considerable damage to him.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-roadhog.png|75px|link=Roadhog]]<br />[[Roadhog]]</center>
+|<small>Never 1v1 Roadhog unless his time is more valuable than yours. You simply can't kill him on your own because of his one shot potential and self healing. Getting hooked is a death sentence, but if you do get hooked, hold the Fade key so that it instantly activates if you manage to survive. His Hook has the same range as your Biotic Grasp, (20 metres) so use this to space yourself accordingly and avoid it.</small>
+|<small>(To be added)</small>
+|-
+| <center>[[File:icon-sigma.png|75px|link=Sigma]]<br />[[Sigma]]</center>
+|<small>Dodging Accretion with your Fade is very important because he can inflict fatal damage onto you should he land it. You can safely damage Sigma outside of his Hypersphere range and also through Kinetic Grasp, and this can force him to back off if he gets aggressive. An important thing to keep in mind is that like D.Va he can destroy your Biotic Orbs so be wary of using them around him. Also, Moira can use Fade to escape Gravitic Flux even if you're caught in it. If he catches some allies, make sure you go up with them and use your healing to keep them above half HP so they survive the impact and Fade before you hit the ground.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-winston.png|75px|link=Winston]]<br />[[Winston]]</center>
+| <small>Winston will prove to be problematic to deal with, since his Barrier Projector blocks your healing spray and can therefore isolate a teammate from your support. Make sure you have line of sight with the ally he's attacking and keep healing them to keep them safe. If he's targeting you, ideally he'd use Leap to engage, in which case you can make space with Fade, but if Fade is unavailable, use a healing orb on yourself and focus biotic grasp on him; the self healing will be enough to outheal his Tesla Cannon damage.</small>
+|<small>Winston and Moira can have great synergy. A highlight is Fade and Jump Pack being used together. When Winston dives a target, Moira is able to Fade jump into Barrier Projector with Winston. She can then cooldown and start to deal damage to enemies while also sustaining Winston. The damage both are capable of dealing, using Biotic Grasp Alt Fire, Biotic Orb and Tesla Cannon, can be quite high, alone. Biotic Orb also damages multiple targets much like Tesla Cannon.</small> 
+|-
+|<center>[[File:icon-wrecking_ball.png|75px|link=Wrecking Ball]]<br />[[Wrecking Ball]]</center>
+|<small>You can't keep up with Wrecking Ball, so don't waste your time trying to go for him. All you can really do is support allies he is diving, as you can typically outheal the follow-up damage from his Piledrive. If he ever dives ''you'', a simple Fade may not always be enough to escape him. Try to do a Fade jump off of a small object to high ground so has to use multiple cooldowns to catch up, giving you more time to retreat to your team.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-zarya.png|75px|link=Zarya]]<br />[[Zarya]]</center>
+|<small>Zarya's bubbles can protect her team from your damage orbs and cut the line of sight of your healing orbs, so be careful of using them around her. If she has a lot of energy, do not try to 1v1, because she can outdamage your self healing easily and rip you apart in seconds. You can try to pressure a high energy Zarya with Coalescence while spacing yourself out of her beam range, but be careful not to feed her extra energy. In addition, you can generally outheal follow-up damage after her Graviton Surge if it catches multiple allies, so heal them with Biotic Grasp, throw a healing orb and then use Coalescence. It should also be noted that Fade can escape Graviton Surge.</small>
+|<small>(To be added)</small> 
+
+|}
+
+=== Damage===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero
+! | Match-Up
+! |Team Synergy
+|-
+|<center>[[File:icon-ashe.png|75px|link=Ashe]]<br />[[Ashe]]</center>
+|<small>At range, Ashe can make quick work of you with her impressive rifle, so avoid open sightlines she may be holding and try to flank. Most Ashe players panic when they are flanked and instantly use Coach Gun to create separation, however Moira can easily dodge the knockback and catch up with the Ashe through the use of Fade. Once you close the distance she will have no means to escape you, so finish her off with a damage orb/biotic grasp combo.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-bastion.png|75px|link=Bastion]]<br />[[Bastion]]</center>
+|<small>Moira's damage is pitifully weak against a Bastion in Configuration: Assault, and even in Recon, due to his higher health pool. Bastion should be avoided as much as possible, however you can try to support your allies in defeating a Bastion with a Biotic Orb because it is mostly a team effort to defeat a Bastion set-up. You can also use Coalescence to damage the Bastion and heal any attacking allies if he is protected by a barrier as the beam will be unaffected by the barrier.</small>
+|<small>Moira's high healing output can help Bastion survive and deal a ton of damage, as he has rather large hitbox and is slowed in his turret form.</small>
+|-
+|<center>[[File:icon-Cassidy.png|75px|link=Cassidy]]<br />[[Cassidy]]</center>
+|<small>Cassidy is not an optimal target to 1v1, because he is capable of beating you within your effective ranges. At medium distances, he can burst you down easily with his Peacekeeper revolver, taking you out in 2 to 4 shots, His Flashbang is very threatening as it prevents you from escaping with Fade and slows you down making it easier to land shots on you. You can't really win unless he misses his shots a lot, however Cassidy relies on Flashbang quite considerably in close quarter fights, so if you can dodge it with Fade you have a setup to deal as much damage as you can while simultaneously crouch strafing to avoid headshots. Additionally, Moira's Coalescence can damage Cassidy beyond his damage falloff range, where you can easily out-heal body shots and apply a lot of pressure to him.</small>
+|<small>Cassidy has plays closer to your tank compared to many other heroes due to his Flashbang and falloff range, allowing you to heal him and the tank together and be more effective with your AoE heals.</small>
+|-
+|<center>[[File:icon-echo.png|75px|link=Echo]]<br />[[Echo]]</center>
+|<small>Although Echo can use her Flight to stay out of your effective range, she cannot do much at that distance other than use Sticky Bombs, which you can evade with your Fade. If you are stuck with multiple sticky bombs, Fade will drop them on the ground, which is great for your survival, just be careful not to drop them on or near weak allies as you may end up killing them. Additionally, keep allies above half HP so they don't get destroyed with Focusing Beam, as it outdamages your healing output, including that of Coalescence.</small>
+|<small>Echo has rather poor synergy with Moira, as she is usually out of your heal range either flying or off-angling. With more aggressive positioning, you can help her finish off targets with your grasp and damage orb, however.</small>
+|-
+|<center>[[File:icon-genji.png|75px|link=Genji]]<br />[[Genji]]</center>
+|<small>Surprisingly, Moira is incredibly effective against Genji. You can use Fade to dodge his Swift Strike and damage him through Deflect with Biotic Orb, Biotic Grasp or Coalescence, all while being out of his effective range. In a 1v1 you can also outheal most of his damage with a healing orb as long as he's not point blank distance and bursting you down with secondary fires. You can also prevent Genji from getting a dash reset in the midst of Dragonblade by using Fade to create distance if he dashes into you. Additionally, your Coalescence healing can completely negate his Dragonblade swing damage, unless he is nanoboosted.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-hanzo.png|75px|link=Hanzo]]<br />[[Hanzo]]</center>
+|<small>It is not a good idea to 1v1 Hanzo while his Storm Arrows are up, as he can easily burst you down in close to medium range. If you know it's on cooldown, you can try to dive him with a damage orb, and use Fade to move closer when he uses Leap. In close range combat with Hanzo, keep your movement erratic: strafe and crouch as much as possible to avoid headshots. Coalescence can actually protect high-HP allies from the damage of Dragonstrike, but generally it's not worth it because you can easily just move away from the dragons.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-junkrat.png|75px|link=Junkrat]]<br />[[Junkrat]]</center>
+|<small>Close range fights with Junkrat should be avoided because his explosive damage can be devastating and your healing cannot reliably protect you from it. The sweetspot for fighting Junkrat is definitely mid-range, you can safely dodge direct hits and if he tries to get closer with Concussion Mine, just Fade away. If you have Coalescence, you can damage him from much further which is great because Junkrat's biggest weakness is definitely his range limits. Just be careful, he can use Rip-Tire on you during Coalescence and you won't be able to Fade to dodge the explosion.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-mei.png|75px|link=Mei]]<br />[[Mei]]</center>
+|<small>Your Biotic Grasp range is longer than her Endothermic Blaster range, so you can avoid being slowed. Be ready to use Fade if hit by her icicle, as 1 headshot + 1 body shot is enough to eliminate you. Also, Fade will reset the freeze ticks from her primary fire and Blizzard. You can also save allies from the follow-up icicle headshot after they are frozen by focusing them with heals. If they are really low, you will need to use your healing orb as well or Coalescence. And obviously, if you're ever caught in Blizzard, you can use Fade to easily escape and then use Coalescence to heal any frozen allies being focused.</small>
+|<small>Mei usually plays closer to your tank compared to many other heroes due to her primary beam range, allowing you to heal her and the tank together and be more effective with your AoE heals.</small>
+|-
+|<center>[[File:icon-pharah.png|75px|link=Pharah]]<br />[[Pharah]]</center>
+|<small>If Pharah is not flying high enough you can reach her with Biotic Grasp, although most of the time you should avoid trying to deal with her and leave it to someone else suitable for the job, because it's really not your job to deal with her and her high burst damage makes her a strong counter. If you have Coalescence however, it can be a serious threat to her, because your increased mobility makes hitting direct rockets hard for her and your beam has a pretty long range.</small>
+|<small>Moira has rather poor synergy with Pharah. Most of the time she is out of the range of your primary fire healing, and off-axis to benefit from your healing orb. With more aggressive positioning, you can however help her with damage orb and secondary fire to finish off the heroes she is targeting.</small>
+|-
+|<center>[[File:icon-reaper.png|75px|link=Reaper]]<br />[[Reaper]]</center>
+|<small>Reaper will easily dispatch you in close quarters combat, so don't let him sneak up on you and keep your distance as great as you can in a 1v1, because you can focus him with Biotic Grasp while being far enough that not a lot of pellets will connect. Because he has higher health than most heroes, look for surfaces to bounce damage orbs off of to increase your DPS dramatically and take him out much quicker or force him to disengage with Wraith Form. If you ever find yourself in a close range 1v1 with Reaper, be cautious of using a simple Fade to escape, because he can then Wraith Form up to you and finish you off. If you can, try to Fade jump to high ground so he can't really chase you down.</small>
+|<small>If Reaper is not flanking, he'll usually play to pressure the enemy tank with your tank, allowing you to heal him and the tank together and be more effective with your AoE heals. If he is flanking you can help him finish off targets with grasp or damage orb.</small>
+|-
+|<center>[[File:icon-Soldier 76.png|75px|link=Soldier:_76]]<br />[[Soldier: 76]]</center>
+|<small>Soldier is a very difficult matchup for Moira, his Biotic Field can negate most of your damage and he can easily burst you down with his rifle and Helix Rockets. If he has his Biotic Field up, Soldier should be avoided at all costs, but if he doesn't and you know this, you can try to 1v1 and save Fade to dodge Helix Rockets, but if he has good aim, prioritise other targets as you'll lose most of the time. Also, your Coalescence self-healing is outdamaged by his Tactical Visor quite significantly, so just use a Fade to break line of sight rather than trying to challenge him with your own ultimate.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-sombra.png|75px|link=Sombra]]<br />[[Sombra]]</center>
+|<small>Moira's Biotic Grasp and Biotic Orbs do not lock onto a Sombra using Stealth unless she is already detected, so you can't really do much to help your team deal with her, however if she does try to take you on, you will have a decent advantage. You can quickly spin round and cancel her Hack attempt with Biotic Grasp and you can negate most of her damage with the use of a healing orb. Fade will cleanse Virus, and you can use it to either escape her or to pursue her. However, Hack and EMP will cancel Coalescence, so be careful of using it in a massive teamfight where she can easily unstealth and catch you off guard.</small>
+|<small>Sombra is often flanking or off-angling making it hard to reach her with your healing. With more aggressive playstyle, you can help her finish off her targets with your grasp and damage orb.</small>
+|-
+|<center>[[File:icon-symmetra.png|75px|link=Symmetra]]<br />[[Symmetra]]</center>
+|<small>Moira is fairly effective against Symmetra because you can easily destroy her sentry turrets and you can typically beat her in a 1v1 unless her beam is fully charged or she lands multiple secondary fire orbs. A good reference to know is that Moira's Biotic Grasp has about double the range of Symmetra's beam so you can force her to rely on her secondary fire orbs which are easy to dodge at a distance.</small>
+|<small>Symmetra usually plays closer to your tank compared to many other heroes due to her primary beam range, allowing you to heal her and the tank together and be more effective with your AoE heals.</small>
+|-
+|<center>[[File:icon-torbjörn.png|75px|link=Torbjörn]]<br />[[Torbjörn]]</center>
+|<small>Torbjörn is another very difficult match-up for Moira, he just has too much armour and burst damage to the point that you lose every time unless he misses most of his shots and/or doesn't use his turret. Destroying the turret is not your job at all, however if you must you can use a healing orb to heal yourself while you break it with Biotic Grasp; keep in mind, the turret is not affected by damage orbs. Don't waste your time trying to deal with Torbjörn and leave this one to another teammate.</small>
+|<small>Torbjörn usually plays closer to your tank compared to many other heroes as landing long range primary fire shots and his shotgun secondary, allowing you to heal him and the tank together and be more effective with your AoE heals. He also has some damage mititgation and higher health pool which benefit from higher sustain provided by Moira.</small>
+|-
+|<center>[[File:icon-tracer.png|75px|link=Tracer]]<br />[[Tracer]]</center>
+|<small>Because of Tracer's lower health pool compared to other heroes, she can be much easier to 1v1 than it may seem at first. Your Biotic Grasp also has a lock-on effect which means her mobility is not a problem in the slightest, and a healing orb can save you from getting one-clipped. In general, try to harass Tracer as much as possible, just a second or two of damage from you can force her to use her vital cooldowns to survive and make her play scared. As a final note, if you are stuck with a Pulse Bomb, using Fade will drop it on the ground, which is really good to survive, just be careful not to accidentally drop in nearby teammates.</small>
+|<small>With more aggressive playstyle, Moira can help Tracer finish off targets, but otherwise she is far too mobile to keep up with your healing.</small>
+|-
+|<center>[[File:icon-widowmaker.png|75px|link=Widowmaker]]<br />[[Widowmaker]]</center>
+|<small>If Widowmaker is playing far back and outside of your Biotic Grasp range, just try to ignore her and let someone else on your team deal with her. However, if you feel like being annoying, you can throw a damage orb her way and force her out of position or she risks taking a lot of damage; either of these outcomes can keep her suspended from the action for a while while she tries to find healing. If she does ever fall in range of your Biotic Grasp she's an easy kill unless she is being pocketed by a healer, in which case leave her alone: she may actually kill you if you get too aggressive and you'll find the healing is negating a lot of your damage. If she flees to high ground with Grappling Hook, you can chase her with a Fade jump or throw a damage orb at her if it's off cooldown to finish her off.</small>
+|<small>Widowmaker does not have very good synergy with Moira. You can help her survive dive with her high heal output, however she will usually playing further behind, causing you to separate from the rest of the team to do so.</small>
+|}
+
+===Support ===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" | Hero
+! | Match-Up
+! |Team Synergy
+
+|-
+|<center>[[File:icon-ana.png|75px|link=Ana]]<br />[[Ana]]</center>
+|<small>If you're going to attack Ana with Moira, you can bait out her Biotic Grenade as it is fairly obvious when Ana is going to use it (looking at the ground & moving toward you).</small>
+<small>It is then very easy to finish her off unless she gets some well placed shots. Try to save Fade for dodging Sleep Dart or Biotic Grenade, though if only dodging one, make sure you move further away so it is easier to dodge Ana's other projectile ability.</small>
+|<small>Ana's Biotic Grenade combined with Moira's Coalescence equals a lot of healing, and can even negate a NanoBoosted Genji's Dragonblade.</small>
+|-
+|<center>[[File:icon-baptiste.png|75px|link=Baptiste]]<br />[[Baptiste]]</center>
+|<small>Baptiste can be difficult to duel as his {{al|Immortality Field}} and {{al|Regenerative Burst}} can buy time to get help from allies or kill you as his primary fire is also rather potent. When battling Baptiste, you need to wait or bait out his Immortality Field as you will not be able to destroy it in time with Biotic Grasp and your orb cannot damage it.</small>
+|<small>Moira and Baptiste can work together in [[brawl]] comps, both providing good aoe sustain and damage. Though, ideally you would want to replace one of them with [[Juno]] or [[Lúcio]] to provide movement speed.</small>
+|-
+|<center>[[File:icon-brigitte.png|75px|link=Brigitte]]<br />[[Brigitte]]</center>
+|<small>Never let Brigitte get close to you, always keep your distance & focus on healing instead of going after her, as you can easily outheal her damage. If she can't get close to you, it's a free kill.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-lúcio.png|75px|link=Lúcio]]<br />[[Lúcio]]</center>
+|<small>You can easily burn down Lucio with Biotic Grasp, though you shouldn't throw a Damage Orb at him as he can quickly speed away. Make sure to not use Coalescence if you know he has his ultimate, as it will nullify your damage. Once he has used his ultimate, wait a few seconds before casting a Damage Orb & Coalescence to burn down any enemies near you, and to keep your team alive if needed.</small>
+|<small>Lúcio and Moira make a good support line for [[brawl]] compositions, with Lúcio moving the group forward with his speed boost and Moira providing high AoE sustain.</small>
+|-
+|<small><center>[[File:icon-mercy.png|75px|link=Mercy]]<br />[[Mercy]]</center>
+|<small>If the situation allows it, make Mercy your primary target with your Biotic Orb, Biotic Grasp, or Coalescence, as she is easy to burn down with these abilities, unless she is flying around with a Pharah or Echo. Moira is a very effective hero against Mercy.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-moira.png|75px|link=Moira]]<br />[[Moira]]</center>
+|<small>Always use Coalescence AFTER the enemy Moira, this will ensure you have more heals and a better chance at winning, though this may not be possible for every situation if a teammate is in trouble (e.g. in a Graviton Surge).</small>
+<small>For 1v1, you will want to stay in an area where you can reliably bounce your Orb while moving randomly to reduce damage dealt to you & the enemy Moira's healing. Healing orb is favoured over Damage Orb, but this can make the 1v1 last a long time. Once the enemy Moira casts Coalescence, use your Damage Orb & Coalescence to quickly burn her down.</small>
+|<small>N/A</small>
+|-
+|<center>[[File:icon-zenyatta.png|75px|link=Zenyatta]]<br />[[Zenyatta]]</center>
+|<small>Since Zenyatta has no mobility you can easily burn him down with Biotic Grasp & Damage Orb, but be careful as he can easily kill you with a few well placed shots. Save your Fade to remove his Orb of Discord then resume attacking him - he will be forced to reapply the Orb of Discord which will slow him down slightly.</small>
+|<small>(To be added)</small>
+|}
+
+==Map Strategies==
+
+===Control===
+{{MapStrategyTable/Control
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Antarctic_rating = 
+| Antarctic_feature = 
+| Antarctic_strategy = 
+| Antarctic_Labs_strat = 
+| Antarctic_Sublevel_strat = 
+| Antarctic_Icebreaker_strat = 
+
+| Busan_rating = 
+| Busan_feature = 
+| Busan_strategy = 
+| Busan_Downtown_strat = 
+| Busan_Sanctuary_strat = 
+| Busan_MEKA_strat = 
+
+| Ilios_rating = 
+| Ilios_feature = 
+| Ilios_strategy = 
+| Ilios_Lighthouse_strat = 
+| Ilios_Well_strat = 
+| Ilios_Ruins_strat = 
+
+| Lijiang_rating = 
+| Lijiang_feature = 
+| Lijiang_strategy = 
+| Lijiang_ControlCenter_strat = 
+| Lijiang_Garden_strat = 
+| Lijiang_NightMarket_strat = 
+
+| Nepal_rating = 
+| Nepal_feature = 
+| Nepal_strategy = 
+| Nepal_Village_strat = 
+| Nepal_Shrine_strat = 
+| Nepal_Sanctum_strat = 
+
+| Oasis_rating = 
+| Oasis_feature = 
+| Oasis_strategy = 
+| Oasis_CityCenter_strat = 
+| Oasis_Gardens_strat = 
+| Oasis_University_strat = 
+
+| Samoa_rating = 
+| Samoa_feature = 
+| Samoa_strategy = 
+| Samoa_Beach_strat = 
+| Samoa_Downtown_strat = 
+| Samoa_Volcano_strat = 
+}}
+
+===Escort===
+{{MapStrategyTable/Escort
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| CircuitRoyal_rating = 
+| CircuitRoyal_feature = 
+| CircuitRoyal_strategy = 
+| CircuitRoyal_Attack_strat = 
+| CircuitRoyal_Defense_strat = 
+
+| Dorado_rating = 
+| Dorado_feature = 
+| Dorado_strategy = 
+| Dorado_Attack_strat = 
+| Dorado_Defense_strat = 
+
+| Havana_rating = 
+| Havana_feature = 
+| Havana_strategy = 
+| Havana_Attack_strat = 
+| Havana_Defense_strat = 
+
+| Junkertown_rating = 
+| Junkertown_feature = 
+| Junkertown_strategy = 
+| Junkertown_Attack_strat = 
+| Junkertown_Defense_strat = 
+
+| Rialto_rating = 
+| Rialto_feature = 
+| Rialto_strategy = 
+| Rialto_Attack_strat = 
+| Rialto_Defense_strat = 
+
+| Route66_rating = 
+| Route66_feature = 
+| Route66_strategy = 
+| Route66_Attack_strat = 
+| Route66_Defense_strat = 
+
+| Shambali_rating = 
+| Shambali_feature = 
+| Shambali_strategy = 
+| Shambali_Attack_strat = 
+| Shambali_Defense_strat = 
+
+| Gibraltar_rating = 
+| Gibraltar_feature = 
+| Gibraltar_strategy = 
+| Gibraltar_Attack_strat = 
+| Gibraltar_Defense_strat = 
+}}
+
+===Hybrid===
+{{MapStrategyTable/Hybrid
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| BlizzardWorld_rating = 
+| BlizzardWorld_feature = 
+| BlizzardWorld_strategy = 
+| BlizzardWorld_Attack_strat = 
+| BlizzardWorld_Defense_strat = 
+
+| Eichenwalde_rating = 
+| Eichenwalde_feature = 
+| Eichenwalde_strategy = 
+| Eichenwalde_Attack_strat = 
+| Eichenwalde_Defense_strat = 
+
+| Hollywood_rating = 
+| Hollywood_feature = 
+| Hollywood_strategy = 
+| Hollywood_Attack_strat = 
+| Hollywood_Defense_strat = 
+
+| KingsRow_rating = 
+| KingsRow_feature = 
+| KingsRow_strategy = 
+| KingsRow_Attack_strat = 
+| KingsRow_Defense_strat = 
+
+| Midtown_rating = 
+| Midtown_feature = 
+| Midtown_strategy = 
+| Midtown_Attack_strat = 
+| Midtown_Defense_strat = 
+
+| Numbani_rating = 
+| Numbani_feature = 
+| Numbani_strategy = 
+| Numbani_Attack_strat = 
+| Numbani_Defense_strat = 
+
+| Paraiso_rating = 
+| Paraiso_feature = 
+| Paraiso_strategy = 
+| Paraiso_Attack_strat = 
+| Paraiso_Defense_strat = 
+}}
+
+===Push===
+{{MapStrategyTable/Push
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Colosseo_rating = 
+| Colosseo_feature = 
+| Colosseo_strategy = 
+| Colosseo_Pushing_strat = 
+| Colosseo_Defending_strat = 
+
+| Esperanca_rating = 
+| Esperanca_feature = 
+| Esperanca_strategy = 
+| Esperanca_Pushing_strat = 
+| Esperanca_Defending_strat = 
+
+| NewQueenStreet_rating = 
+| NewQueenStreet_feature = 
+| NewQueenStreet_strategy = 
+| NewQueenStreet_Pushing_strat = 
+| NewQueenStreet_Defending_strat = 
+
+| Runasapi_rating = 
+| Runasapi_feature = 
+| Runasapi_strategy = 
+| Runasapi_Pushing_strat = 
+| Runasapi_Defending_strat = 
+}}
+
+===Flashpoint===
+{{MapStrategyTable/Flashpoint
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Aatlis_rating = 
+| Aatlis_feature = 
+| Aatlis_strategy = 
+| Aatlis_Bazaar_strat = 
+| Aatlis_Garden_strat = 
+| Aatlis_Resort_strat = 
+| Aatlis_Station_strat = 
+| Aatlis_TownCentre_strat = 
+
+| NewJunkCity_rating = 
+| NewJunkCity_feature = 
+| NewJunkCity_strategy = 
+| NewJunkCity_Arena_strat = 
+| NewJunkCity_Foundation_strat = 
+| NewJunkCity_Refinery_strat = 
+| NewJunkCity_Scrapyard_strat = 
+| NewJunkCity_Waterworks_strat = 
+
+| Suravasa_rating = 
+| Suravasa_feature = 
+| Suravasa_strategy = 
+| Suravasa_Gardens_strat = 
+| Suravasa_Market_strat = 
+| Suravasa_Palace_strat = 
+| Suravasa_Ruins_strat = 
+| Suravasa_Temple_strat = 
+}}
+
+==Achievements==
+{{AchievementTable/Start}}
+{{Achievement|Antipode|Ability Moira Coalescence.png|Hit 6 targets simultaneously with Moira's Coalescence in Quick or Competitive play.|Spray Moira Cute.png|Cute}}
+{{Achievement|Simple Trigonometry|Ability Moira Biotic Orb.png|Fully deplete both types of Moira's Biotic Orb without dying in Quick or Competitive play.|Spray Moira Pixel.png|Pixel}}
+{{AchievementTable/End}}
+
+== Trivia==  
+*Moira is [[Heroes|Hero]] 26 and the fifth new hero added to the game.
+*Moira is the second hero after [[D.Va]] who can perform the "Quick Melee" attack with both her hands, chosen randomly.
+*The Blackwatch outfit/skin for Moira was first shown in the ''[[Retribution (comic)|Retribution]]'' comic.
+* Moira is from Ireland's capital, Dublin, as is her voice actress, Genevieve O'Reilly.
+
+===Cultural References=== 
+*Moira is an Anglicisation of the Irish name Máire, ultimately derived from the biblical Mary, as well as a Greek name meaning "fate." O'Deorain is an Irish name meaning "descendant of the exile."
+*Excluding heroes who use both hands to heal, Moira is the only Support hero to heal with her left hand. This possibly references her twisted nature because the left side is traditionally associated with evil, while healing is beneficial.
+**Moira's shortened nails on her left hand could also hint that Moira is left-handed.
+*In the 2018 ''[[Summer Games]]'' event, Moira received a skin called "Éireannach", which means "Irish Woman" or "an Irish person."
+** The Irish flag appears over her right breast on this skin.
+**The Éireannach skin replaces Moira's left blue eye with a green eye probably for color scheme reasons.
+*Moira's "Good news, everyone" voice line is a possible reference to the science fiction animated sitcom, ''[https://en.wikipedia.org/wiki/Futurama Futurama]''.
+*Moira's "Glam" and "Moon" skins are both possible nods to English musician [https://en.wikipedia.org/wiki/David_Bowie David Bowie]. The face paints featured especially support this. 
+**The Star on the Glam skin could be referencing Bowie's [https://en.wikipedia.org/wiki/Blackstar_(album) Blackstar] record. The album cover of which also has a picture of a star.
+**The Crescent on the Moon skin as well as the name itself, could both be referencing his 1983 [https://en.wikipedia.org/wiki/Serious_Moonlight_Tour Serious Moonlight tour].
+
+===Misc. Character Information===
+* There is a story behind Moira's decrepit right hand, hinted to be the result of coming into contact with an anomalous genetic experiment, however, it seems it still doesn't hint at explanation how those genetics are able to allow plasma production in a biotic system.<ref name="Blizzcon 2017" /> 
+***In ''[[Overwatch 2]]'' the mutation in her right arm seems to have progressed further, with her arm now being colored purple and having a far more mutated appearance with the veins of it bulging out. Also her upper shoulder on this arm seems to now be replaced by robotics for reasons currently unknown.
+**Moira's right hand is ghoulish and damaged, and her right eye is red, referencing evil creatures depicted with red eyes.
+*Moira has two different eye colors, the right one being red and the left blue. She may be heterochromatic (born with two different eye colors), or she could have suffered from one of her experiments on herself.
+*Moira has some backstory with Mercy, as one utilized technology developed by the other.<ref>2017-11-12, [https://web.archive.org/web/20180504104509/http://overwatch.blizzplanet.com/blog/comments/blizzcon-2017-overwatch-whats-next-panel-transcript/5 BlizzCon 2017 Overwatch: What’s Next Panel Transcript - Community Q&A (archived)]. ''Blizzplanet'', accessed on 2017-11-19</ref> 
+**Moira and Mercy have complementary sprays, both called "Sigil". When placed together, they form the complete ''Overwatch'' sigil and position Moira and Mercy back to back. This shows that they are at odds.
+* Moira likes to dress up and enjoys art.<ref>''[[Overwatch Retribution]]''</ref>
+*Moira's favorite drink is Irish coffee<ref>2018-12-12, [https://twitter.com/westofhouse/status/1072885891490754566 Michael Chu's Twitter]. ''Twitter'', accessed on 2018-12-12</ref><ref>Monroe-Cassel, Chelsea. ''Overwatch: The Official Cookbook''. Insight Editions, 2019.</ref>. She is holding a steaming mug of it in her "Toast" victory pose.
+*While Moira knows "the dead tell intriguing tales," as far as her research goes, she prefers to focus on the living.<ref>''[[Overwatch 2]]'', ''[[Venture/Quotes|Venture Quotes]]''</ref>
+*Moira also appears to have some culinary experience, as one of the omnic staff of [[Oasis]]'s [[ElBuffi]] restaurants (and Spawn Point), when approached by a player as Moira, will comment on how they received "nothing but compliments" after changing certain recipes and ingredients according to her suggestions.
+*Moira's favorite animal is the [https://en.wikipedia.org/wiki/Scolopendra_gigantea Scolopendra gigantea].<ref name = "MoiraQuotesOW2"/>
+*Moira tends to avoid crowded environs.<ref name = "MoiraQuotesOW2"/>
+
+====Disputed Information====
+''Note: The following information is from gameplay trailers and is of dubious canon status.''
+At some point after Null Sector's return, Moira and her fellow Talon members engaged Overwatch in a firefight at [[Petra]]. Talon was forced to retreat.<ref name="VentureNew">2024-03-28, [https://www.youtube.com/watch?v=JF6tLqe_FSA Venture | New Hero Gameplay Trailer | Overwatch 2]. ''YouTube'', accessed on 2024-03-28</ref>
+
+===Merchandise=== 
+*The Blizzard store lists a Moira T-shirt for both Men and Women.
+* The Blizzard store lists Overwatch Magnet sets, series 4 includes Moira's icon.
+*Funko made a Blackwatch T-shirt for the 2018 Archives event, Retribution, which lists the members including Moira O' Deorain.
+*The Blizzard store has an Ultimate Moira Hoodie available.
+* Cute But Deadly Series 5 has a Moira figure to collect.
+*Funko made a pop figure of Moira in 2019.
+
+===Development===
+[[File:Moira Early Ideation 1.jpg|thumb|right|Early concept art of Moira]]
+Moira's early ideation began with a combination of both gameplay and story ideas, stemming from strong player demand for a new support healer. Their initial goal was to introduce a shady, morally ambiguous healer to contrast with the existing "benevolent healer" archetypes already in the game.<ref name="Blizzcon 2017" /> The developers wanted her to have connections with various groups in the ''Overwatch'' setting.<ref name="2017Next" /> Initial concepts gravitated towards a set of designs with a mysterious androgynous appeal, with the first iteration being outfitted with a set of four mechanical tentacles. Feeling that the tentacles would be difficult to incorporate into gameplay, they progressed to a more conventional, toned-down design with a two-handed spray cannon and began incorporating scientific apparatuses such as tubes and cannisters into her look, but felt that her silhouette became too similar to [[Zarya]]'s.
+
+[[File:Moira Early Ideation 2.jpg|thumb|Thumbnails exploring different looks and weapons for Moira, including one inspired by the [[Sombra#Development|Omniblade]] (far right)|thumb|left]]
+At this point they produced a number of thumbnails to experiment with different weapons and costumes while retaining her gaunt, androgynous appearance, with several that wielded various clawed gloves and gauntlets, as well as a concept inspired by [[Sombra]]'s original [[Sombra#Development|Omniblade]] design, incorporating baggy sleeves and throwable syringes. The latter design also introduced the idea of a duality between her left and right hands, with one used to deal damage and the other to heal. Elements from these thumbnails were pulled together to create her final design, incorporating the earlier scientific details with a color-changing liquid to differentiate her healing and damage dealing abilities.
+
+Moira's initial gameplay design involved her having a large health pool, which she would spend as a resource to heal allies while draining health from enemies, but it proved to be too difficult to balance. Early inspiration for her abilities may have been drawn from [[Overmind]], a hero created for the original ''[[Overwatch#Development|Prometheus]]'' pitch. In her final design, she instead uses separate Regeneration and Decay versions of her abilities, with her Biotic Grasp: Decay ability leeching health from enemies and enhancing the effectiveness of her Regeneration abilities. Because she is one of the few characters in the game to have both hands visible on the screen at all times, great care was taken with her animations to convey how these different abilities worked and reflected her design and personality. Her [[Fade]] ability was also designed to be similar to Reaper's [[Wraith Form]], showing that the two characters are connected. The original version of her ultimate ability was a transformation that involved biotic energy swirling around her and gave her a beam that could both heal and damage, but as the beam was the most interesting aspect of the ability they decided to make it her ultimate's sole focus.<ref name="Blizzcon 2017" />
+
+Moira was first shown to players as a member of the Talon Inner Council in the comic ''[[Doomfist: Masquerade]]'', but was not given a name or speaking role. The day before her reveal, a research paper labeled "Draft: Repairing Degenerative Genetic Structures" was added to the [[Oasis]] map, hinting at Moira's occupation and involvement with [[Reaper]]. Oasis University had a special interaction between [[Reaper]] and ''[[Sombra]]'' when on the same team that teased Moira's release.  Sombra asked him "What are we doing here boss?" and Reaper responded to her with "I am here to visit an old friend."
+
+==== Removed abilities ====
+
+===== Removed Perks =====
+{{Ability details
+| removed = 1
+| ability_name = Vanish
+| ability_image = Perk_Vanish.png
+| ability_type = Minor Perk
+| official_description = Fade’s duration is increased by 0.5 seconds. 
+| ability_details=
+* ''Removed in Season 18.''
+}}
+{{Ability details
+| removed = 1
+| ability_name = Uprush
+| ability_image = Perk_Uprush.png
+| ability_type = Minor Perk
+| official_description = Fade’s jump height is increased by 50%. 
+| ability_details = 
+* ''Removed in Season 18.''
+}}
+{{Ability details
+| removed = 1
+| ability_name = Contamination
+| ability_image = Perk_Contamination.png
+| ability_type = Major Perk
+| official_description = Enemies being damaged by Biotic Orb receive 25% reduced healing. 
+| ability_details = 
+* ''Removed in Season 18.''
+}}
+
+==Media==
+=== Former Portrait ===
+<gallery>
+File:OW1Icon_Moira.png|Overwatch 1 Hero portrait
+</gallery>
+
+===Concept art===
+<gallery>
+File:Moira Early Ideation 3.jpg|Early concept art of Moira
+File:Moira concept art.webp|Moira concept art
+File:Moira arms concept.webp|Moira arms concept art
+File:Moira ability concept art.webp|Moira ability concept art
+File:Qiu-fang-moira.jpg|Banshee Skin Concept Art by Qiu Fang
+File:Moira Oasis.jpg|Oasis Skin Concept Art
+File:Moira Glam.png|Glam Skin Concept Art
+File:Moira Ice Empress.jpeg|Ice Empress Skin Concept Art by Yiming Liu
+</gallery>
+
+===Videos=== 
+;Official
+{{#ev:youtube|8tLopqeL9s8|400|inline}}
+{{#ev:youtube|6ETybQd4uRE|400|inline}}
+
+;Curse
+{{#ev:youtube|SOsgh9NDowY|400|inline}}
+{{#ev:youtube|TYAp6kjZwVo|400|inline}}
+{{#ev:youtube|Ak0KVL6yOnY|400|inline}}
+
+==Balance Change Logs==
+{{ChangelogsTabber
+| owpvp =
+{{PatchTableElement|2026-06-16|
+{{DevComment|Biotic Orb’s output is limited by the mobility and durability of the hero roster. Increasing its damage and healing increases its impact, while rewarding efficient placement.}}
+
+{{al|Biotic Orb}}
+*Damage per second increased from 50 to 60 damage per second.
+*Healing per second increased from 65 to 75 healing per second.
+*Maximum damage per orb increased from 200 to 250.
+}}
+{{PatchTableElement|2026-02-10|
+{{al|Destruction's Divide}} – Minor Perk
+* Focused healing/damage bonus increased from 25% to 30%
+}}
+{{PatchTableElement|2026-01-08|
+{{DevComment|This change increases Coalescence generation to better align its impact with other support ultimates.}}
+
+* Ultimate cost reduced by 7%.
+}}
+{{PatchTableElement|2025-08-26|
+{{al|Vanish}} - Minor Perk
+* Removed.
+
+{{al|Uprush}} - Minor Perk
+* Removed.
+
+{{al|Destruction's Divide}} - Minor Perk
+* New Minor Perk
+* Coalescence can be toggled between pure healing or pure damage, with 25% greater effect.
+
+{{al|Ethical Nourishment}} - Minor Perk
+* Changed to a Minor Perk.
+* The instant healing is reduced to 30 (down from 50 healing).
+
+{{al|Contamination}} - Major Perk
+* Removed.
+
+{{al|Reversal}} - Major Perk
+* New Major Perk
+* Reactivating Biotic Orb reverses its direction.
+
+{{al|Phantom Step}} - Major Perk
+* New Major Perk.
+* Fade lasts 0.5 seconds longer and boosts jump height by 50%.
+}}
+{{PatchTableElement|2025-06-24|
+{{DevComment|Developer Comments: We wanted to boost Moira’s overall healing output, as she doesn’t offer as much direct utility compared to other Support heroes, and we’re reducing some healing impact in this patch through the Damage role passive. We’re happy with the cadence of managing her healing resource and swapping to damage to restore it, so we opted to adjust the direct healing rather than the resource availability or a similar mechanic.}}
+
+{{al|Biotic Grasp}} - Secondary Fire
+* Healing per second increased from 70 to 80.
+}}
+{{PatchTableElement|2025-02-18|
+;Hero Perks
+
+{{al|Vanish}}
+* Fade's duration is increased by 0.5 seconds.
+
+{{al|Uprush}}
+* Fade's jump height is increased by 50%.
+
+{{al|Ethical Nourishment}}
+* Biotic Orb's first 50 healing is instant on each ally it encounters.
+
+{{al|Contamination}}
+* Enemies being damaged by Biotic Orb receive 25% reduced healing.
+}}
+{{PatchTableElement|2024-11-12|
+{{DevComment|Developer Comment: Moira wasn't that adversely affected by the move to 225 HP, but she could use a small boost to her survivability.}}
+
+{{al|Biotic Grasp}}
+* Self-healing increased from 24 to 30 health per second.}}
+{{PatchTableElement|2024-09-17|
+{{DevComment|Developer Comment: Moira's ultimate didn't feel threatening enough after the health adjustments across the cast and her own lower health value.}}
+
+{{al|Coalescence}}
+* Damage per second increased from 70 to 85.
+}}
+{{PatchTableElement|2024-08-20|
+{{DevComment|Developer Comment: Moira can be difficult to take down between the low cooldown on her Fade ability and self-healing with the Biotic Orb, so now she has 225 HP and slightly higher damage output to keep an edge to her offensive potential.}}
+
+* Base health reduced from 250 to 225.
+
+{{al|Biotic Grasp}}
+* Secondary fire damage increased from 60 to 65 damage per second.}}
+{{PatchTableElement|2024-04-16|
+{{al|Biotic Grasp}}
+* Damage per second decreased from 65 to 60.
+
+{{al|Coalescence}}
+* Self-heal per second increased from 50 to 55.
+}}
+{{PatchTableElement|2024-02-13|
+;General updates
+Most damage-dealing projectile sizes have been increased by a new global modifier added to their base size.
+
+* +0.05 meters for hitscan projectiles with a high rate of fire or spread (e.g., Tracer's Pulse Pistols or Reaper's Hellfire Shotguns).
+* +0.08 meters for hitscan projectiles that are more precise (e.g., Cassidy's Peacekeeper or Soldier:76's Heavy Pulse Rifle).
+* +0.05 meters for travel time projectiles that are shotguns or have a very high rate of fire (e.g., Roadhog's Scrap Gun or Ramattra's Void Accelerator).
+* +0.10 meters for travel time projectile with a speed greater than 50 meters per second (e.g., Zenyatta's Destruction Orb).
+* +0.15 meters for travel time projectile with a speed less than or equal to 50 meters per second (e.g., Pharah's Rocket Launcher).
+* Very large projectiles with a base size greater than 0.5 meters have been excluded from these increases (e.g., Orisa's Energy Javelin or Reinhardt's Fire Strike).
+
+Hero combined HP (base health/armor/shields) increased by 15-25%.
+
+* 150-175 HP heroes increased by 25 HP.
+* 200-300 HP heroes increased by 50 HP.
+* 300+ HP (Tanks) increased by 75-100 HP.
+* Each hero's precise health increases are listed in their patch notes below.
+
+Ultimate Charge
+
+* All Ultimate ability costs increased by 10%.
+
+Regenerative Passive for All Heroes
+
+* All heroes now regenerate 20 health per second after 5 seconds of not taking damage.
+
+Support Role Passive
+
+* Now reduces the delay before regeneration begins by half (2.5 seconds).
+
+Quick Melee
+
+* Damage increased from 30 to 40.
+
+;Hero updates
+
+* Health increased from 200 to 250.
+
+{{al|Biotic Grasp}}
+* Secondary fire damage increased from 50 to 65 damage per second.
+* Secondary fire target acquisition radius increased from 0.6 to 0.7 meters.
+}}
+{{PatchTableElement|2023-06-13|
+{{DevComment|Developer Comment: The Reaper and Moira changes are addressing an inconsistency with the interaction of Wraith Form or Fade with mobility-locking effects such as Junkrat's Steel Trap, Sigma's Gravitic Flux, Zarya's Graviton Surge, and Cassidy's Magnetic Grenade. They are now disabled similarly to Tracer's Recall or Sombra's Translocator, which are abilities that also phase out and can move the player.}}
+
+{{al|Fade}}
+* Can no longer be activated while affected by mobility-locking effects (Magnetic Grenade, Steel Trap, Graviton Surge, etc.).
+}}
+{{PatchTableElement|2023-04-11|
+{{DevComment|Developer Comments: Being able to use Fade during her Coalescence ultimate gives Moira more playmaking ability by being able to reposition even more quickly and avoid potential threats with quick reactions. Due to the more spread-out playstyle of 5v5, we're increasing the lingering heal duration from her primary fire, meaning it will heal more in total.}}
+{{Al|Fade}}
+* Can now be activated during Coalescence
+{{Al|Coalescence}}
+* Bonus movement speed reduced from 50 to 40%
+{{Al|Biotic Grasp}}
+* Lingering heal duration increased from 2 to 3 seconds
+}}
+{{PatchTableElement|2023-02-07|
+{{Al|Coalescence}}
+*Ultimate cost reduced 5%
+}}
+{{PatchTableElement|2023-01-05|
+{{Al|Biotic Orb}}
+* Dealing damage with Biotic Orb now restores a small amount of Biotic Energy
+}}
+{{PatchTableElement|2022-08-11|
+*Previous beta changes reverted
+|beta=1}}
+{{PatchTableElement|2022-07-11|
+<i>Developer Comment: Moira’s strengths lie in her extreme survivability, high healing throughput, and consistent damage output, but other supports have at least one utility option or play-making ability. To remedy this, Biotic Orb has been split into two abilities on separate cooldowns: Biotic Orb and Necrotic Orb. Due to Necrotic Orb’s potential to shut down many Ultimates and heavily swing duels in her favor, Moira has also received some compensation nerfs to her overall power.</i>
+
+Necrotic Orb
+*New ability, temporarily named “Enfeebling Orb” in-game
+*Replaces Damage Biotic Orb, with a separate cooldown of 16 seconds
+*Fires a straight moving projectile that explodes in a 3-meter radius on impact of an enemy or environment
+*Deals 40 impact damage and 10 explosion damage
+*Enemies affected by Necrotic Orb’s explosion receive the “Weakened” effect, reducing all damage dealt by 75% for 4 seconds
+{{Al|Biotic Orb}}
+*Damage Orb has been replaced by a new ability “Necrotic Orb”
+**Each orb has its own separate cooldown
+*Healing Orb capacity decreased from 300 to 250
+*Cooldown increased from 8 to 10 seconds
+{{Al|Biotic Grasp}}
+*Self-healing decreased from 24 to 20 per second
+{{Al|Fade}}
+*Cooldown increased from 6 to 7 seconds
+|beta=1}}
+
+{{PatchTableElement|2022-04-26|
+;GENERAL
+*Phase effects (includes {{Al|Fade}}) no longer clear the Zarya Graviton Surge or Sigma Gravitic Flux movement restriction effects
+**E.g., Reaper can still use Wraith Form while in Graviton Surge to prevent damage but can’t walk out of it
+*Sombra Hack effect is now removed by phase effects
+|beta=1}}
+
+|owstadium={{#section-h:Moira/Stadium|Balance Change Log}}<!-- this section is transcluded from the /Stadium page and must be edited from there -->
+
+| ow1 =
+{{PatchTableElement|2022-01-06|{{Al|Fade}}
+*Can now jump much higher while using this ability
+}}{{PatchTableElement|2021-08-05|{{Al|Biotic Grasp}}
+*Self-healing increased from 20 to 24 health per second
+''Developer Comment: Moira has recently been underperforming a little bit. This increase to her self-healing with Biotic Grasp will help improve her survivability while in range to recharge her healing resources.''
+}}{{PatchTableElement|2021-06-03|{{Al|Biotic Grasp}}
+*Resource regeneration is now three times higher while channeling Coalescence
+{{Al|Coalescence}}
+*Ultimate cost increased by 17%
+''Developer Comment: Many channeled ultimate abilities automatically reload the heroes weapon as they're locked out from reloading for a short time. The new regeneration rate will refill about half of Moira's Biotic energy resource over the full duration of Coalescence. This doesn't fully refill Moira's energy from empty as it would be unfortunate to lose that portion of her gameplay if players were able to fully cycle between ultimates with healing alone.''
+}}
+{{PatchTableElement|2021-04-22|{{Al|Biotic Orb}} 
+*Cooldown reduced from 10 to 8 seconds
+''Developer Comment: Moira has been underperforming in the support role even in team compositions and metas where we’d expect her to excel. Reducing the cooldown of Biotic Orb is a significant increase in Moira's potential to quickly adapt to many situations.''
+}}
+{{PatchTableElement|2020-11-19|{{Al|Biotic Grasp}}
+*Healing resource consumption rate lowered from 14 to 12.5
+
+''Moira could use a small bump in healing efficiency after recent changes made maintaining her high healing output more challenging.''
+}}
+{{PatchTableElement|2020-08-31|{{Al|Biotic Grasp}}
+
+Healing
+*Lingering heal reduced from 4 seconds to 2 seconds (Total healing from 65 down to 35)
+*Healing per second increased from 65 to 70
+*Healing resource consumption rate increased from 11 to 14 (27%)
+
+Damage
+*Attach angle reduced by 37%
+*Healing resource gain rate increased by 50%
+}}{{PatchTableElement|2020-05-19|{{Al|Biotic Orb}} 
+*Damage radius reduced from 5 to 4 meters
+*Projectile speed increased from 16 to 20
+*Projectile duration reduced from 10 to 7 seconds
+}}
+{{PatchTableElement|2019-12-10|{{Al|Biotic Grasp}} 
+*Healing reduced from 4 to 3.25 (80 HP/s to 65 HP/s)
+
+''Developer Comment: Moira’s primary heal has proven to be too potent, largely due to its ability to heal multiple targets.''
+}}
+{{PatchTableElement|2019-10-15|{{Al|Biotic Grasp}}
+*Self-healing reduced from 30 to 20 health per second
+
+''Developer Comment: Moira’s dueling capability is a bit too strong, so we’re reducing the self-healing gain from her Biotic Grasp to make it more reasonable to fight against her alone.''
+}}
+{{PatchTableElement|2019-03-19|{{Al|Biotic Grasp}}
+*Heal over time duration increased from 3 to 4 seconds
+*Total healing increased from 50 to 65
+
+''Developer Comments: These minor changes make Moira’s passive healing effect on Biotic Grasp slightly more effective when topping off an ally’s health.''
+}}
+{{PatchTableElement|2018-08-09|{{Al|Biotic Grasp}}
+*Passive energy regeneration rate increased from 2 per second to 2.4 per second
+
+''Developer Comments: This change should help Moira in situations where there are no enemies within reach but your team still requires a lot of healing. She will still need to drain enemies to be fully effective, but this just helps her a bit in the rare cases where there is an extended long-range fight that she can’t reasonably take part in.''
+}}
+{{PatchTableElement|2018-04-10|{{Al|Biotic Grasp}}
+*Transparency increased the closer you are to a target
+{{Al|Coalescence}}
+*Now becomes more transparent the closer its visual effects are to a player’s camera
+{{Al|Fade}}
+*Transparency increased the closer you are to a target
+
+''Developer Comments: Due to issues with visibility, we have made most of Moira’s visual effects fade away the closer they are to the camera. We have also made modifications to Coalescence to greatly increase the ability for foes and allies alike to see through it when facing it.''
+}}
+{{PatchTableElement|2017-11-16|New Hero: Moira (Support)
+}} }}
+
+==References==
+<references />
+
+==External links==
+*[https://playoverwatch.com/en-us/heroes/moira/ Official Site - Moira]
+
+{{Heroes}}
+[[Category:Moira| ]]
+[[Category:Heroes]]
+[[Category:Talon members]]

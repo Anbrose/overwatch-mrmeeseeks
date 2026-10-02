@@ -5,6 +5,7 @@
   @mrmeeseeks status     查看所有在线客户端
   @mrmeeseeks disconnect 解绑当前频道里的客户端
   @mrmeeseeks help       显示帮助
+  @mrmeeseeks <问题>     英雄问答（数值、补丁、几枪击杀），见 hero_qa.py
 """
 from __future__ import annotations
 
@@ -15,9 +16,12 @@ import os
 import time
 
 import discord
+from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
 
 from analyzer import Analyzer, format_facts
+from hero_qa import Cooldown, HeroQA
+from herodata import HeroStore, load_aliases, refresh_loop
 from registry import CODE_TTL_SECONDS, ClientConn, PairingError, Registry
 from ws_server import WSServer
 
@@ -28,8 +32,27 @@ HELP_TEXT = (
     "`@mrmeeseeks` or `@mrmeeseeks connect` Connect a local client (pick its ID and I'll DM you an 8-digit pairing code)\n"
     "`@mrmeeseeks status` List online clients\n"
     "`@mrmeeseeks disconnect` Unpair the client bound to this channel\n"
-    "`@mrmeeseeks help` Show this help"
+    "`@mrmeeseeks help` Show this help\n"
+    "`@mrmeeseeks <question>` Ask about heroes, e.g. `was Cassidy nerfed recently?`, "
+    "`Tracer HP`, `how many Cassidy headshots kill Mauga at 30m?`"
 )
+COMMANDS = ("connect", "status", "disconnect", "help")
+ASK_COOLDOWN_SECONDS = 5
+
+
+def parse_command(text: str, explicit: bool = True) -> tuple[str, str]:
+    """去掉 @ 之后的文本 -> (指令, 原文)。空文本是 connect，不是已知指令的都当作英雄问答。
+
+    explicit=False 表示消息里没有写 @mrmeeseeks（只是回复了 bot 的消息）：这种情况下
+    普通文本（如 "thanks"）显示帮助，不调用付费的问答。
+    """
+    stripped = text.strip()
+    cmd = stripped.lower()
+    if cmd == "":
+        return "connect", stripped
+    if cmd in COMMANDS:
+        return cmd, stripped
+    return ("ask" if explicit else "help"), stripped
 
 
 def _age(seconds: float) -> str:
@@ -104,12 +127,16 @@ class ClientSelectView(discord.ui.View):
 
 # ---------------- Bot 本体 ----------------
 class MeeseeksBot(discord.Client):
-    def __init__(self, registry: Registry, analyzer: Analyzer | None):
+    def __init__(self, registry: Registry, analyzer: Analyzer | None,
+                 store: HeroStore | None = None, hero_qa: HeroQA | None = None):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents, allowed_mentions=discord.AllowedMentions(everyone=False, roles=False))
         self.registry = registry
         self.analyzer = analyzer
+        self.store = store
+        self.hero_qa = hero_qa
+        self.ask_cooldown = Cooldown(ASK_COOLDOWN_SECONDS)
 
     async def on_ready(self) -> None:
         log.info("Logged in to Discord as %s", self.user)
@@ -125,18 +152,41 @@ class MeeseeksBot(discord.Client):
         if message.author.bot or self.user is None or self.user not in message.mentions:
             return
         text = message.content
-        for token in (f"<@{self.user.id}>", f"<@!{self.user.id}>"):
+        tokens = (f"<@{self.user.id}>", f"<@!{self.user.id}>")
+        explicit = any(t in text for t in tokens)
+        for token in tokens:
             text = text.replace(token, "")
-        cmd = text.strip().lower()
+        cmd, question = parse_command(text, explicit)
 
-        if cmd in ("", "connect"):
+        if cmd == "connect":
             await self._connect_flow(message)
         elif cmd == "status":
             await self._status(message)
         elif cmd == "disconnect":
             await self._disconnect(message)
-        else:
+        elif cmd == "help":
             await message.reply(HELP_TEXT)
+        else:
+            await self._ask(message, question)
+
+    async def _ask(self, message: discord.Message, question: str) -> None:
+        if self.hero_qa is None:
+            await message.reply("Hero Q&A needs ANTHROPIC_API_KEY to be set.")
+            return
+        if self.store is None or not self.store.ready:
+            await message.reply("Hero data is not ready yet, try again in a minute.")
+            return
+        if not self.ask_cooldown.allow(message.author.id):
+            await message.reply(f"Please wait {ASK_COOLDOWN_SECONDS} seconds between questions.")
+            return
+        try:
+            async with message.channel.typing():
+                answer = await self.hero_qa.answer(question)
+        except Exception:
+            log.exception("Hero Q&A failed for %r", question)
+            await message.reply("Sorry, I couldn't answer that right now. Please try again later.")
+            return
+        await message.reply(answer[:1990] or "I couldn't come up with an answer.")
 
     async def _connect_flow(self, message: discord.Message) -> None:
         clients = self.registry.available()
@@ -217,8 +267,15 @@ async def main() -> None:
     else:
         log.info("Analysis model: %s", model)
 
+    server_dir = os.path.dirname(os.path.abspath(__file__))
+    store = HeroStore(os.environ.get("HERO_DATA_PATH", "").strip() or os.path.join(server_dir, "data", "heroes.json"),
+                      load_aliases())
+    store.load()
+    hero_qa = HeroQA(AsyncAnthropic(api_key=api_key), model, store) if api_key else None
+    refresh_hours = float(os.environ.get("HERO_REFRESH_HOURS", "24"))
+
     registry = Registry()
-    bot = MeeseeksBot(registry, analyzer)
+    bot = MeeseeksBot(registry, analyzer, store, hero_qa)
     ws = WSServer(
         registry, bot,
         host=os.environ.get("WS_HOST", "0.0.0.0"),
@@ -228,6 +285,7 @@ async def main() -> None:
 
     async with bot:
         await ws.start()
+        refresher = asyncio.create_task(refresh_loop(store, refresh_hours))
         try:
             await bot.start(token)
         except discord.LoginFailure:
@@ -235,6 +293,7 @@ async def main() -> None:
         except discord.PrivilegedIntentsRequired:
             raise SystemExit("Discord refused the connection: enable Message Content Intent on the Bot page of the Developer Portal.")
         finally:
+            refresher.cancel()
             await ws.close()
 
 
