@@ -401,7 +401,7 @@ async def main() -> None:
     store = HeroStore(os.environ.get("HERO_DATA_PATH", "").strip() or os.path.join(server_dir, "herodata", "heroes.json"),
                       load_aliases())
     store.load()
-    hero_qa = HeroQA(AsyncAnthropic(api_key=api_key), model, store) if api_key else None
+    hero_qa = HeroQA(AsyncAnthropic(api_key=api_key), model, store, effort=effort) if api_key else None
     refresh_hours = float(os.environ.get("HERO_REFRESH_HOURS", "24"))
 
     registry = Registry()

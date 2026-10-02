@@ -12,7 +12,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "server"))
 
 import bot  # noqa: E402
-from hero_qa import TOO_COMPLEX, Cooldown, HeroQA  # noqa: E402
+from hero_qa import TOO_COMPLEX, TRUNCATED, TOOLS, Cooldown, HeroQA  # noqa: E402
 from herodata import HeroStore, load_aliases  # noqa: E402
 from heroparse import parse_hero  # noqa: E402
 
@@ -104,6 +104,25 @@ def test_default_weapon():
     check("默认武器跳过没有伤害数据的治疗武器", k.get("weapon") == "Kunai" and k["shots"] == 4)
     k = qa.run_tool("shots_to_kill", {"attacker": "Healer", "target": "Tracer", "weapon": "ofuda"})
     check("unsupported 结果附带可选武器列表", "unsupported" in k and k["weapons"] == ["Healing Ofuda", "Kunai"])
+
+
+def test_thinking_budget():
+    client = ScriptedClient([NS(stop_reason="end_turn", content=[text("ok")])])
+    asyncio.run(HeroQA(client, "m", make_store()).answer("q"))
+    req = client.requests[0]
+    check("max_tokens 给思考留足空间（默认开启 adaptive thinking）", req["max_tokens"] >= 8000)
+    check("默认 effort low", req.get("output_config") == {"effort": "low"})
+    client = ScriptedClient([NS(stop_reason="end_turn", content=[text("ok")])])
+    asyncio.run(HeroQA(client, "m", make_store(), effort=None).answer("q"))
+    check("effort=None 时不传 output_config", "output_config" not in client.requests[0])
+    thinking_only = ScriptedClient([NS(stop_reason="max_tokens", content=[NS(type="thinking", thinking="")])])
+    answer = asyncio.run(HeroQA(thinking_only, "m", make_store()).answer("站瑞希身边奶多少啊"))
+    check("思考耗尽 max_tokens 时返回明确提示而不是空字符串", answer == TRUNCATED)
+
+
+def test_tool_schema():
+    desc = TOOLS[0]["input_schema"]["properties"]["hero"]["description"]
+    check("工具说明要求英雄名按原话传、不要翻译", "exactly as the user wrote" in desc)
 
 
 def test_loop():
@@ -218,6 +237,8 @@ def test_ask():
 if __name__ == "__main__":
     test_tools()
     test_default_weapon()
+    test_thinking_budget()
+    test_tool_schema()
     test_loop()
     test_cooldown()
     test_routing()
