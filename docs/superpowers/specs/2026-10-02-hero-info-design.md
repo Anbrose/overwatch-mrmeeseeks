@@ -35,7 +35,7 @@ Discord @mrmeeseeks <问题>
 
 | 文件 | 职责 | 依赖 |
 |---|---|---|
-| `server/herodata.py` | 抓取 Wiki、解析、规范化、缓存、定时刷新、英雄名解析 | aiohttp/httpx, mwparserfromhell |
+| `server/herodata.py` | 抓取 Wiki、解析、规范化、缓存、定时刷新、英雄名解析 | aiohttp（discord.py 已依赖）, mwparserfromhell |
 | `server/aliases.json` | 中文名与别名（手工维护） | — |
 | `server/damage.py` | 伤害与击杀计算 | 无 |
 | `server/hero_qa.py` | 工具定义、tool use 循环、系统提示 | anthropic, herodata, damage |
@@ -174,7 +174,7 @@ Overwatch fandom Wiki 的 MediaWiki API：
 - `HERO_DATA_PATH=data/heroes.json`
 - `HERO_REFRESH_HOURS=24`
 
-`compose.yml` 为 `data/` 加卷。`requirements.txt` 加 `mwparserfromhell`（HTTP 客户端优先复用现有依赖）。
+`compose.yml` 为 `data/` 加卷。`requirements.txt` 加 `mwparserfromhell`；HTTP 用 discord.py 已带的 aiohttp。
 
 ## 测试
 
