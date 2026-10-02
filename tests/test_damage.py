@@ -115,6 +115,20 @@ def test_pellets_and_variants():
     check("结果标明用了哪个变体", r["variant"] == "at 100% power")
 
 
+def test_variant_guards():
+    reaper = mk_hero("Reaper", hp(275), weapons=[SHOTGUN])
+    r = damage.shots_to_kill(reaper, SHOTGUN, MAUGA, variant=1)
+    check("多弹丸武器选'每发总伤'变体被拒绝（否则 115×20）", "unsupported" in r and "variant 0" in r["unsupported"])
+    volley = mk_weapon("Orb Alt Fire", [("per orb", 50, 50), ("per volley", 250, 250)], shot_type="proj")
+    check("'per volley' 变体被拒绝", "unsupported" in damage.shots_to_kill(CASSIDY, volley, TRACER, variant=1))
+    dot = mk_weapon("Chaingun", [("direct", 4, 1.2), ("per second (damage over time", 15, 15)], falloff=(30, 40))
+    check("'per second' 变体被拒绝", "unsupported" in damage.shots_to_kill(CASSIDY, dot, TRACER, variant=1))
+    check("负数 variant 被拒绝而不是取最后一个",
+          "unsupported" in damage.shots_to_kill(WIDOW, ADS, TRACER, variant=-1))
+    dart = mk_weapon("Biotic Rifle", [("over 0.59 seconds", 75, 75)], shot_type="proj", headshot=False)
+    check("'over N seconds' 的单发伤害仍可计算", damage.shots_to_kill(CASSIDY, dart, TRACER)["shots"] == 3)
+
+
 def test_unsupported():
     beam = mk_weapon("Biotic Grasp", [("", 65, 65)], shot_type="beam")
     melee = mk_weapon("Rocket Hammer", [("", 100, 100)], shot_type="melee", headshot=False)
@@ -136,6 +150,7 @@ if __name__ == "__main__":
     test_armor_rule()
     test_shots_to_kill()
     test_pellets_and_variants()
+    test_variant_guards()
     test_unsupported()
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")

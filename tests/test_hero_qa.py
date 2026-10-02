@@ -84,6 +84,26 @@ def test_tools():
     k = qa.run_tool("shots_to_kill", {"attacker": "Cassidy", "target": "Tracer", "distance": "30"})
     check("字符串数字距离可以用", k["distance_m"] == 30.0 and k["shots"] == 4)
     check("未知工具", "error" in qa.run_tool("nope", {}))
+    k = qa.run_tool("shots_to_kill", {"attacker": "Cassidy", "target": "Tracer", "headshot": "false"})
+    check("headshot 字符串 'false' 不算爆头", k["headshot"] is False and k["shots"] == 3)
+    k = qa.run_tool("shots_to_kill", {"attacker": "Cassidy", "target": "Tracer", "headshot": "True"})
+    check("headshot 字符串 'True' 算爆头", k["headshot"] is True and k["shots"] == 2)
+    bad = qa.run_tool("shots_to_kill", {"attacker": "Cassidy", "target": "Tracer", "headshot": "maybe"})
+    check("headshot 无法识别时返回错误", "headshot" in bad.get("error", ""))
+
+
+def test_default_weapon():
+    store = make_store()
+    gun = {"name": "Kunai", "fire": None, "shot_type": "proj", "headshot": True, "pellets": 1,
+           "damage": [{"label": "", "max": 45.0, "min": 45.0}], "falloff_start": None, "falloff_end": None,
+           "projectile_radius": 0.1, "raw": {}}
+    heal = {**gun, "name": "Healing Ofuda", "damage": []}
+    store.heroes["Healer"] = {**store.heroes["Tracer"], "name": "Healer", "weapons": [heal, gun]}
+    qa = HeroQA(None, "m", store)
+    k = qa.run_tool("shots_to_kill", {"attacker": "Healer", "target": "Tracer"})
+    check("默认武器跳过没有伤害数据的治疗武器", k.get("weapon") == "Kunai" and k["shots"] == 4)
+    k = qa.run_tool("shots_to_kill", {"attacker": "Healer", "target": "Tracer", "weapon": "ofuda"})
+    check("unsupported 结果附带可选武器列表", "unsupported" in k and k["weapons"] == ["Healing Ofuda", "Kunai"])
 
 
 def test_loop():
@@ -134,6 +154,8 @@ def test_routing():
     check("指令忽略大小写", bot.parse_command(" Status ") == ("status", "Status"))
     check("disconnect / help 不变", bot.parse_command("disconnect")[0] == "disconnect" and bot.parse_command("help")[0] == "help")
     check("其他文本 → ask，保留原文", bot.parse_command("Was Cassidy nerfed?") == ("ask", "Was Cassidy nerfed?"))
+    check("回复 bot（没有显式 @）的普通文本不进问答", bot.parse_command("thanks!", explicit=False) == ("help", "thanks!"))
+    check("回复 bot 时指令仍然可用", bot.parse_command("status", explicit=False) == ("status", "status"))
 
 
 class FakeChannel:
@@ -195,6 +217,7 @@ def test_ask():
 
 if __name__ == "__main__":
     test_tools()
+    test_default_weapon()
     test_loop()
     test_cooldown()
     test_routing()

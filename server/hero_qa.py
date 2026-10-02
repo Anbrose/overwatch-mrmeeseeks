@@ -61,13 +61,25 @@ TOOLS = [
 def _pick_weapon(hero: dict[str, Any], weapon: str | None) -> dict[str, Any] | None:
     weapons = hero["weapons"]
     if weapon is None or str(weapon).strip() == "":
-        return next((w for w in weapons if "melee" not in w["shot_type"]), weapons[0] if weapons else None)
+        # 默认取第一把有伤害数据、能逐发计算的武器（跳过治疗武器、光束、近战）
+        usable = (w for w in weapons
+                  if w["damage"] and "beam" not in w["shot_type"] and "melee" not in w["shot_type"])
+        return next(usable, weapons[0] if weapons else None)
     if str(weapon).isdigit():
         i = int(weapon)
         return weapons[i] if i < len(weapons) else None
     q = str(weapon).casefold()
     return next((w for w in weapons if w["name"].casefold() == q), None) or \
         next((w for w in weapons if q in w["name"].casefold()), None)
+
+
+def _as_bool(value: Any) -> bool | None:
+    """模型偶尔会把布尔值写成字符串；bool("false") 是 True，所以要显式转换。"""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str) and value.strip().lower() in ("true", "false"):
+        return value.strip().lower() == "true"
+    return None
 
 
 class HeroQA:
@@ -114,12 +126,16 @@ class HeroQA:
                 variant = None if args.get("variant") is None else int(args["variant"])
             except (TypeError, ValueError):
                 return {"error": "distance must be a number of meters and variant an integer index"}
+            headshot = _as_bool(args.get("headshot", False))
+            if headshot is None:
+                return {"error": "headshot must be true or false"}
             result = damage.shots_to_kill(
-                attacker, weapon, target, distance=distance,
-                headshot=bool(args.get("headshot")),
+                attacker, weapon, target, distance=distance, headshot=headshot,
                 mode=args.get("mode") or "role_queue",
                 variant=variant,
             )
+            if "unsupported" in result:  # 让模型能换一把武器重试
+                result["weapons"] = [w["name"] for w in attacker["weapons"]]
             return {**result, "fetched_at": self.store.fetched_at}
         return {"error": f"unknown tool {name}"}
 

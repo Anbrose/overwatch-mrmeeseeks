@@ -40,15 +40,19 @@ COMMANDS = ("connect", "status", "disconnect", "help")
 ASK_COOLDOWN_SECONDS = 5
 
 
-def parse_command(text: str) -> tuple[str, str]:
-    """去掉 @ 之后的文本 -> (指令, 原文)。空文本是 connect，不是已知指令的都当作英雄问答。"""
+def parse_command(text: str, explicit: bool = True) -> tuple[str, str]:
+    """去掉 @ 之后的文本 -> (指令, 原文)。空文本是 connect，不是已知指令的都当作英雄问答。
+
+    explicit=False 表示消息里没有写 @mrmeeseeks（只是回复了 bot 的消息）：这种情况下
+    普通文本（如 "thanks"）显示帮助，不调用付费的问答。
+    """
     stripped = text.strip()
     cmd = stripped.lower()
     if cmd == "":
         return "connect", stripped
     if cmd in COMMANDS:
         return cmd, stripped
-    return "ask", stripped
+    return ("ask" if explicit else "help"), stripped
 
 
 def _age(seconds: float) -> str:
@@ -148,9 +152,11 @@ class MeeseeksBot(discord.Client):
         if message.author.bot or self.user is None or self.user not in message.mentions:
             return
         text = message.content
-        for token in (f"<@{self.user.id}>", f"<@!{self.user.id}>"):
+        tokens = (f"<@{self.user.id}>", f"<@!{self.user.id}>")
+        explicit = any(t in text for t in tokens)
+        for token in tokens:
             text = text.replace(token, "")
-        cmd, question = parse_command(text)
+        cmd, question = parse_command(text, explicit)
 
         if cmd == "connect":
             await self._connect_flow(message)

@@ -21,6 +21,8 @@ CRIT_MULTIPLIER_OVERRIDES = {
 }
 BRUISER_CRIT_REDUCTION = 0.25
 MODES = ("role_queue", "open_queue", "6v6")
+# 这些变体是多段伤害的合计或每秒伤害，不是单次命中的伤害，拿来逐发模拟会得出错误的枪数
+_NON_PER_HIT_LABELS = ("per second", "per volley", "per burst", "per shot", "total")
 _EPS = 1e-6
 
 
@@ -66,9 +68,14 @@ def shot_instances(attacker: str, weapon: dict[str, Any], target: dict[str, Any]
         label = "direct hit + splash"
     else:
         idx = variant or 0
-        if idx >= len(weapon["damage"]):
+        if not 0 <= idx < len(weapon["damage"]):
             return {"unsupported": f"weapon has no damage variant #{idx}"}
         chosen = weapon["damage"][idx]
+        pellets = weapon.get("pellets") or 1
+        if idx > 0 and pellets > 1:
+            return {"unsupported": f"variant {idx} is a total over {pellets} pellets; use variant 0 (per pellet)"}
+        if idx > 0 and any(k in chosen["label"].lower() for k in _NON_PER_HIT_LABELS):
+            return {"unsupported": f"variant {idx} ({chosen['label']}) is not damage per hit"}
         per_hit = damage_at(chosen, weapon.get("falloff_start"), weapon.get("falloff_end"), distance)
         label = chosen["label"]
 
