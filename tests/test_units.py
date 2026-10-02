@@ -64,7 +64,11 @@ def test_analyzer():
     check("建议文本返回", advice.startswith("Stay as is"))
     check("只发文字、不发图", "image" not in json.dumps(calls[0]["messages"]))
     check("带上识别出的 facts", "King's Row" in calls[0]["messages"][0]["content"])
-    check("带上约束规则", "Use only the data provided below" in calls[0]["system"])
+    check("带上约束规则：只用识别出的事实", "Use only the facts provided below" in calls[0]["system"])
+    sent = calls[0]["messages"][0]["content"]
+    check("不再发送 not available 占位数据（模型会因此拒绝给建议）", "not available" not in sent)
+    check("没有'缺信息就不给建议'的规则", "Not enough data to give advice" not in calls[0]["system"])
+    check("允许用通用克制知识", "general" in calls[0]["system"].lower())
     check("effort 传给 API", calls[0]["output_config"] == {"effort": "low"})
     asyncio.run(_analyzer(create, effort=None).advise(FACTS))
     check("effort 为 None 时不传 output_config", "output_config" not in calls[1])
@@ -74,6 +78,8 @@ def test_analyzer():
           text.splitlines()[0] == "King's Row · Hybrid · Attack · checkpoint 2 (~40%)")
     check("我方：未知显示 ?，未选显示 (not picked)", text.splitlines()[1] == "Allies: D.Va, ?, (not picked)")
     check("敌方：阵亡的补全英雄带 †", text.splitlines()[2] == "Enemies: Winston, Tracer†")
+    check("认不出但有上次英雄显示 Moira?", analyzer.format_facts(
+        {**FACTS, "enemies": [{**_p("X", None, "unknown"), "last_seen_hero": "Moira"}]}).splitlines()[2] == "Enemies: Moira?")
     check("阵亡且没有记忆显示 ?†", analyzer.format_facts(
         {**FACTS, "enemies": [_p("X", None, "dead")]}).splitlines()[2] == "Enemies: ?†")
     check("沿用的阶段标注 last seen", "checkpoint 1 (last seen)" in analyzer.format_facts(

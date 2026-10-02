@@ -19,6 +19,7 @@ import numpy as np
 from vision.heroes import DEAD, EMPTY, HeroMatcher
 
 DUPLICATE_SCORE = 0.90
+REPROMPT_SECONDS = 180    # 同一个未知头像多久后可以再弹一次（菜单可能被刷走，或 bot 重启后失效）
 
 
 @dataclass
@@ -48,19 +49,32 @@ class LabelStore:
                 items.append(Pending(meta_file.stem, img, json.loads(meta_file.read_text())))
         return items
 
-    def add(self, crop: np.ndarray, meta: dict[str, Any]) -> str | None:
-        """加入队列；和已有某张几乎一样就只给那张计数加一，返回 None。"""
+    def _save_meta(self, pid: str, meta: dict[str, Any]) -> None:
+        (self.unlabeled / f"{pid}.json").write_text(json.dumps(meta))
+
+    def add(self, crop: np.ndarray, meta: dict[str, Any]) -> tuple[str, bool]:
+        """加入队列，返回 (id, 现在要不要弹标注菜单)。
+
+        和队列里某张几乎一样时不重复入队，只计数并更新为最新的昵称/位置；
+        这张最近 REPROMPT_SECONDS 内没弹过就再弹（之前的菜单可能错过或已失效）。"""
         for item in self._items():
             if item.image.shape == crop.shape:
                 score = float(cv2.matchTemplate(crop, item.image, cv2.TM_CCOEFF_NORMED).max())
                 if score >= DUPLICATE_SCORE:
-                    item.meta["seen"] = item.meta.get("seen", 1) + 1
-                    (self.unlabeled / f"{item.id}.json").write_text(json.dumps(item.meta))
-                    return None
+                    seen = item.meta.get("seen", 1) + 1
+                    item.meta.update({k: v for k, v in meta.items() if v is not None}, seen=seen)
+                    self._save_meta(item.id, item.meta)
+                    return item.id, time.time() - item.meta.get("prompted_at", 0) >= REPROMPT_SECONDS
         pid = time.strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:6]
         cv2.imwrite(str(self.unlabeled / f"{pid}.png"), crop)
-        (self.unlabeled / f"{pid}.json").write_text(json.dumps({**meta, "seen": 1}))
-        return pid
+        self._save_meta(pid, {**meta, "seen": 1})
+        return pid, True
+
+    def mark_prompted(self, pid: str) -> None:
+        item = self.get(pid)
+        if item is not None:
+            item.meta["prompted_at"] = time.time()
+            self._save_meta(pid, item.meta)
 
     def pending(self, limit: int | None = None) -> list[Pending]:
         items = self._items()

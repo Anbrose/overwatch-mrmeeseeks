@@ -43,6 +43,9 @@ class Situation:
             elif p.get("status") in ("dead", "empty") and name in self.memory:
                 p["hero_key"], p["hero"] = self.memory[name]
                 p["remembered"] = True
+            elif p.get("status") == "unknown" and name in self.memory:
+                # 头像认不出（可能换了英雄，也可能是特效遮挡）：只作参考，英雄仍算未知
+                p["last_seen_hero"] = self.memory[name][1]
         self.last_facts = facts
         return facts
 

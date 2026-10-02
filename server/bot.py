@@ -292,12 +292,12 @@ class MeeseeksBot(discord.Client):
 
         state = self.situations[client.channel_id]
         facts = state.update(to_facts(rec, self.hero_name))
-        new_unknowns = []
+        to_prompt = []
         for slot in rec.unknowns:
-            pid = self.labels.add(slot.crop, {"team": slot.team, "row": slot.row, "player": slot.player,
-                                              "score": round(slot.score, 2), "at": time.time()})
-            if pid:
-                new_unknowns.append(pid)
+            pid, prompt = self.labels.add(slot.crop, {"team": slot.team, "row": slot.row, "player": slot.player,
+                                                      "score": round(slot.score, 2), "at": time.time()})
+            if prompt:
+                to_prompt.append(pid)
 
         if state.should_skip(facts):
             await channel.send(f"⏸️ No change ({format_facts(facts).splitlines()[0]}, same heroes) — "
@@ -314,7 +314,7 @@ class MeeseeksBot(discord.Client):
             state.remember_advice(facts, reply.jump_url)
             summary = advice.splitlines()[0] if advice else ""
 
-        prompts = [p for p in (self.labels.get(pid) for pid in new_unknowns[:AUTO_PROMPTS]) if p]
+        prompts = [p for p in (self.labels.get(pid) for pid in to_prompt[:AUTO_PROMPTS]) if p]
         if prompts:
             await send_prompts(channel, self.labels, self.roster, self.hero_name, prompts,
                                self._owners(client.channel_id))

@@ -9,16 +9,15 @@ from typing import Any
 
 from anthropic import AsyncAnthropic
 
-ADVISE_SYSTEM = """You are mrmeeseeks, an Overwatch hero-swap advisor.
-Rules:
-1. Use only the data provided below. Do not add facts that are not in the data.
-2. A player whose hero is null (status "unknown") has an unknown hero. A "dead" player with a hero listed is still playing that hero.
-3. After each suggestion, cite its basis in parentheses, e.g. (basis: enemy comp Winston + Tracer).
-4. Teammates' best heroes may only come from "teammate_career_data"; if it is not provided, do not assume.
-5. If a counter relationship comes only from general knowledge and is not backed by "patch_data", mark it "(general counter, not verified against current patch data)".
-6. If key information is missing, answer "Not enough data to give advice" and say what is missing.
-Output format (English, at most 150 words):
-First line: a one-sentence conclusion (who should swap to what, or stay as is)
+ADVISE_SYSTEM = """You are mrmeeseeks, an Overwatch hero-swap advisor for the player's team (the "allies").
+The data below is what was recognized from the in-game scoreboard. Rules:
+1. Use only the facts provided below for the current game state (map, mode, side, stage, heroes). Do not invent facts about this game.
+2. Use your general knowledge of Overwatch heroes, counters and map positions to reason about those facts.
+3. Always give your best recommendation with whatever is known. Some heroes may be unknown: reason around them and mention them in a few words at most; never refuse to advise just because some data is missing.
+4. A player with status "unknown" and a "last_seen_hero" was most recently seen on that hero; treat it as likely but not certain. A "dead" player with a hero listed is still playing that hero.
+5. After each reason, cite its basis in parentheses, e.g. (basis: enemy comp Winston + Tracer).
+Output format (English, at most 120 words):
+First line: a one-sentence conclusion (which ally should swap to what, or stay as is)
 Then at most 3 reasons, one per line, each starting with "- "."""
 
 # 模型默认开启 adaptive thinking，思考也计入 max_tokens；给小了会只剩 thinking 块、没有正文
@@ -38,13 +37,9 @@ class Analyzer:
         self.effort = effort   # 纯文本推理，low 足够且快；None 为模型默认
 
     async def advise(self, facts: dict[str, Any]) -> str:
-        # 以后在这里接入：OverFast 队友生涯数据、地图分段对照表、当前版本英雄数据
-        payload = {
-            "screen_facts": facts,
-            "teammate_career_data": "not available yet",
-            "map_segment_reference": "not available yet",
-            "patch_data": "not available yet",
-        }
+        # 以后接入 OverFast 队友生涯数据、地图分段对照表时加到这里；没有的数据不要放占位，
+        # 否则模型会以"缺数据"为由拒绝给建议
+        payload = {"screen_facts": facts}
         extra = {"output_config": {"effort": self.effort}} if self.effort else {}
         resp = await self.client.messages.create(
             model=self.model,
@@ -70,7 +65,7 @@ def _stage(seg: dict[str, Any]) -> str:
 def _people(people: list[dict[str, Any]]) -> str:
     out = []
     for p in people:
-        hero = p.get("hero") or "?"
+        hero = p.get("hero") or (f"{p['last_seen_hero']}?" if p.get("last_seen_hero") else "?")
         if p.get("status") == "dead":
             hero += "†"
         elif p.get("status") == "empty" and not p.get("hero"):

@@ -103,3 +103,4 @@ async def send_prompts(channel, store: LabelStore, roster: Roster, hero_name, it
     for item in items:
         await channel.send(prompt_text(item), file=prompt_file(item),
                            view=LabelView(store, roster, hero_name, item.id, owners))
+        store.mark_prompted(item.id)

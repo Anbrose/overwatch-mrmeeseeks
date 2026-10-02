@@ -167,6 +167,10 @@ def test_situation():
 
     unknown = _facts(); unknown["enemies"][0].update(hero=None, hero_key=None, status="unknown")
     check("有未知英雄时指纹为 None，不跳过", fingerprint(unknown) is None)
+    f6 = s.update(unknown)
+    check("认不出的头像带上该玩家上次的英雄（可能换了，所以只作参考）",
+          f6["enemies"][0]["last_seen_hero"] == "Mauga" and f6["enemies"][0]["hero"] is None)
+    check("仍然不跳过", not s.should_skip(f6))
 
     s.update(_facts(side=None))
     check("读不到攻防时沿用同图上次的攻防", s.last_facts["side"] == "Attack")
@@ -186,11 +190,18 @@ def test_labeling():
         matcher = HeroMatcher([])
         store = LabelStore(Path(tmp), matcher)
         crop = _tpl("reaper")
-        pid = store.add(crop, {"team": "enemy", "row": 3, "player": "SHORTERARROW"})
-        check("未知头像加入队列", pid and len(store.pending()) == 1)
-        check("几乎一样的头像不重复入队", store.add(crop.copy(), {"team": "enemy", "row": 3}) is None
-              and store.pending()[0].meta["seen"] == 2)
-        check("不同头像单独入队", store.add(_tpl("ana"), {"team": "enemy", "row": 5}) and len(store.pending()) == 2)
+        pid, prompt = store.add(crop, {"team": "enemy", "row": 3, "player": "SHORTERARROW"})
+        check("未知头像加入队列，新的要弹标注", pid and prompt and len(store.pending()) == 1)
+        dup, prompt = store.add(crop.copy(), {"team": "enemy", "row": 3, "player": "ICEFROSTY"})
+        check("没弹过的重复头像：不重复入队，但要弹", dup == pid and prompt and store.get(pid).meta["seen"] == 2)
+        check("重复时更新为最新的昵称", store.get(pid).meta["player"] == "ICEFROSTY")
+        store.mark_prompted(pid)
+        check("刚弹过的重复头像不再弹", store.add(crop.copy(), {"team": "enemy", "row": 3}) == (pid, False))
+        meta = store.get(pid).meta; meta["prompted_at"] -= 600
+        (Path(tmp) / "unlabeled" / f"{pid}.json").write_text(__import__("json").dumps(meta))
+        check("弹过但已过几分钟（菜单可能错过或失效）→ 再弹", store.add(crop.copy(), {"team": "enemy", "row": 3}) == (pid, True))
+        other_id, prompt = store.add(_tpl("ana"), {"team": "enemy", "row": 5})
+        check("不同头像单独入队", other_id != pid and prompt and len(store.pending()) == 2)
         check("标注后存成模板文件", store.label(pid, "reaper") and (Path(tmp) / "templates" / "reaper" / f"{pid}.png").exists())
         check("标注后立刻进入匹配器", "reaper" in matcher.labels)
         check("标注后移出队列", len(store.pending()) == 1)
