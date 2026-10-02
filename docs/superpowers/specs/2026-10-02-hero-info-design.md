@@ -102,7 +102,7 @@ Overwatch fandom Wiki 的 MediaWiki API：
 
 ### 缓存与刷新
 
-- 快照写入 `HERO_DATA_PATH`（默认 `data/heroes.json`，Docker 中挂卷）。
+- 快照写入 `HERO_DATA_PATH`（默认 `server/data/heroes.json`，Docker 中 `/app/data` 挂卷）。
 - 启动：读缓存（若有）→ 后台立即刷新一次 → 之后每 `HERO_REFRESH_HOURS`（默认 24）刷新。
 - 新快照替换旧快照的条件：英雄数 ≥ 旧快照的 90%，且「有武器数据的英雄占比」不比旧快照低超过 10 个百分点。不满足则保留旧快照并记 warning。无旧快照时只要求英雄数 > 0。
 - 写文件用临时文件 + rename，避免写一半。
@@ -180,7 +180,7 @@ Overwatch fandom Wiki 的 MediaWiki API：
 ## 配置
 
 `.env.example` 新增：
-- `HERO_DATA_PATH=data/heroes.json`
+- `HERO_DATA_PATH=`（留空默认 `server/data/heroes.json`；Docker 中 `/app/data` 挂卷）
 - `HERO_REFRESH_HOURS=24`
 
 `compose.yml` 为 `data/` 加卷。`requirements.txt` 加 `mwparserfromhell`；HTTP 用 discord.py 已带的 aiohttp。
