@@ -11,6 +11,7 @@ class Situation:
     memory: dict[str, tuple[str, str]] = field(default_factory=dict)   # 昵称 -> (hero_key, 显示名)
     map_side: tuple[Any, Any] | None = None
     stage: Any = None
+    pending_side: Any = None      # 读到相反攻防但还没确认（可能是击杀回放的对方视角）
     last_facts: dict[str, Any] | None = None
     advised_fingerprint: tuple | None = None
     advice_url: str | None = None
@@ -19,9 +20,22 @@ class Situation:
         """用记忆补全阵亡/未选玩家的英雄，返回新的 facts（不修改入参）。"""
         facts = copy.deepcopy(facts)
         map_name = (facts.get("map") or {}).get("name")
-        # 复活画面等情况下读不到攻防：同一张地图沿用上次的
-        if facts.get("side") is None and self.map_side and self.map_side[0] == map_name:
+        objective = (facts.get("segment") or {}).get("detail") or ""
+        same_map = self.map_side is not None and self.map_side[0] == map_name
+        side = facts.get("side")
+        if same_map and side is None:
+            # 复活画面等情况下读不到攻防：同一张地图沿用上次的
             facts["side"] = self.map_side[1]
+        elif same_map and side != self.map_side[1]:
+            # 击杀回放显示的是对方视角（「防守目标点A」），单独一次不算换边；
+            # 真正换边一定经过准备阶段（「准备进攻/防守」），那时立即生效，否则要连续两次读到才换
+            if "准备" not in objective and self.pending_side != side:
+                self.pending_side = side
+                facts["side"] = self.map_side[1]
+            else:
+                self.pending_side = None
+        else:
+            self.pending_side = None
         key = (map_name, facts.get("side"))
         if self.map_side is not None and key != self.map_side:
             self.memory.clear()            # 换图或换边：新的一局

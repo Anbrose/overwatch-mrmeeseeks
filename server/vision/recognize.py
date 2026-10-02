@@ -121,7 +121,10 @@ class Recognizer:
         if point:
             rec.stage = point
             return
-        fraction, checkpoint = progress.read_bar(hud)
+        # 只有推车阶段（护送/阻止运载目标）才读进度条；闪点、加时等阶段的进度条长得不一样，读出来是错的
+        if "运载" not in rec.objective_text:
+            return
+        fraction, checkpoint = progress.read_bar(hud, rec.map.mode if rec.map else None, rec.side)
         if fraction is not None:
             rec.progress = fraction
             rec.stage = str(checkpoint)

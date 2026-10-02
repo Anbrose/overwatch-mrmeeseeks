@@ -80,6 +80,14 @@ def test_recognize():
     check("地图和模式来自地图表", rec.map and rec.map.en == "Neon Junction" and rec.map.mode == "Hybrid")
     check("目标文字判断进攻", rec.side == "Attack")
 
+    bar_hud = cv2.imencode(".png", _bar(0.3))[1].tobytes()
+    rec = Recognizer(matcher, MAPS, fake_ocr(names=NAMES, objective="护送运载目标5:10")).recognize(synth_scoreboard(ROWS), bar_hud)
+    check("推车阶段读进度条", rec.stage == "1" and rec.progress is not None and abs(rec.progress - 0.3) < 0.03)
+    for objective in ("闪点即将解锁：0:27", "46%", "加时！", "防守目标点B"):
+        rec = Recognizer(matcher, MAPS, fake_ocr(names=NAMES, objective=objective)).recognize(synth_scoreboard(ROWS), bar_hud)
+        ok = rec.progress is None and (rec.stage == "B" if "目标点" in objective else rec.stage is None)
+        check(f"非推车阶段不读进度条：{objective}", ok)
+
     facts = to_facts(rec, lambda k: k.title())
     check("facts 里阵亡状态", facts["enemies"][4]["status"] == "dead" and facts["enemies"][4]["hero"] is None)
 
@@ -114,26 +122,55 @@ def test_text():
     check("昵称过滤数字和中文称号，按行分配", text.assign_names(lines, [10, 100, 200], tol=40) == ["MUFFIN", "TROJI", None])
 
 
-def _bar(fill_frac, diamonds=(0.56,)):
-    hud = np.zeros((259, 3440, 3), np.uint8)
+ATTACK_COLORS = {"fill": (255, 197, 14), "track": (65, 55, 150), "checkpoint": (98, 77, 241)}     # BGR
+DEFENSE_COLORS = {"fill": (89, 53, 243), "track": (147, 110, 7), "checkpoint": (255, 170, 40)}
+
+
+def _bar(fill_frac, diamonds=(0.556,), background=(0, 0, 0), side="Attack", mode="Hybrid"):
+    """按实测颜色画一条推车进度条。进攻：蓝色填充、暗红轨道、红色检查点；防守相反。"""
+    colors = ATTACK_COLORS if side == "Attack" else DEFENSE_COLORS
+    hud = np.full((259, 3440, 3), background, np.uint8)
     cx, H = 1720, layout.H
     y = int(0.11 * H)
-    x0, x1 = int(cx - 0.2 * H), int(cx + 0.2 * H)
+    gx0, gx1 = progress.GEOMETRY[mode]
+    x0, x1 = int(cx + gx0 * H), int(cx + gx1 * H)
     xf = int(x0 + (x1 - x0) * fill_frac)
-    hud[y - 3:y + 3, x0:x1] = (70, 60, 150)       # 红色未完成部分（BGR）
-    hud[y - 3:y + 3, x0:xf] = (255, 197, 14)      # 蓝色已完成部分
+    hud[y - 3:y + 3, x0:x1] = colors["track"]
+    hud[y - 3:y + 3, x0:xf] = colors["fill"]
     for d in diamonds:
         xd = int(x0 + (x1 - x0) * d)
-        hud[y + 8:y + 16, xd - 5:xd + 5] = (90, 40, 230)   # 红色菱形检查点
+        hud[y + 8:y + 16, xd - 5:xd + 5] = colors["checkpoint"]
+    hud[y + 8:y + 16, x1 - 5:x1 + 5] = (40, 140, 228)     # 终点橙色菱形
     return hud
 
 
 def test_progress():
-    frac, cp = progress.read_bar(_bar(0.26))
+    frac, cp = progress.read_bar(_bar(0.26), "Hybrid", "Attack")
     check("进度约 26%，第 1 段", abs(frac - 0.26) < 0.02 and cp == 1)
-    frac, cp = progress.read_bar(_bar(0.7))
+    frac, cp = progress.read_bar(_bar(0.7), "Hybrid", "Attack")
     check("过了检查点就是第 2 段", abs(frac - 0.7) < 0.02 and cp == 2)
-    check("看不到进度条 → None", progress.read_bar(np.zeros((259, 3440, 3), np.uint8)) == (None, None))
+    check("看不到进度条 → None", progress.read_bar(np.zeros((259, 3440, 3), np.uint8), "Hybrid", "Attack") == (None, None))
+    # 好莱坞：橙红色墙面会被当成红色进度条，把起点拉到很左边，进度读高（实测 10% 读成 35%）
+    frac, cp = progress.read_bar(_bar(0.10, background=(49, 84, 148)), "Hybrid", "Attack")
+    check("橙红色背景下进度仍正确（约 10%）", frac is not None and abs(frac - 0.10) < 0.02 and cp == 1)
+    hud = _bar(0.10)
+    cx, H = 1720, layout.H
+    hud[int(0.11 * H) - 3:int(0.11 * H) + 3, int(cx + 0.2 * H):int(cx + 0.21 * H)] = (255, 197, 14)  # 进度条右侧别的蓝色物体
+    frac, _ = progress.read_bar(hud, "Hybrid", "Attack")
+    check("只取从起点连续的蓝色，远处的蓝色不算", abs(frac - 0.10) < 0.02)
+
+    # 防守方：颜色反过来（红色填充、暗蓝轨道、蓝色检查点）；中城实测读不到
+    frac, cp = progress.read_bar(_bar(0.47, side="Defense"), "Hybrid", "Defense")
+    check("防守方进度（红色填充）约 47%，第 1 段", frac is not None and abs(frac - 0.47) < 0.02 and cp == 1)
+    frac, cp = progress.read_bar(_bar(0.6, side="Defense"), "Hybrid", "Defense")
+    check("防守方过了蓝色检查点是第 2 段", cp == 2)
+    # 纯推车图：没有 A 点的勾选框，进度条更靠左，有两个检查点
+    frac, cp = progress.read_bar(_bar(0.5, diamonds=(0.338, 0.70), mode="Escort"), "Escort", "Attack")
+    check("推车图进度约 50%，第 2 段", frac is not None and abs(frac - 0.5) < 0.02 and cp == 2)
+    frac, cp = progress.read_bar(_bar(0.8, diamonds=(0.338, 0.70), side="Defense", mode="Escort"), "Escort", "Defense")
+    check("推车图防守方第 3 段", cp == 3)
+    check("攻防未知时不读", progress.read_bar(_bar(0.3), "Hybrid", None) == (None, None))
+    check("非推车模式不读", progress.read_bar(_bar(0.3), "Control", "Attack") == (None, None))
 
 
 def _facts(enemy5="Lucio", status5="alive", side="Attack", map_name="Neon Junction", stage="1"):
@@ -174,6 +211,19 @@ def test_situation():
 
     s.update(_facts(side=None))
     check("读不到攻防时沿用同图上次的攻防", s.last_facts["side"] == "Attack")
+
+    def obj(side, text):
+        f = _facts(side=side); f["segment"]["detail"] = text; return f
+    s3 = Situation()
+    s3.update(obj("Attack", "进攻目标点A4:27"))
+    killcam = s3.update(obj("Defense", "防守目标点A4:03"))
+    check("单独一次读到相反攻防（击杀回放是对方视角）不换边", killcam["side"] == "Attack")
+    check("不换边就不清空英雄记忆", s3.memory.get("J") == ("lucio", "Lucio"))
+    s3.update(obj("Defense", "防守目标点A3:50"))
+    check("连续两次读到相反攻防才换边", s3.last_facts["side"] == "Defense")
+    s4 = Situation()
+    s4.update(obj("Attack", "护送运载目标0:20"))
+    check("准备阶段的攻防立即生效（换边一定经过准备阶段）", s4.update(obj("Defense", "准备防守0:34"))["side"] == "Defense")
 
     s2 = Situation()
     s2.remember_advice(s2.update(_facts(stage="1")), "https://discord/msg/9")
