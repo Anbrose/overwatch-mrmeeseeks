@@ -96,6 +96,27 @@ def test_likely_and_missing():
           and analyzer.build_matchup_data(FACTS, STORE, {})["swap_candidates"] == [])
 
 
+def test_no_data_for_current():
+    roles = analyzer.roles_from_roster({
+        "tank": [("zarya", "Zarya"), ("roadhog", "Roadhog"), ("dva", "D.Va"), ("winston", "Winston"), ("reinhardt", "Reinhardt")],
+        "damage": [("genji", "Genji")],
+        "support": [("ana", "Ana"), ("kiriko", "Kiriko")],
+    })
+    facts = {
+        "map": {"name": "King's Row"}, "side": "Attack",
+        "allies": [p("Reinhardt")],
+        "enemies": [p("Winston"), p("Genji")],
+    }
+    d = analyzer.build_matchup_data(facts, STORE, roles)
+    reinhardt_swap = next(s for s in d["swap_candidates"] if s["ally"] == "Reinhardt")
+    check("当前英雄无对位数据时 current_total 为 None", reinhardt_swap["current_total"] is None)
+    check("当前英雄无对位数据时 current_pairs_with_data 为 0", reinhardt_swap["current_pairs_with_data"] == 0)
+    check("无对位数据的英雄仍有候选换人", len(reinhardt_swap["best"]) > 0)
+    d_zarya = analyzer.build_matchup_data(FACTS, STORE, ROLES)
+    zarya_swap = next((s for s in d_zarya["swap_candidates"] if s["ally"] == "Zarya"), None)
+    check("既有数据的英雄有 current_pairs_with_data", zarya_swap is not None and zarya_swap["current_pairs_with_data"] == 2)
+
+
 def test_advise_payload():
     calls = []
 
@@ -122,6 +143,7 @@ if __name__ == "__main__":
     test_roles()
     test_build()
     test_likely_and_missing()
+    test_no_data_for_current()
     test_advise_payload()
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")

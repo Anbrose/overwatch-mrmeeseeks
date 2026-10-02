@@ -90,7 +90,9 @@ def build_matchup_data(facts: dict[str, Any], matchups: mu.MatchupStore | None, 
             if c_pairs:
                 candidates.append({"hero": name, "vs_enemies_total": c_total, "pairs_with_data": len(c_pairs)})
         candidates.sort(key=lambda c: -c["vs_enemies_total"])
-        swaps.append({"ally": hero, "role": role, "current_total": total, "best": candidates[:top]})
+        current_pairs_count = len(pairs)
+        swaps.append({"ally": hero, "role": role, "current_total": total if current_pairs_count > 0 else None,
+                      "current_pairs_with_data": current_pairs_count, "best": candidates[:top]})
 
     updated = f", updated {matchups.source_updated}" if matchups.source_updated else ""
     return {
