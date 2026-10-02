@@ -11,6 +11,7 @@ import types
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "server"))
 
+import bot  # noqa: E402
 from hero_qa import TOO_COMPLEX, Cooldown, HeroQA  # noqa: E402
 from herodata import HeroStore, load_aliases  # noqa: E402
 from heroparse import parse_hero  # noqa: E402
@@ -128,10 +129,76 @@ def test_cooldown():
     check("过了 5 秒允许", c.allow(1, now=5.1))
 
 
+def test_routing():
+    check("空文本 → connect", bot.parse_command("  ") == ("connect", ""))
+    check("指令忽略大小写", bot.parse_command(" Status ") == ("status", "Status"))
+    check("disconnect / help 不变", bot.parse_command("disconnect")[0] == "disconnect" and bot.parse_command("help")[0] == "help")
+    check("其他文本 → ask，保留原文", bot.parse_command("Was Cassidy nerfed?") == ("ask", "Was Cassidy nerfed?"))
+
+
+class FakeChannel:
+    def typing(self):
+        class _Ctx:
+            async def __aenter__(self):
+                return None
+
+            async def __aexit__(self, *a):
+                return False
+        return _Ctx()
+
+
+class FakeMessage:
+    def __init__(self, user_id=1):
+        self.author = NS(id=user_id)
+        self.channel = FakeChannel()
+        self.replies = []
+
+    async def reply(self, content):
+        self.replies.append(content)
+
+
+def make_bot(qa, store):
+    b = bot.MeeseeksBot.__new__(bot.MeeseeksBot)  # 不连 Discord，只测 _ask
+    b.hero_qa, b.store, b.ask_cooldown = qa, store, Cooldown(5)
+    return b
+
+
+def test_ask():
+    store = make_store()
+
+    class FakeQA:
+        def __init__(self, answer="x" * 3000, error=None):
+            self.answer_text, self.error, self.questions = answer, error, []
+
+        async def answer(self, q):
+            self.questions.append(q)
+            if self.error:
+                raise self.error
+            return self.answer_text
+
+    m = FakeMessage()
+    asyncio.run(make_bot(None, store)._ask(m, "q"))
+    check("没有 API Key 时提示", "ANTHROPIC_API_KEY" in m.replies[0])
+    m = FakeMessage()
+    asyncio.run(make_bot(FakeQA(), HeroStore("unused.json"))._ask(m, "q"))
+    check("数据未就绪时提示", "not ready" in m.replies[0])
+    qa, m = FakeQA(), FakeMessage()
+    b = make_bot(qa, store)
+    asyncio.run(b._ask(m, "Cassidy HP?"))
+    check("问题原样交给 HeroQA，回答截断到 1990 字符", qa.questions == ["Cassidy HP?"] and len(m.replies[0]) == 1990)
+    asyncio.run(b._ask(m, "again"))
+    check("冷却期内拒绝", "wait" in m.replies[1] and qa.questions == ["Cassidy HP?"])
+    m = FakeMessage()
+    asyncio.run(make_bot(FakeQA(error=RuntimeError("api down")), store)._ask(m, "q"))
+    check("Claude 出错时回复简短错误", m.replies[0].startswith("Sorry"))
+
+
 if __name__ == "__main__":
     test_tools()
     test_loop()
     test_cooldown()
+    test_routing()
+    test_ask()
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")
     sys.exit(0 if passed == len(results) else 1)

@@ -10,8 +10,13 @@ services:
       WS_PORT: "8765"
     ports:
       - "8765:8765"
+    volumes:
+      - herodata:/app/data
     read_only: true
     security_opt:
       - no-new-privileges:true
     cap_drop: [ALL]
     mem_limit: 512m
+
+volumes:
+  herodata:
