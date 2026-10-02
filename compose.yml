@@ -11,7 +11,7 @@ services:
     ports:
       - "8765:8765"
     volumes:
-      - herodata:/app/data
+      - herodata:/app/herodata
     read_only: true
     security_opt:
       - no-new-privileges:true
