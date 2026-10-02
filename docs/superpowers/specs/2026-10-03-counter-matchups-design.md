@@ -39,7 +39,7 @@
 - **快照**：`{"fetched_at", "source_updated", "scores": {a: {b: {"score", "type", "users"}}}}`。只存 `targets`，反向查询时取对方页面的 `targets`。
 - **`source_updated`**：取页面里 "last updated <date>" 的日期文本，取不到就为 `null`。
 - **缓存**：`herodata` 卷下的 `matchups.json`，用临时文件加 `os.replace` 写入；写失败时记日志，继续使用内存里的数据。
-- **刷新**：并入现有刷新循环，每 `HERO_REFRESH_HOURS` 小时一次，英雄数据刷新完接着刷新对位数据。
+- **刷新**：复用 `herodata.refresh_loop`（它只依赖 `store.refresh(fetch)`），单独起一个后台任务，每 `HERO_REFRESH_HOURS` 小时一次。
 - **快照校验**：新快照满足以下条件才替换：英雄数 ≥ 旧快照的 90%，且每个英雄的平均对位数 ≥ 旧值的 90%。无旧快照时非空即可。单个页面失败只跳过并记日志。
 - **接口**：
   - `MatchupStore(path)`，`.ready`、`.load()`、`.save()`、`.accept(new)`、`async .refresh(fetch)`
@@ -78,8 +78,8 @@
 
 ## 4. 接入 `server/bot.py`
 
-- 启动时创建 `MatchupStore`，放在 `HERO_DATA_PATH` 所在目录下，文件名 `matchups.json`，然后 `.load()`。
-- `refresh_loop` 改为依次刷新英雄数据和对位数据。
+- 启动时创建 `MatchupStore`，放在 `HERO_DATA_PATH` 所在目录下，文件名 `matchups.json`，然后 `.load()`。`Analyzer` 的创建移到 roster 构建之后，以便传入 `roles_from_roster(roster)`。
+- 在英雄数据刷新任务之外，再起一个 `refresh_loop(matchup_store, hours, fetch=matchups.fetch_all)` 任务；退出时两个都取消。
 - 同一个 `MatchupStore` 实例传给 `Analyzer` 和 `HeroQA`；`roles` 用 `roster.json` 构建。
 - `snapshot_received`（对局中按 Tab）和 `_reanalyze` 都调用 `Analyzer.advise`，因此都会带上对位数据，这两处代码不需要改。"阵容没变就不出新建议"的行为保持不变。
 
