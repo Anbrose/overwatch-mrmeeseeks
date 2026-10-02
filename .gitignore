@@ -1,6 +1,9 @@
 # 密钥
 .env
 
+# 英雄数据缓存（运行时从 Wiki 抓取）
+server/data/
+
 # Python
 __pycache__/
 *.pyc
