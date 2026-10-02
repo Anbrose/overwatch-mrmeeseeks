@@ -2,7 +2,7 @@
 .env
 
 # 英雄数据缓存（运行时从 Wiki 抓取）
-server/data/
+server/herodata/
 
 # Python
 __pycache__/

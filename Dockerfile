@@ -5,6 +5,6 @@ WORKDIR /app
 COPY server/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY server/ .
-RUN useradd -r -u 10001 meeseeks && mkdir -p /app/data && chown meeseeks /app/data
+RUN useradd -r -u 10001 meeseeks && mkdir -p /app/herodata && chown meeseeks /app/herodata
 USER meeseeks
 CMD ["python", "bot.py"]
