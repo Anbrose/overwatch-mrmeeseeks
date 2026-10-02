@@ -123,7 +123,9 @@ class MatchupStore:
                         len(new.get("scores") or {}), _pair_count(new.get("scores") or {}),
                         len(self.scores), _pair_count(self.scores))
             return False
-        self.scores, self.source_updated = new["scores"], new.get("source_updated")
+        # 部分抓取（个别页面失败）时，缺失的英雄沿用旧行，避免快照被逐次掏空；新行优先
+        self.scores = {**{h: r for h, r in self.scores.items() if h not in new["scores"]}, **new["scores"]}
+        self.source_updated = new.get("source_updated")
         self.fetched_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         try:
             self.save()
@@ -134,8 +136,21 @@ class MatchupStore:
 
     # ---------- 查询 ----------
     def score(self, a: str, b: str) -> dict[str, Any] | None:
-        """a 对 b 的评分（正数 = a 占优）；没有数据时返回 None。"""
-        return self.scores.get(_norm(a), {}).get(_norm(b))
+        """a 对 b 的评分（正数 = a 占优）；没有数据时返回 None。
+        a 的页面缺失但 b 的页面有 b 对 a 的评分时，取负得到（标 derived）。"""
+        a, b = _norm(a), _norm(b)
+        direct = self.scores.get(a, {}).get(b)
+        if direct is not None:
+            return direct
+        rev = self.scores.get(b, {}).get(a)
+        if rev is None:
+            return None
+        return {"score": round(-rev["score"], 2), "type": None, "users": rev.get("users"), "derived": True}
+
+    def has(self, hero: str) -> bool:
+        """是否有关于 hero 的任何数据：自己的页面，或出现在别人页面的行里。"""
+        key = _norm(hero)
+        return key in self.scores or any(key in row for row in self.scores.values())
 
     def profile(self, hero: str, top: int = 5) -> dict[str, list[dict[str, Any]]] | None:
         """hero 最克制谁（它的评分最高）、最怕谁（对手对它的评分最高）。"""

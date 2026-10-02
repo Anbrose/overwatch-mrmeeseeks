@@ -157,6 +157,16 @@ def test_matchups_tool():
         "get_matchups", {"hero": "Zarya"})["error"])
 
 
+def test_source_updated_fallback():
+    store = make_store()
+    for name in ("Zarya", "Winston"):
+        store.heroes[name] = {**store.heroes["Tracer"], "name": name}
+    m = make_matchups()
+    m.source_updated, m.fetched_at = None, "2026-10-03T01:02:03Z"
+    r = HeroQA(None, "m", store, matchups=m).run_tool("get_matchups", {"hero": "Zarya", "opponent": "Winston"})
+    check("source_updated 缺失时回退到 fetched_at 日期", r["source_updated"] == "2026-10-03")
+
+
 def test_loop():
     client = ScriptedClient([
         NS(stop_reason="tool_use", content=[
@@ -272,6 +282,7 @@ if __name__ == "__main__":
     test_thinking_budget()
     test_tool_schema()
     test_matchups_tool()
+    test_source_updated_fallback()
     test_loop()
     test_cooldown()
     test_routing()

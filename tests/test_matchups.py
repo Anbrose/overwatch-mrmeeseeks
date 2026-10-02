@@ -114,11 +114,40 @@ def test_accept_and_refresh():
         check("缓存损坏时 load 返回 False", MatchupStore(path).load() is False)
 
 
+def test_partial_refresh_and_derived():
+    def row(v):
+        return {"score": v, "type": None, "users": 500}
+    full = {f"h{i}": {f"o{j}": row(1.0) for j in range(10)} for i in range(10)}
+    store = MatchupStore("unused.json")
+    store.scores = {k: dict(v) for k, v in full.items()}
+    partial = {k: {"o0": row(9.0)} if k == "h0" else dict(v) for k, v in full.items() if k != "h9"}
+    partial["h0"] = {f"o{j}": row(9.0) for j in range(10)}
+
+    async def fetch():
+        return {"scores": partial, "source_updated": "Oct 3, 2026"}
+    with tempfile.TemporaryDirectory() as d:
+        store.path = os.path.join(d, "m.json")
+        check("部分抓取（缺 1/10 英雄）被接受", asyncio.run(store.refresh(fetch)))
+    check("缺失英雄沿用旧行", "h9" in store.scores and store.scores["h9"]["o0"]["score"] == 1.0)
+    check("新行优先于旧行", store.scores["h0"]["o0"]["score"] == 9.0)
+
+    s = MatchupStore("unused.json")
+    s.scores = {"zarya": {"winston": {"score": 7.114, "type": "pressure", "users": 552}}}
+    d = s.score("winston", "zarya")
+    check("缺失方向由反向取负得到并标记 derived", d == {"score": -7.11, "type": None, "users": 552, "derived": True})
+    check("有直接数据时不标 derived", "derived" not in s.score("zarya", "winston"))
+    check("两个方向都没有时仍是 None", s.score("winston", "tracer") is None)
+    check("has: 顶层键", s.has("Zarya"))
+    check("has: 只出现在别人的行里", s.has("Winston"))
+    check("has: 完全没有", not s.has("Tracer"))
+
+
 if __name__ == "__main__":
     test_sitemap()
     test_parse_page()
     test_store_queries()
     test_accept_and_refresh()
+    test_partial_refresh_and_derived()
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")
     sys.exit(0 if passed == len(results) else 1)

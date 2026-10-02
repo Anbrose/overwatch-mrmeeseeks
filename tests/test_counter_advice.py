@@ -132,11 +132,37 @@ def test_advise_payload():
     payload = json.loads(calls[0]["messages"][0]["content"].split("\n", 1)[1])
     check("advise 把 matchup_data 交给模型", payload["matchup_data"]["current"][0]["ally"] == "Zarya")
     check("系统提示：克制只能来自 matchup_data 并引用数字", 'may only come from "matchup_data"' in calls[0]["system"]
-          and "Zarya vs Winston +7.1" in calls[0]["system"])
+          and "(basis: <ally hero> vs <enemy hero> +N.N, counterwatch)" in calls[0]["system"]
+          and "Zarya vs Winston" not in calls[0]["system"])
     check("系统提示：差距在 3 以内要说明差别不大", "within 3" in calls[0]["system"])
     a.matchups = MatchupStore("empty")
     asyncio.run(a.advise(FACTS))
     check("没有对位数据时不带 matchup_data", "matchup_data" not in calls[1]["messages"][0]["content"])
+
+
+def test_review_fixes():
+    d = analyzer.build_matchup_data(FACTS, STORE, ROLES)
+    swap = next(s for s in d["swap_candidates"] if s["ally"] == "Zarya")
+    hog = next(c for c in swap["best"] if c["hero"] == "Roadhog")
+    check("换人候选带逐个敌人的分数", hog.get("pairs") == [{"enemy": "Winston", "score": 9.0},
+                                                          {"enemy": "Genji", "score": 2.0}])
+    # 2c：Winston 只出现在别人的行里（没有自己的页面）仍算有数据
+    partial = MatchupStore("unused.json")
+    partial.scores = {"zarya": {"winston": {"score": 7.1, "type": None, "users": 500}}}
+    partial.source_updated = "Oct 2, 2026"
+    facts = {"map": {"name": "King's Row"}, "side": "Attack", "allies": [p("Zarya")], "enemies": [p("Winston")]}
+    d2 = analyzer.build_matchup_data(facts, partial, ROLES)
+    check("只在别人行里出现的敌人不进 enemies_without_data", d2 is not None and d2["enemies_without_data"] == [])
+    # 3：没有数据的当前英雄 vs_enemies_total 为 None
+    facts = {"map": {"name": "King's Row"}, "side": "Attack", "allies": [p("Ana")], "enemies": [p("Genji")]}
+    d3 = analyzer.build_matchup_data(facts, STORE, ROLES)
+    ana = d3["current"][0]
+    check("pairs_with_data 为 0 时 vs_enemies_total 为 None", ana["pairs_with_data"] == 0 and ana["vs_enemies_total"] is None)
+    # 4：source_updated 缺失时用 fetched_at
+    STORE.source_updated, STORE.fetched_at = None, "2026-10-03T01:02:03Z"
+    d4 = analyzer.build_matchup_data(FACTS, STORE, ROLES)
+    STORE.source_updated, STORE.fetched_at = "Oct 2, 2026", None
+    check("source_updated 缺失时 source 带 fetched_at 日期", d4["source"].endswith("2026-10-03"))
 
 
 if __name__ == "__main__":
@@ -145,6 +171,7 @@ if __name__ == "__main__":
     test_likely_and_missing()
     test_no_data_for_current()
     test_advise_payload()
+    test_review_fixes()
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")
     sys.exit(0 if passed == len(results) else 1)

@@ -166,7 +166,7 @@ class HeroQA:
         hero = self._hero(args["hero"])
         if "error" in hero:
             return hero
-        info = {"source": mu.SOURCE, "unit": mu.UNIT, "source_updated": self.matchups.source_updated}
+        info = {"source": mu.SOURCE, "unit": mu.UNIT, "source_updated": self.matchups.source_updated or (self.matchups.fetched_at or "")[:10] or None}
         if args.get("opponent"):
             opp = self._hero(args["opponent"])
             if "error" in opp:

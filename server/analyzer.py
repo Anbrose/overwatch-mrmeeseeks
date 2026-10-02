@@ -16,7 +16,7 @@ from herodata import _norm
 ADVISE_SYSTEM = """You are mrmeeseeks, an Overwatch hero-swap advisor for the player's team (the "allies").
 The data below is what was recognized from the in-game scoreboard. Rules:
 1. Use only the facts provided below for the current game state (map, mode, side, stage, heroes). Do not invent facts about this game.
-2. Counter relationships (which hero is favored against which) may only come from "matchup_data", and you must quote its number, e.g. (basis: Zarya vs Winston +7.1, counterwatch). If there is no matchup_data, or a pair is not in it, do not claim that one hero counters another. For everything else (map, positions, objective, team composition) use your general knowledge of Overwatch.
+2. Counter relationships (which hero is favored against which) may only come from "matchup_data", and you must quote its number, e.g. (basis: <ally hero> vs <enemy hero> +N.N, counterwatch). If there is no matchup_data, or a pair is not in it, do not claim that one hero counters another. For everything else (map, positions, objective, team composition) use your general knowledge of Overwatch.
 2b. When recommending a swap, prefer heroes from "swap_candidates". If a candidate's total is within 3 of the current hero's total, say the difference is small. Heroes listed in "likely_heroes" are probable, not certain; say so if you rely on them.
 3. Always give your best recommendation with whatever is known. Some heroes may be unknown: reason around them and mention them in a few words at most; never refuse to advise just because some data is missing.
 4. A player with status "unknown" and a "last_seen_hero" was most recently seen on that hero; treat it as likely but not certain. A "dead" player with a hero listed is still playing that hero.
@@ -63,7 +63,7 @@ def build_matchup_data(facts: dict[str, Any], matchups: mu.MatchupStore | None, 
         return None
     allies = _team(facts.get("allies") or [])
     enemies = _team(facts.get("enemies") or [])
-    known = [h for h, _ in enemies if h and _norm(h) in matchups.scores]
+    known = [h for h, _ in enemies if h and matchups.has(h)]
     if not known:
         return None
 
@@ -77,7 +77,8 @@ def build_matchup_data(facts: dict[str, Any], matchups: mu.MatchupStore | None, 
         if not hero:
             continue
         total, pairs = against_enemies(hero)
-        current.append({"ally": hero, "vs_enemies_total": total, "pairs_with_data": len(pairs), "pairs": pairs,
+        current.append({"ally": hero, "vs_enemies_total": total if pairs else None,
+                        "pairs_with_data": len(pairs), "pairs": pairs,
                         **({"likely": True} if likely else {})})
         role = roles.get(_norm(hero), (None, None))[0]
         if role is None:
@@ -88,19 +89,21 @@ def build_matchup_data(facts: dict[str, Any], matchups: mu.MatchupStore | None, 
                 continue
             c_total, c_pairs = against_enemies(name)
             if c_pairs:
-                candidates.append({"hero": name, "vs_enemies_total": c_total, "pairs_with_data": len(c_pairs)})
+                candidates.append({"hero": name, "vs_enemies_total": c_total, "pairs_with_data": len(c_pairs),
+                                   "pairs": c_pairs})
         candidates.sort(key=lambda c: -c["vs_enemies_total"])
         current_pairs_count = len(pairs)
         swaps.append({"ally": hero, "role": role, "current_total": total if current_pairs_count > 0 else None,
                       "current_pairs_with_data": current_pairs_count, "best": candidates[:top]})
 
-    updated = f", updated {matchups.source_updated}" if matchups.source_updated else ""
+    stamp = matchups.source_updated or (matchups.fetched_at or "")[:10]   # 页面没给日期时用抓取日期
+    updated = f", updated {stamp}" if stamp else ""
     return {
         "source": mu.SOURCE + updated,
         "unit": mu.UNIT,
         "current": current,
         "swap_candidates": swaps,
-        "enemies_without_data": [h or "unknown" for h, _ in enemies if not h or _norm(h) not in matchups.scores],
+        "enemies_without_data": [h or "unknown" for h, _ in enemies if not h or not matchups.has(h)],
         "likely_heroes": [h for h, likely in allies + enemies if h and likely],
     }
 
