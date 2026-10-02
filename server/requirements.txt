@@ -2,3 +2,5 @@ discord.py>=2.4
 websockets>=14
 anthropic>=0.40
 python-dotenv>=1.0
+numpy>=1.26
+rapidocr-onnxruntime==1.4.4  # OCR 参数在这个版本上验证过

@@ -63,6 +63,10 @@ class OverFast:
             raise OverFastUnavailable(f"HTTP {status}")
         return data
 
+    async def heroes(self) -> list[dict[str, Any]]:
+        """全部英雄：[{key, name, role, ...}]。"""
+        return await self._get_ok("/heroes")
+
     async def player(self, battletag: str) -> tuple[dict[str, Any], dict[str, Any]]:
         summary = await self._get_ok(f"/players/{battletag}/summary")
         stats = await self._get_ok(f"/players/{battletag}/stats/summary")

@@ -167,11 +167,29 @@ async def main():
     check("过期配对码被拒绝", not ok and "expired" in reason)
 
     # ---------- 9. Discord 下拉菜单可构造 ----------
+    import tempfile
+    from pathlib import Path
     from bot import ClientSelectView, MeeseeksBot, HELP_TEXT
-    bot = MeeseeksBot(reg, None)
+    from label_ui import LabelView, build_roster
+    from labeling import LabelStore
+    from vision.heroes import HeroMatcher
+    from vision.recognize import Recognizer
+    tmp = tempfile.TemporaryDirectory()
+    matcher = HeroMatcher([])
+    labels = LabelStore(Path(tmp.name), matcher)
+    roster = build_roster([{"key": "ana", "name": "Ana", "role": "support"},
+                           {"key": "dva", "name": "D.Va", "role": "tank"}])
+    bot = MeeseeksBot(reg, None, Recognizer(matcher, [], ocr=lambda img: []), labels, roster)
     view = ClientSelectView(bot, 42, reg.available())
     sel = view.children[0]
     check("下拉菜单列出可用客户端", [o.value for o in sel.options] == [x.client_id for x in reg.available()])
+    check("英雄显示名来自名单", bot.hero_name("dva") == "D.Va" and bot.hero_name("soldier-76") == "Soldier: 76")
+
+    # ---------- 10. 标注菜单可构造 ----------
+    lv = LabelView(labels, roster, bot.hero_name, "pid", {42})
+    first = [o.value for o in lv.children[0].options]
+    check("标注菜单第一级：三个职责 + 阵亡/未选/丢弃",
+          first == ["tank", "damage", "support", "_dead", "_empty", "_discard"])
 
     proc.kill(); await proc.wait(); pump_task.cancel()
     await srv.close()

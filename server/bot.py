@@ -4,6 +4,8 @@
   @mrmeeseeks            连接一个本地客户端（选择标识 -> 私发 8 位配对码），也可写 connect
   @mrmeeseeks status     查看所有在线客户端
   @mrmeeseeks player <BattleTag>  用 OverFast 查玩家段位和常用英雄
+  @mrmeeseeks analyze    用本频道最近一次识别结果重新给建议
+  @mrmeeseeks label      拿出待标注的未知头像
   @mrmeeseeks disconnect 解绑当前频道里的客户端
   @mrmeeseeks help       显示帮助
 """
@@ -11,17 +13,31 @@ from __future__ import annotations
 
 import asyncio
 import io
+import json
 import logging
 import os
 import time
+from collections import defaultdict
+from pathlib import Path
 
 import discord
+import numpy as np
 from dotenv import load_dotenv
 
 import overfast
 from analyzer import Analyzer, format_facts
+from label_ui import Roster, build_roster, send_prompts
+from labeling import LabelStore
 from registry import CODE_TTL_SECONDS, ClientConn, PairingError, Registry
+from situation import Situation
+from vision.heroes import HeroMatcher
+from vision.recognize import Recognizer, to_facts
+from vision.text import load_maps
 from ws_server import WSServer
+
+DATA_DIR = Path(__file__).resolve().parent / "data"
+AUTO_PROMPTS = 3     # 每次截图最多当场弹几个未知头像
+LABEL_BATCH = 5      # @mrmeeseeks label 一次拿几个
 
 log = logging.getLogger("mrmeeseeks")
 
@@ -30,6 +46,8 @@ HELP_TEXT = (
     "`@mrmeeseeks` or `@mrmeeseeks connect` Connect a local client (pick its ID and I'll DM you an 8-digit pairing code)\n"
     "`@mrmeeseeks status` List online clients\n"
     "`@mrmeeseeks player Name#1234` Look up a player's ranks and most played heroes (case-sensitive BattleTag)\n"
+    "`@mrmeeseeks analyze` Re-run advice on the latest recognized situation in this channel\n"
+    "`@mrmeeseeks label` Label portraits I couldn't recognize\n"
     "`@mrmeeseeks disconnect` Unpair the client bound to this channel\n"
     "`@mrmeeseeks help` Show this help"
 )
@@ -115,13 +133,25 @@ class ClientSelectView(discord.ui.View):
 
 # ---------------- Bot 本体 ----------------
 class MeeseeksBot(discord.Client):
-    def __init__(self, registry: Registry, analyzer: Analyzer | None):
+    def __init__(self, registry: Registry, analyzer: Analyzer | None, recognizer: Recognizer,
+                 labels: LabelStore, roster: Roster):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents, allowed_mentions=discord.AllowedMentions(everyone=False, roles=False))
         self.registry = registry
         self.analyzer = analyzer
+        self.recognizer = recognizer
+        self.labels = labels
+        self.roster = roster
+        self.names = {key: name for heroes in roster.values() for key, name in heroes}
+        self.situations: dict[int, Situation] = defaultdict(Situation)
         self.overfast = overfast.OverFast()
+
+    def hero_name(self, key: str) -> str:
+        return self.names.get(key) or overfast.hero_name(key)
+
+    def _owners(self, channel_id: int) -> set[int]:
+        return {c.user_id for c in self.registry.in_channel(channel_id) if c.user_id}
 
     async def on_ready(self) -> None:
         log.info("Logged in to Discord as %s", self.user)
@@ -149,6 +179,10 @@ class MeeseeksBot(discord.Client):
             await self._disconnect(message)
         elif cmd == "player":
             await self._player(message, arg)
+        elif cmd == "analyze":
+            await self._reanalyze(message)
+        elif cmd == "label":
+            await self._label(message)
         else:
             await message.reply(HELP_TEXT)
 
@@ -174,6 +208,29 @@ class MeeseeksBot(discord.Client):
                 await message.reply("OverFast is unavailable right now (rate-limited or down). Try again in a minute.")
                 return
         await message.reply(overfast.format_player(tag, summary, stats))
+
+    async def _reanalyze(self, message: discord.Message) -> None:
+        state = self.situations.get(message.channel.id)
+        if state is None or state.last_facts is None:
+            await message.reply("Nothing to analyze yet. Hold Tab in game first.")
+            return
+        if self.analyzer is None:
+            await message.reply("ANTHROPIC_API_KEY is not set, so I can't give advice.")
+            return
+        async with message.channel.typing():
+            advice = await self.analyzer.advise(state.last_facts)
+        reply = await message.reply(f"{format_facts(state.last_facts)}\n\n{advice}"[:1990])
+        state.remember_advice(state.last_facts, reply.jump_url)
+
+    async def _label(self, message: discord.Message) -> None:
+        items = self.labels.pending(LABEL_BATCH)
+        if not items:
+            await message.reply("Nothing to label. 🎉")
+            return
+        total = len(self.labels.pending())
+        await message.reply(f"{total} portrait(s) waiting to be labeled; here are {len(items)}.")
+        owners = self._owners(message.channel.id) | {message.author.id}
+        await send_prompts(message.channel, self.labels, self.roster, self.hero_name, items, owners)
 
     async def _connect_flow(self, message: discord.Message) -> None:
         clients = self.registry.available()
@@ -225,18 +282,43 @@ class MeeseeksBot(discord.Client):
 
     async def snapshot_received(self, client: ClientConn, scoreboard: bytes, hud: bytes) -> str:
         channel = await self._channel(client.channel_id)
+        rec = await asyncio.to_thread(self.recognizer.recognize, scoreboard, hud)
+        log.info("Recognized %s in %.2fs: table=%s map=%s side=%s stage=%s unknown=%d", client.client_id,
+                 rec.elapsed, rec.table_found, rec.map and rec.map.en, rec.side, rec.stage, len(rec.unknowns))
+        if not rec.table_found:
+            await channel.send("👀 Couldn't see the scoreboard in that screenshot. "
+                               "Hold Tab a little longer (about a second) and try again.")
+            return "Couldn't see the scoreboard; hold Tab a bit longer"
+
+        state = self.situations[client.channel_id]
+        facts = state.update(to_facts(rec, self.hero_name))
+        new_unknowns = []
+        for slot in rec.unknowns:
+            pid = self.labels.add(slot.crop, {"team": slot.team, "row": slot.row, "player": slot.player,
+                                              "score": round(slot.score, 2), "at": time.time()})
+            if pid:
+                new_unknowns.append(pid)
+
+        if state.should_skip(facts):
+            await channel.send(f"⏸️ No change ({format_facts(facts).splitlines()[0]}, same heroes) — "
+                               f"previous advice still applies: {state.advice_url}")
+            return "No change; previous advice still applies"
+
         files = [discord.File(io.BytesIO(scoreboard), "scoreboard.jpg"),
                  discord.File(io.BytesIO(hud), "hud.jpg")]
-        msg = await channel.send(f"🔍 Got screenshots from **{client.client_id}**, analyzing…", files=files)
+        msg = await channel.send(f"🔍 {format_facts(facts)}", files=files)
+        summary = "Recognized (advice disabled: ANTHROPIC_API_KEY not set)"
+        if self.analyzer is not None:
+            advice = await self.analyzer.advise(facts)
+            reply = await msg.reply(advice[:1990])
+            state.remember_advice(facts, reply.jump_url)
+            summary = advice.splitlines()[0] if advice else ""
 
-        if self.analyzer is None:
-            await msg.reply("(ANTHROPIC_API_KEY is not set, so screenshots are only forwarded, not analyzed.)")
-            return "Analysis not configured"
-
-        facts, advice = await self.analyzer.analyze(scoreboard, hud)
-        text = f"**Detected**: {format_facts(facts)}\n\n{advice}"
-        await msg.reply(text[:1990])
-        return advice.splitlines()[0] if advice else ""
+        prompts = [p for p in (self.labels.get(pid) for pid in new_unknowns[:AUTO_PROMPTS]) if p]
+        if prompts:
+            await send_prompts(channel, self.labels, self.roster, self.hero_name, prompts,
+                               self._owners(client.channel_id))
+        return summary
 
 
 async def main() -> None:
@@ -248,14 +330,29 @@ async def main() -> None:
         raise SystemExit("DISCORD_TOKEN is missing: copy server/.env.example to server/.env and fill it in.")
     api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     model = os.environ.get("CLAUDE_MODEL", "").strip() or "claude-sonnet-5"
-    analyzer = Analyzer(api_key, model) if api_key else None
+    effort = os.environ.get("ADVISE_EFFORT", "low").strip() or None
+    analyzer = Analyzer(api_key, model, effort) if api_key else None
     if analyzer is None:
-        log.warning("ANTHROPIC_API_KEY not set; screenshots will be forwarded without analysis")
+        log.warning("ANTHROPIC_API_KEY not set; screenshots will be recognized but no advice given")
     else:
-        log.info("Analysis model: %s", model)
+        log.info("Advice model: %s (effort %s)", model, effort or "default")
+
+    state_dir = Path(os.environ.get("STATE_DIR", DATA_DIR.parent / "state"))
+    matcher = HeroMatcher([DATA_DIR / "templates", state_dir / "templates"])
+    labels = LabelStore(state_dir, matcher)
+    recognizer = Recognizer(matcher, load_maps(DATA_DIR / "maps.json"))
+    await asyncio.to_thread(recognizer.ocr, np.zeros((32, 32, 3), np.uint8))   # 预加载 OCR 模型
+    log.info("Loaded %d hero templates (%d labels); %d portraits waiting to be labeled",
+             len(matcher.templates), len(matcher.labels), len(labels.pending()))
+    try:
+        heroes = await overfast.OverFast().heroes()
+    except (overfast.OverFastUnavailable, overfast.PlayerNotFound) as e:
+        log.warning("Could not fetch hero list from OverFast (%s); using bundled list", e)
+        heroes = json.loads((DATA_DIR / "heroes.json").read_text(encoding="utf-8"))
+    roster = build_roster(heroes)
 
     registry = Registry()
-    bot = MeeseeksBot(registry, analyzer)
+    bot = MeeseeksBot(registry, analyzer, recognizer, labels, roster)
     ws = WSServer(
         registry, bot,
         host=os.environ.get("WS_HOST", "0.0.0.0"),

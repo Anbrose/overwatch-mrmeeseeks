@@ -39,7 +39,7 @@
 
 **配对流程**：客户端启动后连上服务器，拿到一个标识（如 `MEE-7K3Q`）。在 Discord 频道里 `@mrmeeseeks`，从下拉菜单选择这个标识，bot 会**私下**发给你一个 8 位配对码。在客户端窗口输入配对码，客户端就绑定到这个频道了。之后每次按住 Tab 再松开，分析结果都会发到这个频道。
 
-**分析流程**：先让 Claude 只做识别（地图、模式、攻防、第几段、双方阵容，每项带置信度，看不清就留空），再把识别结果交给第二次调用生成建议。第二次调用看不到图片，只能引用识别出的事实，每条建议都要注明依据。
+**分析流程**：服务器先在本地识别截图，不调用大模型：英雄头像用模板匹配，昵称、地图、攻防用 OCR，推车进度看进度条像素，大约 1–2 秒。认不出的头像标为未知（绝不猜），并在频道里弹出菜单让你标注，标完立刻生效。然后把识别结果（纯文本）交给 Claude 生成建议，每条建议都要注明依据。如果地图、阶段和双方英雄都和上次一样，就不再调用 Claude，直接提示「局面没变」。设计见 [docs/superpowers/specs/2026-10-02-cv-recognition-design.md](docs/superpowers/specs/2026-10-02-cv-recognition-design.md)。
 
 仓库结构：
 
@@ -114,7 +114,7 @@ cd mrmeeseeks
 1. 登录 [Claude Console](https://platform.claude.com)，创建一个 API Key。详细步骤见[官方文档](https://platform.claude.com/docs/en/get-api-key)。
 2. 复制保存好这个 Key。
 
-这一步可以先跳过。不填 API Key 时，bot 只会把截图转发到频道、不做分析，正好用来调试截图时机（见[阶段 B](#阶段-b测试截图时机不需要-api-key)）。
+这一步可以先跳过。不填 API Key 时，bot 只识别截图、不给建议，正好用来调试截图时机（见[阶段 B](#阶段-b测试截图时机不需要-api-key)）。
 
 ---
 
@@ -247,14 +247,16 @@ python client\client.py --no-capture
 频道里会先出现截图，几秒后 bot 回复：
 
 ```
-Detected: Map King's Row | Escort/Attack | Checkpoint 2 ~40% | Allies D.Va, … | Enemies Winston, …
+🔍 Neon Junction · Hybrid · Attack · checkpoint 1 (~26%)
+Allies: D.Va, Vendetta, Venture, Illari, Kiriko
+Enemies: Mauga, Pharah, Reaper†, Kiriko, ?
 
 One-sentence conclusion…
 - Reason 1 (basis: …)
 - Reason 2 (basis: …)
 ```
 
-第一行 "Detected" 是模型看到的内容，用来核对它有没有认错。客户端窗口里也会显示结论。
+前三行是识别结果，用来核对有没有认错：`†` 表示阵亡（英雄按昵称从之前的截图记住），`?` 表示没认出来。没认出来的头像会另外弹出标注菜单。局面没变时只回一行 `⏸️ No change … previous advice still applies`。客户端窗口里也会显示结论。
 
 ---
 
@@ -318,8 +320,10 @@ journalctl -u mrmeeseeks -f      # 查看日志
 | 变量 | 必填 | 默认 | 说明 |
 |---|---|---|---|
 | `DISCORD_TOKEN` | 是 | – | Discord bot Token |
-| `ANTHROPIC_API_KEY` | 否 | 空 | 留空则只转发截图，不做分析 |
-| `CLAUDE_MODEL` | 否 | `claude-sonnet-5` | 分析用的模型；想更快可换成 `claude-haiku-4-5-20251001`。可用模型见[模型列表](https://platform.claude.com/docs/en/models/overview) |
+| `ANTHROPIC_API_KEY` | 否 | 空 | 留空则只识别截图，不给建议 |
+| `CLAUDE_MODEL` | 否 | `claude-sonnet-5` | 给建议用的模型；想更快可换成 `claude-haiku-4-5-20251001`。可用模型见[模型列表](https://platform.claude.com/docs/en/models/overview) |
+| `ADVISE_EFFORT` | 否 | `low` | 给建议时的思考强度（`low`/`medium`/`high`），越高越慢 |
+| `STATE_DIR` | 否 | `state/` | 标注的模板和待标注队列存放位置；Docker 部署时是挂载的 `/state` |
 | `WS_HOST` | 否 | `0.0.0.0` | WebSocket 监听地址；用反向代理时改为 `127.0.0.1` |
 | `WS_PORT` | 否 | `8765` | WebSocket 端口 |
 | `MIN_SNAPSHOT_INTERVAL` | 否 | `5` | 同一客户端两次分析的最短间隔（秒） |
@@ -350,6 +354,8 @@ python client\client.py --help
 |---|---|
 | `@mrmeeseeks` 或 `@mrmeeseeks connect` | 连接客户端：选择标识，私下收到 8 位配对码 |
 | `@mrmeeseeks status` | 查看所有在线客户端和绑定情况 |
+| `@mrmeeseeks analyze` | 用本频道最近一次识别结果重新给一次建议，不用再按 Tab |
+| `@mrmeeseeks label` | 拿出待标注的未知头像（一次 5 个），用菜单选「职责 → 英雄」，标完立刻生效 |
 | `@mrmeeseeks player Name#1234` | 用 [OverFast](https://overfast-api.tekrop.fr/) 查玩家各职责段位、总体数据和最常玩的 5 个英雄。BattleTag 区分大小写；生涯设为私密时只能看到段位 |
 | `@mrmeeseeks disconnect` | 解绑本频道的客户端 |
 | `@mrmeeseeks help` | 显示帮助 |
@@ -412,8 +418,11 @@ Token 填错了，或者在开发者后台重新生成过。重新复制一次�
 - 两次截图之间要隔 `--cooldown` 秒，按住时间要超过 `--min-hold`
 - 如果游戏是以管理员身份运行的，客户端所在的 PowerShell 也要以管理员身份运行，否则收不到游戏窗口里的按键
 
-**分析结果经常认错英雄**
-频道里的 "Detected" 行能看出是哪一步出错。可以试着提高 `--quality`，或者换用更强的模型（`CLAUDE_MODEL`）。
+**英雄显示成 `?`**
+没见过的英雄或皮肤。频道里会弹出标注菜单，选「职责 → 英雄」后立刻生效；也可以之后用 `@mrmeeseeks label` 补标。标注的模板存在服务器的 `state/` 目录，用 `deploy/pull-templates.sh` 可以拉回仓库。
+
+**提示 "Couldn't see the scoreboard"**
+截到计分板之前就松开了 Tab，或者计分板还没完全弹出。按住 Tab 一秒左右再松开；还不行就调大 `--score-delay`。
 
 ---
 
