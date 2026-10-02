@@ -12,9 +12,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "server"))
 
 import bot  # noqa: E402
-from hero_qa import TOO_COMPLEX, Cooldown, HeroQA  # noqa: E402
+from hero_qa import TOO_COMPLEX, TRUNCATED, TOOLS, Cooldown, HeroQA  # noqa: E402
 from herodata import HeroStore, load_aliases  # noqa: E402
 from heroparse import parse_hero  # noqa: E402
+from matchups import MatchupStore  # noqa: E402
 
 FIXTURES = os.path.join(ROOT, "tests", "fixtures", "wiki")
 results = []
@@ -106,6 +107,66 @@ def test_default_weapon():
     check("unsupported 结果附带可选武器列表", "unsupported" in k and k["weapons"] == ["Healing Ofuda", "Kunai"])
 
 
+def test_thinking_budget():
+    client = ScriptedClient([NS(stop_reason="end_turn", content=[text("ok")])])
+    asyncio.run(HeroQA(client, "m", make_store()).answer("q"))
+    req = client.requests[0]
+    check("max_tokens 给思考留足空间（默认开启 adaptive thinking）", req["max_tokens"] >= 8000)
+    check("默认 effort low", req.get("output_config") == {"effort": "low"})
+    client = ScriptedClient([NS(stop_reason="end_turn", content=[text("ok")])])
+    asyncio.run(HeroQA(client, "m", make_store(), effort=None).answer("q"))
+    check("effort=None 时不传 output_config", "output_config" not in client.requests[0])
+    thinking_only = ScriptedClient([NS(stop_reason="max_tokens", content=[NS(type="thinking", thinking="")])])
+    answer = asyncio.run(HeroQA(thinking_only, "m", make_store()).answer("站瑞希身边奶多少啊"))
+    check("思考耗尽 max_tokens 时返回明确提示而不是空字符串", answer == TRUNCATED)
+
+
+def test_tool_schema():
+    desc = TOOLS[0]["input_schema"]["properties"]["hero"]["description"]
+    check("工具说明要求英雄名按原话传、不要翻译", "exactly as the user wrote" in desc)
+
+
+def make_matchups():
+    m = MatchupStore("unused.json")
+    m.scores = {"zarya": {"winston": {"score": 7.11, "type": "pressure", "users": 552},
+                          "tracer": {"score": -2.0, "type": None, "users": 600}},
+                "winston": {"zarya": {"score": -7.11, "type": None, "users": 579}},
+                "reinhardt": {"zarya": {"score": 3.5, "type": "duel", "users": 400}}}
+    m.source_updated = "Oct 2, 2026"
+    return m
+
+
+def test_matchups_tool():
+    store = make_store()
+    for name in ("Zarya", "Winston"):   # 只需要能被名字解析到
+        store.heroes[name] = {**store.heroes["Tracer"], "name": name}
+    qa = HeroQA(None, "m", store, matchups=make_matchups())
+    pair = qa.run_tool("get_matchups", {"hero": "Zarya", "opponent": "Winston"})
+    check("一对英雄：双向评分", pair["hero_vs_opponent"]["score"] == 7.11 and pair["opponent_vs_hero"]["score"] == -7.11)
+    check("附来源说明（不是整局胜率）和更新日期", "not match win rate" in pair["source"]
+          and pair["source_updated"] == "Oct 2, 2026")
+    prof = qa.run_tool("get_matchups", {"hero": "Zarya"})
+    check("单个英雄：最克制谁、最怕谁，用显示名", prof["strong_against"][0]["hero"] == "Winston"
+          and [e["hero"] for e in prof["weak_against"]] == ["Reinhardt"])
+    check("中文名也能查", qa.run_tool("get_matchups", {"hero": "查莉娅", "opponent": "温斯顿"})["hero"] == "Zarya")
+    check("未知英雄返回候选", qa.run_tool("get_matchups", {"hero": "xyz"})["error"] == "unknown_hero")
+    check("这一对没有数据", qa.run_tool("get_matchups", {"hero": "Tracer", "opponent": "Moira"})["error"]
+          == "no_matchup_data")
+    check("英雄没有对位数据", qa.run_tool("get_matchups", {"hero": "Moira"})["error"] == "no_matchup_data")
+    check("对位数据未就绪", "not available" in HeroQA(None, "m", make_store()).run_tool(
+        "get_matchups", {"hero": "Zarya"})["error"])
+
+
+def test_source_updated_fallback():
+    store = make_store()
+    for name in ("Zarya", "Winston"):
+        store.heroes[name] = {**store.heroes["Tracer"], "name": name}
+    m = make_matchups()
+    m.source_updated, m.fetched_at = None, "2026-10-03T01:02:03Z"
+    r = HeroQA(None, "m", store, matchups=m).run_tool("get_matchups", {"hero": "Zarya", "opponent": "Winston"})
+    check("source_updated 缺失时回退到 fetched_at 日期", r["source_updated"] == "2026-10-03")
+
+
 def test_loop():
     client = ScriptedClient([
         NS(stop_reason="tool_use", content=[
@@ -116,8 +177,8 @@ def test_loop():
     answer = asyncio.run(HeroQA(client, "test-model", make_store()).answer("卡西迪爆头几枪杀猎空？"))
     check("循环结束后返回最终文本", answer == "2 发爆头即可击杀猎空。")
     first = client.requests[0]
-    check("请求带 system 和 3 个工具", "system" in first and [t["name"] for t in first["tools"]] ==
-          ["get_hero_stats", "get_patch_history", "shots_to_kill"])
+    check("请求带 system 和 4 个工具", "system" in first and [t["name"] for t in first["tools"]] ==
+          ["get_hero_stats", "get_patch_history", "shots_to_kill", "get_matchups"])
     second = client.requests[1]["messages"]
     check("第二轮带上 assistant 的 tool_use 和 user 的 tool_result",
           second[1]["role"] == "assistant" and second[2]["role"] == "user")
@@ -218,6 +279,10 @@ def test_ask():
 if __name__ == "__main__":
     test_tools()
     test_default_weapon()
+    test_thinking_budget()
+    test_tool_schema()
+    test_matchups_tool()
+    test_source_updated_fallback()
     test_loop()
     test_cooldown()
     test_routing()

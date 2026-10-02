@@ -27,7 +27,8 @@ from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
 
 import overfast
-from analyzer import Analyzer, format_facts
+import matchups
+from analyzer import Analyzer, format_facts, roles_from_roster
 from hero_qa import Cooldown, HeroQA
 from herodata import HeroStore, load_aliases, refresh_loop
 from label_ui import Roster, build_roster, send_prompts
@@ -377,11 +378,6 @@ async def main() -> None:
     api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
     model = os.environ.get("CLAUDE_MODEL", "").strip() or "claude-sonnet-5"
     effort = os.environ.get("ADVISE_EFFORT", "low").strip() or None
-    analyzer = Analyzer(api_key, model, effort) if api_key else None
-    if analyzer is None:
-        log.warning("ANTHROPIC_API_KEY not set; screenshots will be recognized but no advice given")
-    else:
-        log.info("Advice model: %s (effort %s)", model, effort or "default")
 
     state_dir = Path(os.environ.get("STATE_DIR", DATA_DIR.parent / "state"))
     matcher = HeroMatcher([DATA_DIR / "templates", state_dir / "templates"])
@@ -401,7 +397,17 @@ async def main() -> None:
     store = HeroStore(os.environ.get("HERO_DATA_PATH", "").strip() or os.path.join(server_dir, "herodata", "heroes.json"),
                       load_aliases())
     store.load()
-    hero_qa = HeroQA(AsyncAnthropic(api_key=api_key), model, store) if api_key else None
+    # 对位数据和英雄数据放在同一个目录（Docker 里是 herodata 卷）
+    matchup_store = matchups.MatchupStore(os.path.join(os.path.dirname(os.path.abspath(store.path)), "matchups.json"))
+    matchup_store.load()
+    hero_qa = (HeroQA(AsyncAnthropic(api_key=api_key), model, store, effort=effort, matchups=matchup_store)
+               if api_key else None)
+    analyzer = (Analyzer(api_key, model, effort, matchups=matchup_store, roles=roles_from_roster(roster))
+                if api_key else None)
+    if analyzer is None:
+        log.warning("ANTHROPIC_API_KEY not set; screenshots will be recognized but no advice given")
+    else:
+        log.info("Advice model: %s (effort %s)", model, effort or "default")
     refresh_hours = float(os.environ.get("HERO_REFRESH_HOURS", "24"))
 
     registry = Registry()
@@ -415,7 +421,8 @@ async def main() -> None:
 
     async with bot:
         await ws.start()
-        refresher = asyncio.create_task(refresh_loop(store, refresh_hours))
+        refreshers = [asyncio.create_task(refresh_loop(store, refresh_hours)),
+                      asyncio.create_task(refresh_loop(matchup_store, refresh_hours, fetch=matchups.fetch_all))]
         try:
             await bot.start(token)
         except discord.LoginFailure:
@@ -423,7 +430,8 @@ async def main() -> None:
         except discord.PrivilegedIntentsRequired:
             raise SystemExit("Discord refused the connection: enable Message Content Intent on the Bot page of the Developer Portal.")
         finally:
-            refresher.cancel()
+            for task in refreshers:
+                task.cancel()
             await ws.close()
 
 

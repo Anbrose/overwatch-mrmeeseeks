@@ -7,12 +7,16 @@ import time
 from typing import Any
 
 import damage
-from herodata import HeroStore
+import matchups as mu
+from herodata import HeroStore, _norm
 
 log = logging.getLogger("mrmeeseeks.hero_qa")
 
 MAX_TURNS = 5
 TOO_COMPLEX = "That question needs too many lookups. Try splitting it into smaller questions."
+TRUNCATED = "I ran out of room while thinking that through. Try asking more specifically, e.g. name the hero."
+# 模型默认开启 adaptive thinking，思考也计入 max_tokens；给小了会只剩 thinking 块、没有正文
+MAX_TOKENS = 16000
 
 SYSTEM = """You are mrmeeseeks, an Overwatch hero data assistant in a Discord channel.
 Rules:
@@ -20,12 +24,14 @@ Rules:
 2. To say whether a hero was buffed or nerfed, call get_patch_history and quote the relevant patch lines with their dates. If the recent changes only touch perks, say so.
 3. For damage or "how many shots to kill" questions, call shots_to_kill. If a weapon has several damage variants (e.g. charge levels), pick the one the user means via `variant` and say which one you used.
 4. State the assumptions returned by the tools (e.g. all pellets hit, Role Queue health).
-5. If a tool returns candidates for an unclear hero name, ask the user which hero they meant. Do not guess.
-6. If a tool returns "unsupported", explain why. Time-to-kill, ability damage (non-weapon) and perk damage bonuses are not supported yet.
+5. Pass hero and weapon names to tools exactly as the user wrote them; never translate them yourself, the tools resolve names in any language. If a tool returns candidates for an unclear hero name, ask the user which hero they meant. Do not guess. When naming a weapon in your answer, use the name from the tool result.
+6. If a tool returns "unsupported", explain why. Time-to-kill, healing numbers, ability damage (non-weapon) and perk damage bonuses are not supported yet.
 7. Answer in the same language as the question, in at most about 150 words.
-8. End with one line: "Source: Overwatch Wiki, data fetched <fetched_at date>"."""
+8. End with one line: "Source: Overwatch Wiki, data fetched <fetched_at date>"; for matchup answers use "Source: counterwatch.gg, updated <source_updated>" instead.
+9. For counter or matchup questions ("who counters X", "how does X do against Y"), call get_matchups and quote its numbers. Explain that they measure duel and teamfight outcomes, not match win rate. Never state a counter relationship that get_matchups did not return."""
 
-_HERO = {"type": "string", "description": "Hero name in any language, e.g. Cassidy, 卡西迪, McCree"}
+_HERO = {"type": "string", "description": "Hero name exactly as the user wrote it, in any language "
+                                          "(e.g. Cassidy, 卡西迪, McCree). Do not translate it."}
 TOOLS = [
     {
         "name": "get_hero_stats",
@@ -55,6 +61,16 @@ TOOLS = [
             "variant": {"type": "integer", "description": "Index into the weapon's damage variants"},
         }, "required": ["attacker", "target"]},
     },
+    {
+        "name": "get_matchups",
+        "description": "Counter ratings from counterwatch.gg (duel and teamfight outcomes, all ranks, not match win rate). "
+                       "With only hero: who it counters most and who counters it most. With opponent: both directions "
+                       "for that pair. Positive score = first hero favored, roughly percentage points.",
+        "input_schema": {"type": "object", "properties": {
+            "hero": _HERO,
+            "opponent": {**_HERO, "description": "Optional opponent hero, " + _HERO["description"]},
+        }, "required": ["hero"]},
+    },
 ]
 
 
@@ -83,11 +99,14 @@ def _as_bool(value: Any) -> bool | None:
 
 
 class HeroQA:
-    def __init__(self, client: Any, model: str, store: HeroStore, max_turns: int = MAX_TURNS):
+    def __init__(self, client: Any, model: str, store: HeroStore, max_turns: int = MAX_TURNS,
+                 effort: str | None = "low", matchups: mu.MatchupStore | None = None):
         self.client = client
         self.model = model
         self.store = store
         self.max_turns = max_turns
+        self.effort = effort   # 问答是短对话，low 足够且快；None 为模型默认
+        self.matchups = matchups
 
     # ---------- 工具 ----------
     def _hero(self, name: str) -> dict[str, Any]:
@@ -137,16 +156,50 @@ class HeroQA:
             if "unsupported" in result:  # 让模型能换一把武器重试
                 result["weapons"] = [w["name"] for w in attacker["weapons"]]
             return {**result, "fetched_at": self.store.fetched_at}
+        if name == "get_matchups":
+            return self._matchups(args)
         return {"error": f"unknown tool {name}"}
+
+    def _matchups(self, args: dict[str, Any]) -> dict[str, Any]:
+        if self.matchups is None or not self.matchups.ready:
+            return {"error": "matchup data is not available yet"}
+        hero = self._hero(args["hero"])
+        if "error" in hero:
+            return hero
+        info = {"source": mu.SOURCE, "unit": mu.UNIT, "source_updated": self.matchups.source_updated or (self.matchups.fetched_at or "")[:10] or None}
+        if args.get("opponent"):
+            opp = self._hero(args["opponent"])
+            if "error" in opp:
+                return opp
+            ab, ba = self.matchups.score(hero["name"], opp["name"]), self.matchups.score(opp["name"], hero["name"])
+            if ab is None and ba is None:
+                return {"error": "no_matchup_data", "hero": hero["name"], "opponent": opp["name"]}
+            return {"hero": hero["name"], "opponent": opp["name"],
+                    "hero_vs_opponent": ab, "opponent_vs_hero": ba, **info}
+        profile = self.matchups.profile(hero["name"])
+        if profile is None:
+            return {"error": "no_matchup_data", "hero": hero["name"]}
+        names = {_norm(n): n for n in self.store.heroes}   # 对位数据的键是归一化名，回答里用显示名
+        for side in profile.values():
+            for entry in side:
+                entry["hero"] = names.get(entry["hero"], entry["hero"])
+        return {"hero": hero["name"], **profile, **info}
 
     # ---------- 对话循环 ----------
     async def answer(self, question: str) -> str:
         messages: list[dict[str, Any]] = [{"role": "user", "content": question}]
         for _ in range(self.max_turns):
             resp = await self.client.messages.create(
-                model=self.model, max_tokens=1024, system=SYSTEM, tools=TOOLS, messages=messages)
+                model=self.model, max_tokens=MAX_TOKENS, system=SYSTEM, tools=TOOLS, messages=messages,
+                **({"output_config": {"effort": self.effort}} if self.effort else {}))
+            if resp.stop_reason == "max_tokens":
+                log.warning("Hero Q&A hit max_tokens=%d for %r", MAX_TOKENS, question)
+                return TRUNCATED
             if resp.stop_reason != "tool_use":
-                return "".join(b.text for b in resp.content if b.type == "text").strip()
+                answer = "".join(b.text for b in resp.content if b.type == "text").strip()
+                if not answer:
+                    log.warning("Hero Q&A returned no text (stop_reason=%s) for %r", resp.stop_reason, question)
+                return answer
             messages.append({"role": "assistant", "content": resp.content})
             results = []
             for block in resp.content:

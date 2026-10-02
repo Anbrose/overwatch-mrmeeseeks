@@ -328,7 +328,7 @@ journalctl -u mrmeeseeks -f      # 查看日志
 | `WS_PORT` | 否 | `8765` | WebSocket 端口 |
 | `MIN_SNAPSHOT_INTERVAL` | 否 | `5` | 同一客户端两次分析的最短间隔（秒） |
 | `HERO_DATA_PATH` | 否 | `server/herodata/heroes.json` | 英雄数据缓存文件。Docker 部署时位于 `herodata` 卷 |
-| `HERO_REFRESH_HOURS` | 否 | `24` | 每隔多少小时从 Overwatch Wiki 刷新英雄数据 |
+| `HERO_REFRESH_HOURS` | 否 | `24` | 每隔多少小时刷新英雄数据（Overwatch Wiki）和对位数据（counterwatch.gg）；对位数据缓存在同一目录的 `matchups.json` |
 
 ### 客户端参数
 
@@ -361,7 +361,7 @@ python client\client.py --help
 | `@mrmeeseeks player Name#1234` | 用 [OverFast](https://overfast-api.tekrop.fr/) 查玩家各职责段位、总体数据和最常玩的 5 个英雄。BattleTag 区分大小写；生涯设为私密时只能看到段位 |
 | `@mrmeeseeks disconnect` | 解绑本频道的客户端 |
 | `@mrmeeseeks help` | 显示帮助 |
-| `@mrmeeseeks <问题>` | 英雄问答：数值（血量、子弹体积）、最近的补丁、N 米处几枪击杀。例如 `@mrmeeseeks 卡西迪最近被削了吗`、`@mrmeeseeks 卡西迪 30 米爆头几枪杀毛加`。需要 `ANTHROPIC_API_KEY` |
+| `@mrmeeseeks <问题>` | 英雄问答：数值（血量、子弹体积）、最近的补丁、N 米处几枪击杀。例如 `@mrmeeseeks 卡西迪最近被削了吗`、`@mrmeeseeks 卡西迪 30 米爆头几枪杀毛加`、`@mrmeeseeks 查莉娅怕谁`。克制关系来自 [counterwatch.gg](https://www.counterwatch.gg) 的对位评分（对决和团战结果，全段位，不是整局胜率）。需要 `ANTHROPIC_API_KEY` |
 
 ### 配对规则
 
@@ -384,6 +384,8 @@ python tests/test_heroparse.py # Wiki 英雄页面解析
 python tests/test_damage.py    # 伤害衰减、护甲、几枪击杀
 python tests/test_herodata.py  # 英雄数据缓存、刷新、名字解析
 python tests/test_hero_qa.py   # 英雄问答工具与对话循环、bot 路由
+python tests/test_matchups.py  # counterwatch 对位数据解析、缓存、查询
+python tests/test_counter_advice.py # 换英雄建议里的对位评分和换人候选
 ```
 
 每个脚本最后一行显示 `N/N passed`，全部通过时退出码为 0。

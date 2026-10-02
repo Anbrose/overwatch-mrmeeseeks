@@ -48,6 +48,7 @@ class _Block:
 def _analyzer(create, effort="low"):
     a = analyzer.Analyzer.__new__(analyzer.Analyzer)
     a.model, a.effort = "test-model", effort
+    a.matchups, a.roles = None, {}
     a.client = types.SimpleNamespace(messages=types.SimpleNamespace(create=create))
     return a
 
@@ -68,7 +69,7 @@ def test_analyzer():
     sent = calls[0]["messages"][0]["content"]
     check("不再发送 not available 占位数据（模型会因此拒绝给建议）", "not available" not in sent)
     check("没有'缺信息就不给建议'的规则", "Not enough data to give advice" not in calls[0]["system"])
-    check("允许用通用克制知识", "general" in calls[0]["system"].lower())
+    check("克制关系只能来自 matchup_data，不再凭常识", 'may only come from "matchup_data"' in calls[0]["system"])
     check("effort 传给 API", calls[0]["output_config"] == {"effort": "low"})
     asyncio.run(_analyzer(create, effort=None).advise(FACTS))
     check("effort 为 None 时不传 output_config", "output_config" not in calls[1])
