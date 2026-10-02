@@ -1,0 +1,1598 @@
+{{Infobox character
+| name = Mauga
+| image = OW2_Mauga.png
+| caption = "A gun in each hand and a smile on my face!"
+| realname = Maugaloa Malosi<ref name = "MaugaHero">[https://overwatch.blizzard.com/en-us/heroes/mauga/ Mauga], ''PlayOverwatch''. Accessed on 2023-12-06</ref>
+| birth = August 19th<ref name = "MaugaHero"/>
+| status = Active
+| age = 37<ref name = "MaugaHero"/>
+| nationality = {{flag|ws}} Samoan
+| occupation = Mercenary<br/>[[Heavy Assault]]
+| baseofoperations = Apia, [[Samoa]]<ref name = "MaugaHero"/><br>[[Rome]], [[Italy]]
+| affiliation = [[Deepsea Raiders]] (formerly)<br/>[[Talon]]
+| relations = Malosi (father)
+| role = [[Tank]]
+| sub-role = [[Bruiser]]
+| health = 425
+| armor = 125
+| health6v6 = 450
+| armor6v6 = 100
+| minor_perk_xp = 1975
+| major_perk_xp = 4935
+| video = 
+| voice = {{VA stack
+| english = [[John Tui]]
+| other = [[Grégory Lerigab]]<ref>2023-12-05, [https://twitter.com/GregoryLerigab/status/1731992866900046069 Grégory Lerigab official Twitter statement]. ''Twitter@GregoryLerigab'', accessed on 2024-04-30</ref> (French)
+<br>Daniel Welbat (German)
+<br>Francesco Rizzi (Italian)
+<br>Ryūnosuke Watanuki (Japanese)
+<br>Choi Hyun-soo (Korean)
+<br>Igor Kwiatkowski (Polish)
+<br>César Emilio (Brazilian Portuguese)
+<br>Ivan Porodnov (Russian)
+<br>Dave Rogers (European Spanish)
+<br>Rolando de Castro (Latin American Spanish)
+}}
+| cosmetics = 1
+| quotes = 1
+}}
+{{HeroTabs}}
+'''Mauga''' is a [[Sub-Roles#Bruiser|Bruiser]] [[Roles#Tank|Tank]] [[Heroes|hero]] in ''[[Overwatch 2|Overwatch]]''. He was released in [[Season/2022-2026#Season_8:_Call_of_the_Hunt|Season 8]] on 5 December 2023, making him the 39th hero to be added to the game.
+
+==Overview==
+[[File:Mauga HS.mp4|left|thumb|Mauga Hero Selection]]
+Mauga features a kit that is designed to bash through the front lines and brawl his opponents in close-quarter combat, by wielding two powerful chainguns that can either be fired individually or in unison. Ignite enemies with his incendiary chaingun “Gunny” to burn them when they take enough damage, then finish them with a critical hit from his volatile chaingun “Cha-Cha.” Paired with his Berserker passive, which grants Mauga temporary health whenever he deals critical damage, he’s a mountain on the battlefield.<ref name="MaugaLights">2023-11-03, [https://overwatch.blizzard.com/en-us/news/24017509/ MAUGA LIGHTS UP THE ARENA IN A LIMITED-TIME TRIAL!]. ''Blizzard Entertainment'', accessed on 2023-11-04</ref><gallery>
+File:Mauga MS.webp|Main Menu
+File:Mauga KA.webp|Key Art
+</gallery><gallery>
+File:Icon-Mauga.png|3D Portrait
+File:Mauga Hero.png|2D Portrait
+</gallery>
+
+==Abilities==
+
+===Passive Abilities===
+{{Role passive|Tank}}
+{{Sub-Role passive|bruiser}}
+
+{{Ability_details
+|ability_name = Berserker
+|ability_image = Berserker_icon.png
+|official_description = Gain temporary health when dealing critical damage.
+|ability_type = Passive Ability
+|duration = 2 seconds
+|overhealth = 50% of critical damage dealt (150 max)
+|ability_keywords = overhealth
+|ability_details = 
+* After 2 seconds, the [[Hit points#Overhealth|overhealth]] starts decaying at a rate of 5 hp/s. Dealing more critical damage will reset this condition.
+* Both headshots as well as hitting a burning target with "Cha-Cha" counts toward this.
+* The center of {{al|Overrun}}'s stomp counts as critical damage and gives overhealth accordingly to damage dealt.
+* Critical damage dealt to objects such as {{al|Tree of Life}}, {{al|Petal Platform}}, {{al|Ice Wall}} and others, does not generate overhealth.
+}}
+
+===Weapons===
+{{Ability details
+| ability_name = Incendiary Chaingun
+| ability_image = Incendiary_Chaingun_icon.png
+| key = primary fire
+| ability_type = Weapon;;Primary Fire
+| shot_type = {{proj|hitscan}}
+| official_description = Automatic weapon that ignites enemies on repeated impacts.
+| damage = {{#vardefineecho: chainguns_direct_damage|4 - 1.2}} (direct)<br>{{tt|15 per second|2.88 every 0.192 seconds}} (damage over time)
+| damage_falloff_range = {{#vardefineecho: chainguns_falloff|30 - 40 meters<br>10 - 20 meters (simultaneous fire)}}
+| headshot = ✓
+| ammo = {{#vardefineecho: chainguns_ammo|300}}
+| fire_rate = {{#vardefineecho: chainguns_fire_rate|{{tt|17.36 shots/s|1 shot every 0.0576 seconds}}}}
+| reload_time = {{#vardefineecho: chainguns_reload|2 seconds}}
+| spread = {{#vardefineecho: chainguns_spread|1 degree (base)<br>1.5 degrees (max)<br>5 degrees (simultaneous fire)}}
+| mspeed_pen = {{#vardefineecho: chainguns_mspen|{{tt|-15%|4.675 m/s}} (per chaingun)}}
+| pradius = {{#vardefineecho: chainguns_pradius|{{tt|0.04 meters|0 base + 0.04 global}}}}<!-- 0.04 global + 0 -->
+| duration = 4 seconds (damage over time)
+| ignores_barrier = No
+| ignores_matrix = No
+| ignores_deflect = No
+| ignores_boost = No
+| ignores_window = partial
+| ability_keywords = burning::critical::hitscan
+| ability_details = * A.K.A "Gunny"
+{{#vardefineecho: chainguns_common_info|
+* Damage per second: 
+** {{CalcDPS|d=4|f=17.36}} while firing ({{CalcDPS|d=4|f=17.36|a=300|r=2}} w/ reload)
+** 84.44 Gunny w/ damage over time
+** 138.88 while firing both guns simultaneously onto non-burning target
+** 208.32 while firing both guns simultaneously onto burning target
+** 223.32 w/ damage over time
+* Gunny and Cha-Cha can be fired one at a time or simultaneously:
+** Each gun has a 0.16 second windup delay.
+** Ammo and reload is shared between the two guns.
+** Movement speed penalties stack when firing both guns simultaneously.
+** Chainguns have individual spread, reaching max value over 30 shots. Spread of both guns will immediately increase to 4 degrees if both are fired at once.
+}}
+* The target enemy is ignited, causing them to take [[damage over time]], if they have been hit by 10 shots from Gunny.
+** The counter resets if the target has not been hit in the last 2 seconds or once they have been successfully ignited.
+** Being ignited while already burning refreshes the duration.
+** Burn damage is unaffected by {{al|Amplification Matrix}}.
+* The following objects cannot be set on fire:
+** All [[barriers]]
+** {{al|Venom Mine}}
+** {{al|Sentry Turret}}
+** {{al|Steel Trap}}
+** {{al|Concussion Mine}}
+| dps = {{CalcDPS|d=4|f=17.36}} while firing ({{CalcDPS|d=4|f=17.36|a=300|r=2}} w/ reload) 84.44 w/ damage over time 138.88 while firing both guns simultaneously onto non-burning target 208.32 while firing both guns simultaneously onto burning target 223.32 w/ damage over time
+}}
+
+{{Ability details
+| ability_name = Volatile Chaingun
+| ability_image = Volatile_Chaingun_icon.png
+| key = secondary fire
+| ability_type = Weapon;;Secondary Fire
+| shot_type = {{proj|hitscan}}
+| official_description = Automatic weapon that deals critical damage to burning enemies.
+| damage = {{#var: chainguns_direct_damage}}
+| damage_falloff_range = {{#var: chainguns_falloff}}
+| headshot = ✓
+| ammo = {{#var: chainguns_ammo}}
+| fire_rate = {{#var: chainguns_fire_rate}}
+| reload_time = {{#var: chainguns_reload}}
+| spread = {{#var: chainguns_spread}}
+| mspeed_pen = {{#var: chainguns_mspen}}
+| pradius = {{#var: chainguns_pradius}}
+| ignores_barrier = No
+| ignores_matrix = No
+| ignores_deflect = No
+| ignores_boost = No
+| ignores_window = No
+| ability_keywords = ability critical::critical::hitscan
+| ability_details = * A.K.A "Cha-Cha"
+{{#var:chainguns_common_info}}
+* {{al|Fortify}} does not prevent [[critical hit]]s to an ignited Orisa.
+* Hitting enemies that are [[Status effect#Burning|burning]] from other abilities (such as [[Ashe]]'s {{Al|Dynamite}}, [[Torbjörn]]'s {{Al|Molten Core}} or [[Anran]]'s {{Al|Ignition}}) will also cause Cha-Cha to deal critical damage.
+** This also allows Cha-Cha to deal critical hits to objects that cannot be ignited by Gunny.
+| dps = {{CalcDPS|d=4|f=17.36}} while firing ({{CalcDPS|d=4|f=17.36|a=300|r=2}} w/ reload) 84.44 w/ damage over time 138.88 while firing both guns simultaneously onto non-burning target 208.32 while firing both guns simultaneously onto burning target 223.32 w/ damage over time
+}}
+
+===Special Abilities===
+{{Ability details
+| ability_name = Overrun
+| ability_image = Overrun_icon.png
+| official_description = Charge forward to stomp and launch enemies. You are unstoppable while charging.
+| ability_type = Ability
+| shot_type = {{proj|shockwave}}<br>{{proj|movement}}
+| key = ability 1
+| cooldown = 6 seconds
+| damage = 30 (collision)<br>75 (stomp, outer radius)<br>150 (stomp, inner radius)
+| cast_time = {{tt|0.21 + 0.50 seconds|0.208 s startup + 0.496 s}}
+| duration = 0.32 seconds (charge, min)<br>2 seconds (charge, max)<br>0.6 seconds (stomp) <br>1 second (knockdown)
+| mspeed_buff = {{tt|+165%|14.57 m/s}} (charge and stomp)
+| kbspeed = {{tt|18.03 m/s|H:17, V:6}} (knockback, collision)<br>{{tt|8.6 m/s|H:5, V:7}} (stomp, indirect)<br>{{tt|6.95 m/s|H:6, V:3.5}} (stomp critical)
+| range = 4.4 meters (charge, min)<br>28 meters (charge, max)<br>6.5 meters (stomp)
+| radius = 7 meters (stomp, max)<br>2 meters (stomp, critical)
+| height = 3 meters (stomp, shockwave)<br>2 meters (shockwave climb and drop)
+| pspeed = 30 m/s (shockwave)
+| damage_red = -50% taken
+| ignores_barrier = partial
+| ignores_matrix = 1
+| ignores_deflect = 1
+| ignores_boost = 0
+| ignores_window = 1
+| ignores_speedcap = 1
+| ability_keywords = ability critical::collide;;unstoppable::knockdown::reduction cap::shockwave::strong movement::unstoppable
+| ability_details = * Cooldown starts when the ability ends.
+* Mauga cannot shoot or use other abilities (except Cardiac Overdrive) during Overrun.
+* Mauga can turn while charging using the directional keys.
+* Overrun's charge ends automatically after 2 seconds of charging, causing Mauga to leap at the end.
+** Mauga takes 8 footsteps in this time.
+* The charge can be canceled into stomp early by pressing the Primary Fire or Jump key.
+* Alternatively, Overrun can be canceled early by pressing the ability key again, which causes the charge to end without a stomp.
+** The automatic stomp at max duration can also be canceled until slightly after the jump has started.
+** A manually input stomp cannot be cancelled.
+* Enemies that collide with Mauga while he is charging take damage and are [[knocked back]].
+** Each enemy can only be hit by the charge once per use.
+* The stomp has different effects based on the target's proximity upon landing:
+** Enemies hit by the outer area, will take damage and are knocked back.
+** Enemies hit by the inner area take double damage, and are [[knocked down]] for a brief period, similar to [[Sigma]]'s {{Al|Accretion}}.
+*** This counts as a [[critical hit]]: it will trigger {{al|Berserker}} and shows in the kill feed as a critical death if it eliminated an enemy.
+* Overrun's stomp is treated as an actual jump that can clear small gaps.
+* Unlike [[Reinhardt]]'s {{Al|Charge}}, Overrun will not stop if directed towards a wall; Mauga will simply keep charging in place. 
+* During the charge, Mauga is immune to being [[hacked]], [[slowed]], [[knocked back]]/up, [[stunned]], [[knocked down]], [[rooted]] or being affected by {{al|Graviton Surge}}, {{al|Gravitic Flux}} or {{al|Cage Fight}}, excluding the following interactions:
+** [[Orisa]] using {{Al|Fortify}} will be treated as a wall; Mauga will either slide off or stop in place in front of her.
+** [[Lifeweaver]] using {{al|Life Grip}} will temporarily pause the charge until the grip ends, after which he will continue charging from his new position.
+** Clashing with another Mauga using Overrun will cause both Maugas to be [[knocked down]] for 1.7 seconds.
+*** There are no other counter-charge behaviours, such as with {{al|Charge}}, {{al|Rocket Punch}} or {{al|Shield Bash}}. Overrun will continue, but the aforementioned abilities will stop upon colliding with Mauga during Overrun.
+**** Due to a bug, Mauga still receives crowd control if hit by [[Sigma|Sigma]]'s {{al|Hyper Strike}} major perk.
+**In some cases, Mauga can still be affected by [[crowd control]] during the initial startup animation (i.e, before he starts moving).
+* Stomp is blocked by [[barrier|barriers]] but the charge collision is not.
+* Overrun's movement speed buff does not count towards global movement speed buff cap.
+| 6v6_details = * Cooldown increased from 6 to 7 seconds.
+}}
+
+{{Ability details
+| ability_name = Cardiac Overdrive
+| ability_image = Cardiac_Overdrive_icon.png
+| official_description = Gain damage reduction and nearby allies heal themselves by dealing damage.
+| ability_type = Ability
+| shot_type = {{proj|aoe}}
+| key = ability 2
+| cooldown = 12 seconds
+| heal = 100% of damage dealt (self)<br>50% of damage dealt (allies)
+| cast_time = None
+| duration = 3 seconds
+| damage_red = -40% taken (self)
+| radius = 10.5 meter radius
+| ignores_barrier = 1
+| ignores_matrix = 1
+| ignores_deflect = 1
+| ignores_boost = 1
+| ignores_window = 1
+| ability_keywords = area of effect;;spherical::ignore barrier;;target ally::reduction cap::transformation
+| ability_details = * Cooldown starts when the ability ends.
+* Despite the description stating it only affects allies, Mauga also gains the effect of Cardiac Overdrive while it is active.
+* Allies that enter the radius after the ability has been activated will also gain its effects.
+* Allies that leave the radius will retain the effect for ~1.2 seconds.
+* An UI element below the crosshair displays the remaining time and the number of allies within range.
+* This ability requires line of sight for allies to gain the effects.
+** Enemy [[barrier]]s do not block line of sight.
+* Healing from Cardiac Overdrive is not reduced by the global healing reduction passive.
+* Healing from Cardiac Overdrive does not generate [[ultimate charge]].
+}}
+
+===Ultimate Ability===
+{{Ability details
+| ability_name = Cage Fight
+| ability_image = Cage_Fight_icon.png
+| official_description = Deploy a barrier that traps yourself and enemies. Automatically reloads Mauga's Chainguns at the start of the ultimate.
+| ability_type = Ultimate Ability
+| shot_type = {{proj|aoe}}
+| ult_req = 2700 points
+| barrier_health = 1200
+| duration = 8 seconds
+| radius = 7.2 meters
+| height = 6.3 meters
+| ignores_barrier = 1
+| ignores_matrix = 1
+| ignores_deflect = 1
+| ignores_boost = 1
+| ignores_window = 1
+| ability_keywords = area of effect;;cylindrical::barrier::deployable;;strong projectile::hinder::ignore barrier;;tether::reloads::tether
+| ability_details = * Can be interrupted by [[crowd control]] abilities during deployment, causing the Ultimate to be wasted.
+* Can be canceled early by pressing the ability key again.
+* Activating Cage Fight restores the ammo of {{al|Incendiary Chaingun|text=Incendiary and Volatile Chainguns}} to full.
+* Creates a cylindrical barrier centered around a device.
+** Like all barriers, it can be shot through by allies, and both enemies and allies can walk through it.
+** The barrier extends 3 meters below and 9 meters above the device.
+** The device is an invulnerable [[object]] with gravity.
+** The device - along with the barrier and chained targets - moves along with any object or map element it is standing on and will fall down if they are retracted or destroyed.
+*** The device can be placed on {{al|Petal Platform}}, {{al|Ice Wall}}, [[payload]], [[push]] barricade, moving platforms and cars in [[Oasis]].
+* Mauga and enemy heroes within the barrier's bounds will be [[Status effect#Rooted|leashed]] by a chain and become unable move outside the barrier or vertically beyond a ~9 meter spherical radius of the barrier device.
+** [[D.Va]]'s {{Al|Self-Destruct}}, [[Junkrat]]'s {{Al|RIP-Tire}} and [[Ashe]]'s {{al|B.O.B.}} are also affected.
+** Enemies who walk into the barrier even after its initial deployment will also become trapped.
+** Enemies need line of sight with the barrier device in order to be tethered by the chains. Once attached, the chains stay on even if enemy moves behind a wall or solid terrain.
+*** [[Barrier]]s, [[Lifeweaver]]'s {{Al|Tree of Life}} or {{al|Petal Platform}} and [[Mei]]'s {{Al|Ice Wall}} will not prevent the chains from attaching.
+*** If deployed atop an already risen {{Al|Petal Platform}}, it does not attach to anyone below it (due to its height). Anyone already chained will be pulled off of the platform if they ascend on it.
+** Mauga still becomes chained, even if there are no nearby enemies to be chained.
+* Enemies and Mauga will see "TRAPPED" on their screen and their [[movement abilities]] will be disabled. It also cancels most movement abilities. Enemies can still move around normally.
+** It doesn't cancel [[Reaper]]'s {{Al|Wraith Form}} if he activated it while outside, but he can't leave once inside.
+** [[Sombra]] will be forced out of {{Al|Stealth}} if she was within range.
+** Flying enemies will fall to the ground. 
+*** However, certain abilities (such as [[Illari]]'s {{Al|Captive Sun}}) have a jump animation when casting, which cannot be interrupted by the chains. Once the animation ends, they fall back to the ground.
+** Only a few abilities let enemies leave the cylinder:
+*** [[Orisa]]'s {{Al|Fortify}} removes the chains, allowing her to exit through the ultimate's barrier.
+*** [[Symmetra]]'s {{Al|Teleporter}} can let her and allies leave the cylinder. This also extends to the Mauga that casted the ultimate.
+*** [[Lifeweaver]]'s  {{Al|Life Grip}} can pull an ally out of the cylinder, given he's outside of it. This also extends to the Mauga that casted the ultimate.
+*** Mauga's Overrun and [[Moira]]'s {{Al|Fade}} can allow them to go through the Cage Fight without being trapped, given their ability does not end while inside.
+** [[Sombra]] can teleport out of the cage if her {{al|Translocator}} is in flight when she becomes trapped.
+* Destroying the barrier will end the ultimate early and remove the trapped status effect.
+* Killing a Mauga using Cage Fight will not remove the barrier.
+}}
+
+== Perks ==
+=== Minor Perks ===
+A Minor [[Perk]] can be chosen at level 2.
+{{Ability details
+| ability_name = Kinetic Bandolier
+| ability_image = Perk_KineticBandolier.png
+| ability_type = Minor Perk
+| official_description = Overrun reloads up to 150 ammo during the first second of charging.
+| ability_details = 
+}}
+{{Ability details
+| ability_name = Pyromaniac
+| ability_image = Pyromaniac.png
+| ability_type = Minor Perk
+| official_description = Igniting enemies with Incendiary Chaingun grants 50 overhealth.
+| overhealth = 50
+| ability_details =
+* Shared maximum with {{al|Berserker}} overhealth from critical hits.
+}}
+
+=== Major perks ===
+A Major [[Perk]] can be chosen at level 3.
+{{Ability details
+| ability_name = Firewalker
+| ability_image = Perk_Firewalker.png
+| ability_type = Major Perk
+| official_description = Overrun ignites enemies hit.
+| ability_details =
+* Both charge and stomp can apply the burn.
+* This has the same properties as the ignite from {{al|Incendiary Chaingun}}, except it does not trigger {{al|Pyromaniac}}.
+}}
+{{Ability details
+| ability_name = Combat Fuel
+| ability_image = Perk_CombatFuel.png
+| ability_type = Major Perk
+| official_description = Critical hits grant Mauga 3 temporary overhealth on Cardiac Overdrive's next use, up to 150 overhealth.
+| overhealth = 3 per critical hit<br>150 (max)
+| ability_details = * The stored Overhealth resets when Mauga dies.
+}}
+
+== Hero-specific options ==
+{|class ="listtable"
+! Setting name !! Options !! Description
+|-
+| rowspan="2"| '''Secondary Fire cancels Overrun'''
+| Off (default)
+| Only pressing Ability 1 again interrupts Overrun.
+|-
+| On
+| Pressing either Ability 1 again or Secondary Fire interrupts Overrun.
+|-
+| rowspan="2"| '''Hide Cage Fight cancel text'''
+| Off (default)
+| Cancel text UI element is displayed to the left of the crosshair.
+|-
+| On
+| Cancel text UI element is hidden.
+|}
+
+==Strategy==
+Mauga is a fiery [[Tank]], capable of dealing big, consistent damage at range, whilst being a dangerous enemy close-up. His chainguns provide him with good damage at range when used separately, helping apply pressure to enemies at a distance. {{al|Incendiary Chaingun}} deals consistent [[Damage over time]], whilst {{al|Volatile Chaingun}} deals good [[Headshot|critical]] damage, perfect to follow up on {{al|Incendiary Chaingun}} and also contributing greatly to Mauga's passive {{al|Berserker}}, which gives him even more sustainability. His {{al|Overrun}} is an unstoppable movement ability, great for engaging to get up close to enemies and deal high initial damage, or to escape from a battle to safety. {{al|Cardiac Overdrive}} is a powerful ability in Mauga's kit, providing him and his teammates with great self-sustainability through damage reduction and life-steal, capable of saving allies and giving them an advantage in battle. Mauga's ultimate {{al|Cage Fight}} is perfect for forcing enemies into close quarters with him, blocking them away from their team and providing a large, resilient shield. Although Mauga can be a challenge to defeat, his big hitbox and lack of any purely defensive abilities means he's fully dependent on his allies and damage to keep him alive. Mauga does best on the front of the battle applying pressure, using your abilities to help allies engage more safely and boost their abilities.
+
+===Weapon Strategies===
+* '''{{al|Berserker}} (Passive):''' One of Mauga's self-sustaining abilities, providing him with a portion of [[Hit points#Overhealth|Overhealth]] from critical damage.
+** Utilizing his {{al|Volatile Chaingun}}'s ability to automatically deal critical damage on burning enemies is the best way to gain Overhealth from this ability.
+** His critical damage isn't restricted to his Volatile Chaingun, dealing critical damage through normal headshots as well as Overrun's stomp's center hit.
+** He doesn't gain Overhealth from damaging [[objects]], like {{al|Healing pylon}} or {{al|Tree of life}}, even if they're taking critical damage, so you should choose if destroying these constructs is more valuable than attacking enemies.
+*** That being said, destroying constructs will contribute to the team by removing a valuable source of healing or damage from the enemy, just be careful prioritising it over finishing off enemies or helping allies in danger.
+
+* '''{{al|Incendiary Chaingun}}:''' A high-output fiery weapon that ignites almost anything it damages.
+** For Mauga, his spread is greatly decreased when only using a single chaingun at a time, so at range it's best to use your Incendiary Chaingun to set a target alight, then follow up with your {{al|Volatile Chaingun}} to critical them. 
+** His Incendiary Chaingun is best used in unison with his {{al|Volatile Chaingun}} when enemies are in close range, as it deals high damage capable of burning down health pools instantly. 
+** It can set [[Heroes]] on fire as well as certain objects. ([[Illari]]'s {{al|Healing Pylon}}, any of [[Lifeweaver]]'s creations, etc.)
+
+* '''{{al|Volatile Chaingun}}:''' A rapid fire chaingun that deals automatic critical damage to anything set on fire.
+** As mentioned with Incendiary Chaingun, the chaingun has a tighter spread when used on its own. At range it's best used after having set a [[Hero]] on fire using your {{al|Incendiary Chaingun}}, as it'll deal guaranteed critical damage.
+** In combination with his Incendiary Chaingun, Mauga can deal high damage but only at close range.
+** Since this chaingun deals critical damage to anything on fire, it's best used against on fire. This applies not just to heroes, but also abilities or barriers.
+*** Although {{al|Incendiary Chaingun}} cannot set barriers on fire, they can be set alight by [[Ashe]]'s {{al|Dynamite}} and [[Torbjörn]]'s {{al|Molten Core}}, which allows Volatile Chaingun to crit them.
+
+*'''{{al|Overrun}}:''' An unstoppable charge with decent damage and a great ability to engage/disengage.
+** Overrun is Mauga's only movement ability, helping him reposition quickly or get back in the fight sooner.
+** Overrun can be cancelled by reactivating it. This results in a shorter recovery time compared to ending with a stomp and doesn't leave Mauga as vulnerable to enemy abilities and fire, since the stomp's landing location is fairly telegraphed.
+** Overrun causes [[Status effect#Knockback|Knockback]] to enemies who aren't directly stomped on, which can cause [[Environmental kill]]s. 
+** When you need to play safe, save Overrun to disengage and run away from enemies when you are getting pressured too hard to avoid being eliminated. Its immunity to [[Crowd Control]] prevents you from getting [[Status effect#hooked|Hooked]], [[Status effect#Asleep|Slept]], [[Status effect#Pinned|Pinned]] while charging to safety.
+** There is a very brief activation window for Overrun, during which he can be affected by [[Crowd Control]] and cause the ability to go to waste. This is a rare occurrence but not impossible, so tracking enemy abilities will help prevent this.
+** If landing directly on an enemy, this causes the enemy to get [[Status effect#Knocked Down|Knocked down]], dealing high damage. This can be used to finish off enemies running away or stun enemies out of certain [[Channeled]] abilities such as {{al|Resurrect}} or {{al|Deadeye}}. It will also count as a [[critical hit]] and trigger {{al|Berserker}}, granting you some [[overhealth]].
+** This ability provides complete immunity to almost all forms of [[Crowd Control]].
+*** This makes it a perfect counter for most ultimates that cause crowd control, such as {{al|Blizzard}}, {{al|Gravitic Flux}}, {{al|Graviton Surge}}, etc. It's important to note that Mauga can't escape these ultimates once trapped by them. This means using Overrun to run through a {{al|Graviton Surge}} or {{al|Cage Fight}} without being trapped, makes it a great way to get around these ultimates.
+** During the charge, Mauga is given 50% damage reduction, which allows Mauga to survive big bursts of damage, such as {{al|Self-Destruct}} or {{al|Rip-Tire}}. 
+*** Sometimes quickly using the ability to survive burst damage and than stomping early or cancelling it means it'll be ready for use once your lower health. 
+
+*'''{{al|Cardiac Overdrive}}:''' A lifesaving ability that provides you and nearby allies with damage reduction and life steal.
+** This ability is the most useful utility Mauga can provide as a tank, helping save allies & boost survivability for the team.
+** It's best used against enemies with big hitboxes such as [[Ramattra]], [[Winston]], or even another [[Mauga]], as Mauga deals the most damage when simultaneously firing his chainguns, but they have a fairly large spread.
+** Be careful not to use overdrive when your ammo clip is under half, as you will need to reload before overdrive expires.
+** Try to avoid using Cardiac Overdrive simultaneously with {{al|Overrun}}. The latter already causes Mauga to hit the damage reduction cap of 50% and you are largely not benefiting from the healing as you don't deal much damage while charging.
+*** However, Overrun's stomp damage does trigger lifesteal and Cardiac Overdrive can be activated while charging, so when Overrun is used offensively the best time to activate Cardiac Overdrive is right before hitting the stomp to gain a good burst of healing while maximizing the time your guns can benefit from the lifesteal afterwards.
+** This ability also provides ''only'' life steal to allies in range, lingering for a short time after, making it useful to quickly save an ally from elimination, or help them engage with more survivability.
+*** While it may be tempting to use it to support an ally in battle, it should primarily be used to keep Mauga alive due to the lack of damage reduction.
+
+*'''{{al|Cage Fight}}:''' A powerful ultimate that forces enemies into close quarters with Mauga.
+** Don't bite more than you can chew. Trapping five enemies with Cage Fight is tempting, but it will simultaneously turn you the primary target of the entire enemy team. Make sure your team can provide enough back up to survive the focus you get.
+** Cage Fight fully reloads Mauga's ammo, so sometimes its best use is in the middle of an intense team fight to quickly reload and continue damaging.
+** Mauga's Cage Fight can be placed on top of a [[Escort#Payload|Payload]], which causes it to move along with the payload. This deters any enemies from getting too close to contest, as they will be trapped within.
+** You can also place your Cage Fight early and utilize it was a barrier for your allies, or to protect yourself from further damage given you've distanced yourself from the enemy. 
+*** As it is a [[barrier]], most healing abilities cannot pass through to heal enemies within. This makes it useful for finishing off pocketed enemies, as this means the supports would have to enter the ultimate to try heal and save their ally.
+** [[Status effect#Mobility lock|Mobility lock]] effect is applied to enemies inside of Cage Fight, canceling or preventing enemies from using most [[abilities]] that utilize [[Movement speed#Movement abilities|movement]], including some [[Ultimate ability|ultimates]].
+*** Affected ultimate abilities include {{al|B.O.B.}}'s Charge, {{al|Meteor Strike}} and {{al|Rampage}}.
+*** It'll also cause any flying entities to drop to the ground, unable to fly. This will temporarily cancel [[Echo]] and [[Pharah]] flight, as well as flight from ultimates such as {{al|Captive Sun}}, {{al|Valkyrie}} and {{al|Gravitic Flux}}. Though, this doesn't interrupt the ultimates themselves.
+
+===General Strategies===
+* Mauga can do well on his own or with his team, but thrives best up-close with enemies as using both his {{al|Incendiary Chaingun}} and {{al|Volatile Chaingun}} at the same time quickly burns through enemies. It's best to try close the gap between you and your opponents to better secure eliminations. Use {{al|Cardiac Overdrive}} to keep you alive during the battle, then use {{al|Overrun}} to escape to cover or to your supports if you're in too much trouble.
+* Try your best to work around your team, be prepared to engage when they do or bunker down alongside them. Try stay in front of your team because as a [[Tank]], it's better for opponents to try eliminating you rather than your [[Support]] or [[Damage]] allies, as they're much easier to kill.
+* Mauga's kit works well with most compositions, with his Chainguns providing him the range for poke-orientated compositions, whilst his {{al|Cardiac Overdrive}} make him viable in brawl-orientated compositions, and his {{al|Overrun}} and its short cooldown giving him a powerful escape tool for dive-compositions. It's important for you to keep track of your allies and try keep close to them because as a Mauga, most enemies will be more likely to keep their distance and avoid getting close to you.
+* Try your best to utilize {{al|Cardiac Overdrive}} not just for your own survivability but for your allies too. Using Cardiac Overdrive for them can help them better secure kills and stay alive, such as with a [[Genji]] using his {{al|Dragonblade}} or [[Soldier: 76]] using {{al|Tactical Visor}}, it can provide them the sustain your supports may not be able to.
+* You should try to keep track of enemy ultimates and abilities, and prepare to use {{al|Overrun}} to try counter them wherever possible. For example, to escape a {{al|Gravitic Flux}} or {{al|Blizzard}}, survive high burst damage or cancel a [[channeled]] ability like {{al|Resurrect}} or {{al|Deadeye}}.
+
+==Match-Ups and Team Synergy==
+<!--When proving match-up or team synergy advice, please write all advice from the sake of someone playing as this hero, not as someone who wishes to counter this hero. Also, please try to be as objective as possible. Taking personal skill out of the equation, please provide advice that would apply to any player who knows how to play these characters well.-->
+When fighting Tanks, Mauga has '''"Matchups"''' ratings, ranging on a scale of 5 levels. This is because Mauga's primary focus, like all other tanks, are eliminating DPS or Supports, with controlling and disrupting the enemy tank being a secondary objective:
+
+* ''Very Strong Vs.'' '''|''' ''Strong Vs.'' '''|''' ''Even/Neutral Vs.'' '''|''' ''Weak Vs.'' '''|''' ''Very Weak Vs.''
+
+When fighting DPS & Supports, Mauga has '''"Priority Targeting"''' & measures of '''"Risk"''' ranging on a scale of 5 levels. These heroes are Mauga's main targets. Only Supports feature a listed measure of risk as nearly all of them can counteract Mauga effectively with CC or other abilities:
+
+* ''Extremely High Priority'' '''|''' ''High Priority'' '''|''' ''Medium Priority'' '''|''' ''Low Priority'' '''|''' ''Very Low Priority''
+* ''Extreme Risk'' '''|''' ''High Risk'' '''|''' ''Medium Risk'' '''|''' ''Low Risk'' '''|''' ''Very Low Risk''
+
+Synergies are also graded on a scale of 5 levels. Tank Synergies will not feature explicit gradings due to the nature of Role Lock restrictions:
+
+* ''Exceptional Synergy'' '''|''' ''Strong Synergy'' '''|''' ''Good Synergy'' '''|''' ''Ok Synergy'' '''|''' ''Weak Synergy''
+
+===Tank===
+{| class="listtable mw-collapsible mw-collapsed"
+|-
+! style="width:80px" |'''Hero'''
+! style="width:70%"  |'''Match-Up'''
+! style="width:30%"  |'''Team Synergy'''
+|-
+!<center>[[Image:icon-dva.png|80px|link=D.Va]]<br />[[D.Va]]</center>
+|'''Very Weak Vs.'''
+D.Va is one of Mauga's hardest match-ups. While D.Va herself has a very large and unobscured hitbox, her high mobility alongside her hefty HP pool and Defense Matrix make her a hard target to eliminate as Mauga. Her Defense Matrix completely denies the value of Mauga's Chainguns, furthermore limiting the effectiveness of Cardiac Overdrive. Her high damage can also make her quite a threat, as she has a considerable amount of burst damage capable of killing Mauga's backline rather quickly. The best way to deal with a D.Va is to force her Defense Matrix resources out early by focusing her in the early stages of a team fight, then either closing on her for the kill/to force her away, or to turn on her backline and kill them while she's helpless. D.Va is also a very poor isolated duelist against most tanks, due to her hitbox size, so taking her on individually won't be much of an issue as long as you don't use Overdrive early. Be careful while using Cage Fight against her, as her Self Destruct will likely force you to destroy your cage early, unless you have a piece of map geometry to hide behind.
+
+
+Their Perks - D.Va's minor perks don't do much against Mauga, but her Shield System perk can be a self-sustain nightmare for Mauga. Be careful not to feed her massive amounts of HP while she's using Defense Matrix.
+
+
+Your Perks - Pyromaniac can give you an edge against D.Va, giving you a little intial extra sustain if you meet her head on. Firewalker will also give you a huge amount of lifesteal using Cardiac Overdrive without needing to fire your Chainguns, giving you a chance to survive her Defense Matrix and shred her after.
+
+|''(6v6 Exclusive Pairing - Exceptional Synergy)'' 
+While D.Va is typically a massive threat to Mauga's self-sustainability, as a teammate, she can be a massive boon. Her Defense Matrix allows Mauga to survive far more damage than he normally could, prevent status effects such as Ashe's Dynamite, Ana's Biotic Grenade/Sleep Dart, or another Mauga's burn. Not only that, Cage Fight and Self Destruct can be a lethal pairing when used correctly, preventing the enemy team from escaping the devastating damage of the bomb.
+
+|-
+!<center>[[Image:icon-Domina.png|80px|link=Domina]]<br />[[Domina]]</center>
+|'''TBA Vs.'''
+|
+|-
+!<center>[[Image:icon-doomfist.png|80px|link=Doomfist]]<br />[[Doomfist]]</center>
+|'''Strong Vs.''' 
+Doomfist and Mauga typically don't meet, but when they do, it's pandemonium. Due to Doomfist's rather closed-in hitbox, low health pool and lack of sustain options, a Mauga can shred him rather quickly, but at risk of charging his Empowered Punch through Power Block. Look to cancel his Power Block using Overrun and shred him while he is stunned. Not only does Doomfist have a rather weak damage output, he has an incredibly low range compared to Mauga's. Look to set him on fire constantly and poke him out to build Overhealth from your Beserker passive.  
+
+Their Perks - Doomfist's minor perks are mainly just annoying more than an issue for Mauga. If a Doomfist has Power Matrix, DO NOT SHOOT HIM. Not only will he not take damage, but he will freely gain an Empowered Punch without any negatives. Let the first second burn then pressure him away with damage. His other major perk can be annoying as slows affect Mauga heavily due to his large hitbox size.  
+
+Your Perks - Pyromaniac is definitely preferred here, due to the ease of lighting Doomfist on fire from range. Depending on the enemy team's comp (especially if they are all mobile heroes,) Combat Fuel can honestly be a better pick for self-sustain due to Firewalker getting significantly less value if the enemy team isn't stacked. 
+
+|''(6v6 Exclusive Pairing - Weak Synergy)'' 
+Frankly, this is not a good matchup. Not only do both Mauga and Doomfist not have many team-oriented mitigation tools, but they are also vulnerable to the same kinds of things. Stuns, hinders, and anti-healing effects. Your best bet is to run in as quickly as possible to overwhelm the enemy team's backline. Outside of this, Cage Fight and Meteor Strike make a fairly dangerous combo, due to the ability of Cage Fight to lock people into a small space, something Meteor Strike is great for.
+
+|-
+!<center>[[Image:icon-hazard.png|80px|link=Hazard]]<br>[[Hazard]]</center>
+|'''Very Strong Vs.'''
+This matchup is very stat and balance oriented. Before Hazard's Spike Guard became vulnerable to critical hits in Season 19, Hazard was able to shut down Mauga's utility very easily due to Mauga's reliance on critical damage. Keep that in mind if that gets reverted. But, with the current patch, Mauga destroys any potential Hazard has for play-making. Mauga's range is better, more consistent, and he has the ability to consistently sustain off of Hazard due to his face-tanking nature. Look to force Hazard into an uncomfortable space and make him run away with his Jagged Leap, then either close in with Overrun or take the space he has given you. You can also cancel Spike Guard with Overrun (but do be noted, it's a short cooldown, so it's not a great resource trade.) You are also able to escape Hazard's Downpour while he is casting it by using Overrun to negate the status effect. 
+
+
+Their Perks - Anarchic Zeal can make Hazard quite a bit more tanky against you, as he'll be able to sap some life back as you shoot at him as well. Reconstitution can also increase his lifetime against Mauga, buying time for his team to kill you or force you away. Keep those in mind when facing against a Hazard. The other two perks do not do much in the matchup.
+
+
+Your Perks - Kinetic Bandolier can be useful to help you regain ammo and chase Hazard down if he tries to escape with Jagged Leap. Pyromaniac won't matter as much due to his high burst damage potential even if he is fairly easy to ignite. Similar to Doomfist, if the Hazard's team is very mobile and can dodge a Firewalker Overrun, look to get Combat Fuel instead.
+|''(6v6 Exclusive Pairing - Ok Synergy)'' 
+Similar to the Doomfist-Mauga pairing, Hazard and Mauga are weak to the same things - Poke, CC, and Anti-healing effects. Look to play to overwhelm the enemy team's backline. While Downpour and Cage Fight are strong on their own, they are not the greatest paired together, as they both achieve similar things. Instead, Mauga can use Cage Fight and Hazard can stand in front of him using Spike Guard to deal massive damage to trapped targets and provide good damage mitigation for the Mauga.
+|-
+!<center>[[Image:icon-junker queen.png|80px|link=Junker Queen]]<br>[[Junker Queen]]</center>
+|'''Even Vs.''' 
+Junker Queen vs Mauga depends on a few things - Aim, Timing, and Positioning. While Junker Queen has very high burst damage, her lack of damage-mitigation tools make her a great sustain-target using Cardiac Overdrive. Look to poke her out before she gets close, as her Carnage and Scattergun can deal massive damage, possibly leading to you having to use Cardiac Overdrive before you wanted to. If you can aim well, this matchup is no problem at all. If your mechanics need a little work, it is not recommended to face her head-on, and instead use your range and better mobility to your advantage. Rampage shuts down your sustain tools completely, making her a force to be reckoned with while she has it - but there is a small detail. Rampage is a movement ability. You can cast Cage Fight when you believe Junker Queen is about to use her Rampage and either 1. Deny her from using it, or 2. Cancel it outright. The timing on this is VERY tight, but it is do-able and is very rewarding to learn.
+
+
+Their Perks - If a Junker Queen has Rampant Charge, the above Cage Fight tactic WILL NOT WORK. She will go through the cage if she is already using her ultimate. If you cast Cage Fight before she uses it, you will still prevent her from using the ability. Savage Satiation will also make her a lot more sustainable due to your large hitbox and damage dealt with Carnage. Be careful to close distance before she's used Carnage.
+
+
+Your Perks - Kinetic Bandolier can be useful if you plan on kiting around the map against Junker Queen, as it will give you less downtime and give you more ability to poke, but be careful - as you won't have Pyromaniac to sustain you a little more. Firewalker is usually very good into comps with a Junker Queen, as a lot of the times her teammates will be playing close to her to get value from Commanding shout, making it easy to light multiple targets on fire.
+
+|''(6v6 Exclusive Pairing - Very Strong Synergy)''
+Junker Queen and Mauga do one thing - Run. It. Down. These two characters synergize in such a unique way in that Mauga's Cardiac Overdrive will affect Junker Queen's bleeds, stacking alongside her Adrenaline rush, making her nearly impossible to kill when she has a bleed active. Not only that, both have very good horizontal mobility and with Commanding Shout can close distance exceptionally fast. Cage Fight and Rampage combined are essentially an instant fight win, due to the anti-effect and Cage Fight tether combining to leave the enemy team completely helpless. Look to use these two on maps such as Suravasa and Nepal, where the maps are very closed in and flat.
+
+|-
+!<center>[[Image:icon-mauga.png|80px|link=Mauga]]<br />[[Mauga]]</center>
+|A Mauga mirror match is based off of some things. Who can poke the other Mauga better, who can manage their Cardiac Overdrive better, and who has better team assistance. From those three factors, a Mauga mirror can be determined of who is the better Mauga of the team. When it comes to Cage Fight, there are two things - Try to avoid using Cage Fight first, as the enemy's Cage will last longer, and only '''ONE''' Cage Fight tether can be attached to you at any time, and it will '''ALWAYS''' be the enemy's tether. This enables a tech called Cage Phasing, where you are able to leave the bounds of your own Cage Fight, while maneuvering yourself within the opponent's, while they are still stuck in yours. This means you can create a situation where your Cage Fight blocks damage for you and their Cage Fight doesn't really do much for them. 
+Perks - Pyromaniac gives you an edge against an enemy Mauga in the poke war, giving you a little extra sustain if you have the mechanics to spread your Incendiary Chaingun pressure around his teammates. Firewalker is also a good option, as Mauga compositions typically have his teammates very closeby to him to get value out of Cardiac Overdrive. In the rare instance that his team plays very split from him, look to get Combat Fuel.
+
+|''<u>This Synergy can only occur in Gamemodes with Mystery Heroes, No Limits or if an Echo is present.</u>''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-orisa.png|80px|link=Orisa]]<br />[[Orisa]]</center>
+|'''Even Vs.'''
+
+Prior to Season 19, Orisa's Fortify granted her immunity to forced critical hits, such as Mauga's Volatile Chaingun. Keep this in mind if this changes, as this makes the match-up far easier. 
+
+Orisa, like Mauga, has good high-range damage and very high self-sustain, but low damage mitigation potential. Look to use Cardiac Overdrive after she's used Javelin Spin, and preferably after Fortify. You can look to force Javelin Spin early by poking her out, then either force Fortify out by applying heavy pressure or baiting it out with Overrun while she's using Javelin Spin. While you can gain Beserker Overhealth while she's using Fortify, the amount you will get will be heavily reduced due to the damage mitigation of Fortify. Be careful when you use Cage Fight, as if Orisa has Fortify she becomes immune to the tether and can leave the Cage. If she also has Terra Surge, your team better be ready to delete her HP pool or she will deal massive damage to you and the Cage.
+
+Their Perks - Defense Protocol allows Orisa to outheal your damage while using Terra Surge, making it impossible for you to take her down alone. Mobile Fortification makes it harder for you to pin Orisa down while using Fortify and also allows her to pump way more damage into you from a distance. Charged Javelin can do massive damage and CC you for a good amount of time, making it hard to close distance. Protective Barrier is the ultimate Mauga counter perk, as it makes it nearly impossible to get through and Orisa and get value with Cardiac Overdrive. Look to either ignore her, or have a teammate play Symmetra or Bastion to burn through the shield.
+
+
+Your Perks - Pyromaniac is recommended, as you need any extra sustain you can get. Similar to a Mauga mirror, if the enemy team is playing incredibly stacked around their Orisa, look to use Firewalker as a source of non-mitigable sustain.
+
+|''(6v6 Exclusive Pairing - Strong Synergy)''
+Orisa and Mauga use similar means to an end - high self sustain, good long range damage, and high CC potential. Combined, they can be a very poky composition, not looking to close distance until the enemy team shows weakness. Terra Surge can be used to pull enemies close, allowing Mauga to get massive damage with an Overrun stomp. Cage Fight and Terra Surge can be used in combination to confirm a team fight, due to the inability for the enemy team to escape the Terra Surge.
+
+|-
+!<center>[[Image:icon-ramattra.png|80px|link=Ramattra]]<br />[[Ramattra]]</center>
+|'''Very Strong Vs.''' 
+While Ramattra has team-damage mitigation with Void Barrier and good range with Void Accelerator, his only form of self-damage mitigation is using the Nemesis Form's block, slowing himself down and making him an extremely easy target for Mauga to farm Overdrive healing off of. Look to bait out Ramattra's Void Barrier early in the fight, then engage on him quickly to force his Nemesis Form. Don't look to kill him - but use him as a sustain tool. Your team will follow up on the enemy team. If you want to kill Ramattra while blocking, you can use the stun from Overrun to cancel and put his block on cooldown. Cage Fight will make Ramattra completely helpless if he is using Annihilation as he will be shredded without his Void Barrier.  
+
+Their Perks - Void Surge can increase Ramattra's effective damage on you, but not by a lot. Just be careful not to take poke before closing distance. Nanite Repair can allow Ramattra to sustain himself against your damage in Nemesis Form, as well as slow you down. Vengeful Vortex can completely stop you from moving momentarily, making you an easier target for Ramattra and his team to shoot you.  
+
+Your Perks - Kinetic Bandolier can be useful to continue shooting Ramattra if you decide to cancel his block with Overrun, but Pyromaniac can also give you an edge in the poke war. Similar to all other brawl tanks, if the enemy team is playing closely to their Ramattra, Firewalker is a great sustain tool option. 
+
+|''(6v6 Exclusive Pairing - Exceptional Synergy)''
+Ramattra and Mauga is a match-up made in heaven. Ramattra's Void Barrier can allow Mauga to close distance without taking damage, and Mauga's Cardiac Overdrive can enable Ramattra to sustain far more effectively than he could alone. Be careful, though, as both are very vulnerable to CC and anti-heals due to their large hitboxes. Cage Fight is also great in combination with Ramattra's general kit, as he can protect you, slow the enemy, and gain lifesteal from Overdrive while the enemy can't escape. Annihilation can also be combined with Cardiac Overdrive to give Ramattra insane amounts of sustain from his Annihilation tendrils.
+
+|-
+!<center>[[Image:icon-reinhardt.png|80px|link=Reinhardt]]<br />[[Reinhardt]]</center>
+|'''Even Vs.'''
+While at first Reinhardt seems like an easy target to take on as Mauga, you need to remember that Reinhardt's Barrier Field enables him to fully mitigate the value of your Cardiac Overdrive and Chainguns in general, but, without his barrier, Reinhardt is extremely fragile against Mauga and his self-sustain. Look to burn his barrier's HP early in the fight, then close distance once you've achieved the resource advantage you're looking for. If a Reinhardt uses Charge, it is fairly easy to use Overrun and quickly stop his charge, then slam on top of him, causing massive amounts of CC and damage to Reinhardt. But be careful, as Cage Fight and Overrun do have cast times - potentially leading to them being cancelled by Earthshatter or Charge. 
+
+
+Their Perks - Yeah, not gonna lie, they all suck.
+
+
+Your Perks - Kinetic Bandolier can be a better option against Reinhardt, as you can cycle your damage output far quicker than normal, and put far more pressure into his barrier. Firewalker will 99% of the time be the better pick against Reinhardt, as not only will you probably not get much Overhealth out of Combat Fuel, but Reinhardt typically requires his team to play rather close to him, as he is helpless otherwise.
+
+|''(6v6 Exclusive Pairing - Exceptional Synergy)''
+Similar to Ramattra, Reinhardt's Barrier Field acts as a great closing tool for Mauga, but even better. Once a Mauga is close to the enemy team, he can use Cardiac Overdrive and enable Reinhardt to get massive lifesteal off of his Rocket Hammer and Firestrike. Barrier Field also gives Mauga time to reload/build his Overdrive back before fighting the enemy team again, and also act as a protective field against CC and Anti-Heals. If a Reinhardt hits an enemy with Earthshatter, it is exceptionally easy to either delete their HP pool with Chainguns, or stomp their life away with Overrun. Cage Fight enables Reinhardt to go all out and swing like there's no tomorrow on the enemy team.
+
+|-
+!<center>[[Image:icon-roadhog.png|80px|link=Roadhog]]<br />[[Roadhog]]</center>
+|'''Very Strong Vs.'''
+Not gonna lie, if you see a Roadhog, just go Mauga. He is easily Hog's hardest counter besides Ana, as Roadhog's massive hitbox and lack of damage mitigation tools make him the juiciest target in the game to farm Beserker and self healing with Cardiac Overdrive on. Be careful of fighting a Roadhog around pits or ledges, as Mauga is a very easy hook target and can be sent off the map using it. While Whole Hog can knock Mauga backward, Overrun can deny the damage output of it alongside nullifying the knockback. Look to use it to slam the Roadhog while he's casting or get to cover. Overdrive can also completely out-sustain Whole Hog, even if all pellets hit. Cage Fight also makes Roadhog a sad little piggy stuck in a cage, unable to escape to cover and just be filled with lead with the Chain guns. Just make sure he's not using Whole Hog, or he'll easily destroy your cage extremely fast. 
+
+
+Their Perks - Shrapnel Launcher can enable a Roadhog to shoot you from further range, but not do much more. Scrap Hook is okay, but doesn't add much as Roadhog doesn't want to pull Mauga in close. Invigorate is the only boon Roadhog has against Mauga, as it allows him to reposition quickly and avoid the Mauga. 
+
+
+Your Perks - Kinetic Bandolier can be useful if you make a Roadhog run away with Take A Breather, then follow up on him with Overrun to continue shredding him. Pyromaniac can also be useful as Roadhog doesn't have any damage mitigation tools, allowing you to freely shoot on his team and build massive amounts of Overhealth. Firewalker can be good, but it depends on if his team plays near him. Most likely, they won't be, so Combat Fuel can be better a lot of the times.
+
+|''<u>(6v6 Exclusive Pairing - Ok Synergy)</u>''
+Roadhog and Mauga are two sides of the same coin - High damage, high self sustain but low team value characters. Combining them leads to a very vulnerable team but a lot of damage potential. Be very careful if they have any sort of CC or anti-heal effects. Otherwise, Hook can pull a target in close to Mauga, allowing him to either stomp on them with Overrun or trap them with Cage Fight. Cage Fight and Whole Hog can be used to create what is called "The Blender", where the enemy team is trapped in Cage and gets shredded by Whole Hog.
+
+|-
+!<center>[[Image:icon-sigma.png|80px|link=Sigma]]<br />[[Sigma]]</center>
+|'''Very Weak Vs.'''
+Sigma is another tank that turns a Mauga's life into a living nightmare. Hyperspheres are extremely easy to land on Mauga due to his hitbox size, and deal massive damage. Experimental Barrier can allow Sigma to exist in a space that Mauga can't return pressure in, Accretion can make Mauga a standing duck, and Kinetic Grasp can completely deny the value of Cardiac Overdrive. There is '''ONE''' way to fight against Sigma right now, and that is bait his cycle early. Sigma is an extremely cyclical hero, having very high peaks, but very, very low lows. Once you're able to bait his Kinetic Grasp and Accretion, Sigma becomes a very easy target to shred as Mauga due to his low health pool and large hitbox size. Be careful while using Cage Fight against Sigma, though, as if he has Gravitic Flux, you are guaranteed to be hit by it. Overrun can be used to run out of Flux, but it will mean you are likely out of position. If he is using Kinetic Grasp, you can possibly use the stomp from Overrun to cancel it, but if you do not have Overrun, either go for cover or melee him if you are using Cardiac Overdrive to gain some small sustain.  
+
+Their Perks - All of Sigma's perks are VERY good against Mauga, as Kinetic Cycle enables him to have an Accretion every time you feed him Kinetic Grasp. Hyper Regeneration is also very easy to fuel as Mauga just sits around and gets shot by Sigma. Hyper Strike also enables Sigma to force Mauga out of position and away from him, creating distance and making Mauga's damage output worse. Levitation also enables Sigma to dodge Overrun or get to a high ground position that Mauga can't easily access.  
+
+Your Perks - Pyromaniac is basically a must here, as you need as much extra sustain as you can get. Firewalker will also be far more preferable, as it gives you an option to sustain against Sigma outside of shooting him. 
+
+|''(6v6 Exclusive Pairing - Exceptional Synergy)''
+While sworn enemies, they are beloved teammates, as Sigma grants Mauga the damage mitigation to sit around and just pummel the enemy team with his Chainguns, and with Kinetic Grasp, gives Mauga a source of protection while he uses Cardiac Overdrive. Just be careful, though, as both are fairly squishy and characters such as D.Va and Zarya can mitigate a good amount of their damage outputs. Sigma can also stun a target with Accretion, making an easy target for an Overrun stomp or finisher with the Chainguns. Cage Fight and Gravitic Flux also combo extremely well, as Gravitic Flux will not only easily grab all enemies in the cage, but won't be able to lift the enemies into the air, making it actually easier to hit them since they'll be stuck in place.
+
+|-
+!<center>[[Image:icon-winston.png|80px|link=Winston]]<br />[[Winston]]</center>
+|'''Very Strong Vs.'''
+While Winston has the mobility to generally avoid Mauga, he does not have the staying power or threat that Mauga does, leading to him having to constantly be on the defensive and avoid the Mauga as much as possible. Make your goal either to kill the Winston, or make his backline live in constant fear of your attack. Due to his large hitbox size, it is also very possible to force Winston's Barrier Projector out very early and close the distance on him once it is over. If a Winston uses Primal Rage, he becomes an extremely easy target due to his massive hitbox size and the ability to cut his mobility off while using Cage Fight.
+
+
+Their Perks - The only perk that is of concern is his Revitalizing Barrier, as it can give him some extra time to potentially pick off a teammate or buy his team time to force you away. 
+
+
+Your Perks - While Kinetic Bandolier can be useful to close distance to Winston if you're pressuring him enough, Pyromaniac can be a great option against him due to large hitbox size and heavy resource investment if he uses Barrier Projector, making it easy to farm overhealth off him or his team. Depending on the composition, Combat Fuel can be an effective sustain tool, especially if the enemy team is playing distance from their Winston and you need a source of sustain outside of lifesteal.
+
+|''(6v6 Exclusive Pairing - Ok Synergy)''
+Winston and Mauga play for different things. While Winston looks to engage on the enemy backline and generally disrupt and make space for his team, Mauga looks to run people over and take space with an iron fist. They can be used in tandem to cause chaos in a backline or isolate a frontline target fairly easily. Tesla Cannon can combine well with Overdrive due to its easy to hit damage, and Barrier Projector can protect Mauga while using Cardiac Overdrive. Outside of that, though, they fall relatively flat as a pairing.
+
+|-
+!<center>[[Image:icon-wrecking_ball.png|80px|link=Wrecking Ball]]<br />[[Wrecking Ball]]</center>
+|'''Very Strong Vs.'''
+If you play aim trainers, Wrecking Ball will be a familiar experience. Ball will never play to fight a Mauga on due to his massive hitbox size and predictable movement. Look to constantly shoot at the Ball and make it impossible for him to engage on your team with full resources. The only threat he proves if he's able to knock you out of position with Fireball from Grappling Claw. Cage Fight completely disables the character's movements, and the only way he could threaten you in Cage is if he uses Minefield. Mines can be instantly cleared with one slam from Overrun, though. So it's not a big deal. If he uses Piledriver, you can time your Overrun with the Piledriver to stop your Overrun momentum and land directly on top of Ball, leading to massive damage.  
+
+Their Perks - Steamroller can make Grappling Claw's Fireball quite hefty, dealing 120 damage to Mauga. Be careful not to get hit too often by it. Hang Time can also deal massive Damage to you, but the excessive cast time provides an easy target for Mauga to shoot. Adaptive Barrier can also prove to be an annoyance, as it can block Overrun's slam. Be on the lookout for when he uses it.  
+
+Your Perks - Pyromaniac is definitely the choice for minor, as it's extremely easy to shoot Ball and his team and get the extra Overhealth. For major, though, Combat Fuel can be very effective due to the ease of farming crits off of Ball's large hitbox. 
+
+|''(6v6 Exclusive Pairing - Weak Synergy)''
+Ball, like Mauga, is an EXTREMELY selfish character that provides essentially no protection for his team. The only thing they have in terms of synergy is Cage Fight and Minefield. That can lead to free team wipes but otherwise, not much else can be said.
+
+|-
+!<center>[[Image:icon-zarya.png|80px|link=Zarya]]<br />[[Zarya]]</center>
+|'''Weak Vs.'''
+Mauga struggles into Zarya due to her ability to block his damage using Barriers, and her general high damage output and his inability to block her damage. Look to play around her bubbles, either by igniting her with Incendiary Chaingun and forcing them out, or by having your teammates bait them out. Once she uses one bubble, she can be fairly easy to eliminate, as your high damage output can easily shred through a singular bubble and tear her health pool apart. Be careful of Graviton Surge, though, as it disables the ability for Mauga to Overrun. If she does use Graviton Surge, you can use Cage Fight to block damage from her team and potentially trap her inside, as it's likely she'll be nearby.
+
+
+Their Perks - Energy Converter will grant Zarya easy charge off of Mauga, as your hitbox will be very easy to hit with her secondary fire. Jump-Ups can also provide her easy high ground access, making it impossible to close distance to her, as well as give her an option for mobility in Cage Fight. Depending on what your team is playing, Energy Lance can create a massive amount of damage to you and your team, but Spotter can also make it very hard to close distance to her teammates.
+
+
+Your Perks - Kinetic Bandolier can be preferred, but Pyromaniac can also work as every time Zarya cleanses a burn from your Incendiary Chaingun, you can immediately reignite the target and get the overhealth out of it. Combat Fuel can be a bit more effective since Zarya can cleanse burns from Firewalker, but it depends on the situation.
+
+|''(6v6 Exclusive Pairing - Exceptional Synergy)''
+Zarya and Mauga are like Reinhardt and Zarya - Punchy, aggressive frontline power. Zarya can prevent Mauga from being CC'd or anti-healed with her Projected Barrier, and Mauga can grant Zarya insane lifesteal with Cardiac Overdrive. Mauga can also use Overrun and be bubbled in it to build Zarya easy charge and prevent Mauga from being damaged in it. If Zarya uses Graviton Surge, Mauga can also use Overrun and stomp into the center of it, stunning all enemies in the center.
+
+|}
+
+=== Damage ===
+{| class="listtable mw-collapsible mw-collapsed"
+|-
+! style="width:80px" |'''Hero'''
+! style="width:70%"  |'''Match-Up'''
+! style="width:30%"  |'''Team Synergy'''
+
+|-
+!<center>[[Image:icon-Anran.png|80px|link=Anran]]<br />[[Anran]]</center>
+|'''<nowiki>TBA PRIORITY</nowiki>'''
+<small>
+</small>
+
+|Mauga and Anran are an excellent pair in a team comp, as igniting enemies with your {{Ability link|name=Incendiary Chaingun}} will allow her to deal critical damage with {{Ability link|name=Fan The Flames}}. Likewise, her {{Ability link|name=Ignition}} passive will help to set enemies on fire faster, allowing you to do critical damage with your {{Ability link|name=Volatile Chaingun}} and gain overhealth from your {{Al|name=Berserker}} passive.
+
+|-
+!<center>[[Image:icon-ashe.png|80px|link=Ashe]]<br />[[Ashe]]</center>
+|'''<nowiki>HIGH RISK | MEDIUM PRIORITY</nowiki>'''
+Ashe will most likely be playing somewhere outside of your affective range. As you attempt to close the distance, she can land more shots on you. Due to your size, it will be easy to land shots on you. Also, you have no means of blocking her {{Ability link|name=Dynamite}}, setting you ablaze and chipping away your health overtime. If her team has a Mauga, his {{Ability link|name=Volatile Chaingun}} can freely land critical hits on you, which will give him overhealth from your {{Al|name=Berserker}} passive.{{Ability link|name=B.O.B.}} might not be a big concern. His large hit box should make it easy for you to land shots. Plus, with {{Ability link|name=Cardiac Overdrive}}, you can reduce some of the damage. 
+
+|Enemies ignited by her {{Ability link|name=Dynamite}} will also cause your {{Ability link|name=Volatile Chaingun}} to deal critical damage, which will give him overhealth from your {{Al|name=Berserker}} passive. Objects ignited by Dynamite can also receive critical damage, but you won't gain overhealth from them.
+
+|-
+!<center>[[Image:icon-bastion.png|80px|link=Bastion]]<br />[[Bastion]]</center>
+|'''<nowiki>EXTREMELY HIGH RISK | HIGH PRIORITY</nowiki>'''
+Bastion is a great danger to you. Since you lack a barrier, Bastion can shred through you in its {{Ability link|name=Configuration: Sentry|text=sentry}} form. Even with your Cardiac Overdrive, it may not provide enough protection against Bastion's damage. 
+
+|Mauga and Bastion combo actually turns most of the unfavored tank matchup to your favor. Especially against Zarya, she will get shredded after she uses the first bubble. Mauga’s Cage Fight pairs very well with Bastion's artillery, as the enemy will be unable to escape this massive fire.
+
+|-
+!<center>[[Image:icon-cassidy.png|80px|link=Cassidy]]<br />[[Cassidy]]</center>
+|'''<nowiki>TBA PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-Emre.png|80px|link=Emre]]<br />[[Emre]]</center>
+|'''<nowiki>TBA PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-Freja.png|80px|link=Freja]]<br />[[Freja]]</center>
+|'''<nowiki>TBA PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-genji.png|80px|link=Genji]]<br />[[Genji]]</center>
+|'''<nowiki>HIGH RISK | HIGH PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-hanzo.png|80px|link=Hanzo]]<br />[[Hanzo]]</center>
+|'''<nowiki>TBA PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-junkrat.png|80px|link=Junkrat]]<br />[[Junkrat]]</center>
+|'''<nowiki>HIGH RISK | HIGH PRIORITY</nowiki>'''
+Although a direct one on one confrontation with a Junkrat is likely to go in Mauga's favor, the risk in fighting a Junkrat is his ability to lay on high, consistent damage from behind his tank with his {{al|Frag Launcher}}. This not only forces you out of aggressive positions, but also allows Junkrat to charge his {{Al|RIP-Tire}} quickly, putting your backline at risk. His {{al|Concussion Mine}} serves as a tool to quickly leave your most effective range, though his lack of horizontal mobility makes your {{al|Overrun}} a great punish in the case he uses both mines. Poke damage from your {{al|Incendiary Chaingun}} will often force a Junkrat out of a sightline if he's unsupported, delaying the threat until you're in a better place to close the distance.
+
+Junkrat's {{al|Steel Trap}} is less of a risk to Mauga compared to some other tanks, since his {{al|Overrun}} causes him to ignore the trap, but getting hit by it can often mean certain death against a coordinated team, or at least force Mauga to use {{al|Cardiac Overdrive}} at an inopportune time.
+
+If you decide to use {{al|Cage Fight}}, make sure Junkrat doesn't have {{al|RIP-Tire}}. Otherwise Mauga have to cancel it or he'll unable to escape the massive damage from the tire (as Mauga's teammates are usually well protected if not in the cage). 
+
+|A Mauga and Junkrat combo can work similarly to the Mauga and Bastion combo, the two creating an area of massive damage potential that most heroes will be eliminated quickly upon entering. Unlike Bastion, though, this combo struggles dealing with longer-range threats, often needing either a speed boost from [[Lúcio|Lucio]] or [[Juno]] to close the distance or a long-range Damage hero like [[Ashe]] to cover for this weakness.
+Junkrat is one of the best heroes to combo with Mauga's {{al|Cage Fight}}, being able to deal massive damage if multiple opponent's are trapped in the cage. A Junkrat using {{al|RIP-Tire}} from outside the cage is an especially powerful combo, since the walls of {{al|Cage Fight}} will prevent the enemy from stopping it even if they see it coming. 
+
+|-
+!<center>[[Image:icon-mei.png|80px|link=Mei]]<br />[[Mei]]</center>
+|'''<nowiki>TBA PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-pharah.png|80px|link=Pharah]]<br />[[Pharah]]</center>
+|'''<nowiki>MEDIUM RISK | HIGH PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-reaper.png|80px|link=Reaper]]<br />[[Reaper]]</center>
+|'''<nowiki>EXTREMELY HIGH RISK | HIGH PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-Shion.png|80px|link=Shion]]<br />[[Shion]]</center>
+|'''<nowiki>TBA PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-Sierra.png|80px|link=Sierra]]<br />[[Sierra]]</center>
+|'''<nowiki>EXTERMELY HIGH RISK | HIGH PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-sojourn.png|80px|link=Sojourn]]<br />[[Sojourn]]</center>
+|'''<nowiki> HIGH RISK | High PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-Soldier_76.png|80px|link=Soldier: 76]]<br />[[Soldier: 76]]</center>
+|'''<nowiki>TBA PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-sombra.png|80px|link=Sombra]]<br />[[Sombra]]</center>
+|'''<nowiki>TBA PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-symmetra.png|80px|link=Symmetra]]<br />[[Symmetra]]</center>
+|'''<nowiki>TBA PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-torbjörn.png|80px|link=Torbjörn]]<br />[[Torbjörn]]</center>
+|'''<nowiki>TBA PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-tracer.png|80px|link=Tracer]]<br />[[Tracer]]</center>
+|'''<nowiki>TBA PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-Vendetta.png|80px|link=Vendetta]]<br />[[Vendetta]]</center>
+|'''<nowiki>TBA PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-venture.png|80px|link=Venture]]<br />[[Venture]]</center>
+|'''<nowiki>TBA PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-widowmaker.png|80px|link=Widowmaker]]<br />[[Widowmaker]]</center>
+|'''<nowiki>TBA PRIORITY</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+|}
+
+===Support===
+{| class="listtable mw-collapsible mw-collapsed"
+|-
+! style="width:80px" |'''Hero'''
+! style="width:70%"  |'''Match-Up'''
+! style="width:30%"  |'''Team Synergy'''
+|-
+!<center>[[Image:icon-ana.png|80px|link=Ana]]<br />[[Ana]]</center>
+|'''<nowiki>HIGH PRIORITY  |  EXTREMELY HIGH RISK</nowiki>'''
+
+
+Ana is extremely painful to play against. With her Biotic Grenade and Sleep Dart, you will be unable to receive the healing outcome from Cardiac Overdrive and make you become a easy prey for enemy team. Not to mention, Poke is one of Mauga's greatest weakness and she will be bound to slowly chip down Mauga's health. Without these tools, though, she is an extremely vulnerable target and easy to takedown. If possible, look to use Overrun and slam on top of her, and use Chainguns to finish her off before she can get back up.
+
+
+Their Perks - Groggy is VERY annoying, and very theatening for Mauga as one of his primary weaknesses is being slowed. Headhunter can also cause a lot of pre-fight damage to Mauga. Biotic Bounce can reapply anti-heal and deal extra damage.
+
+
+Your Perks - Pyromaniac is a must here. You need as much sustain as possible. Firewalker can also help finish a kill on an Ana if you slam her with Overrun. Combat Fuel can be used to minimize Anti-heal effects a ''little,'' but it's not great against her.
+
+|'''GOOD SYNERGY'''
+Ana's Biotic Grenade enables Mauga to have some insane healing number while using Cardiac Overdrive, and Sleep Dart allows an easy Overrun stomp. Nano-boost, is well, nano-boost. It makes Mauga's damage output insane. If she has Speed Serum as a perk, it makes Mauga's Overrun INSANELY fast, allowing him to basically teleport into the enemy team's backline if he wants.
+
+|-
+!<center>[[Image:icon-baptiste.png|80px|link=Baptiste]]<br />[[Baptiste]]</center>
+|'''<nowiki>EXTREMELY HIGH PRIORITY  |  MEDIUM RISK</nowiki>'''
+
+
+While Baptiste has good long range damage, he does not have any form of CC or status effects to apply. The only thing he has against Mauga is his Exo-Boots, enabling him to escape to high ground. If there is no high ground available, he becomes a very easy target to run down and shred. Be careful of his Immortality field, especially when it's used on his teammates.
+
+
+Their Perks - None of Baptiste's perks have an major effect on Mauga, besides his Rocket Boots, allowing him some horizontal mobility to escape Mauga.
+
+
+Your Perks - Pyromaniac is good against Baptiste, due to his lack of protection and relatively large hitbox for a support. Firewalker is very good against Baptiste, as the status effect can be applied to Immortality Field and help destroy it quicker, and most comps with a Baptiste will play fairly stacked.
+
+|'''EXCEPTIONAL SYNERGY'''
+
+''"You and me Baptiste, You and Me."'' 
+
+These two are like bread and butter. Baptiste has insanely high sustain to keep a Mauga alive in a teamfight, and with Immortality Field, allow Mauga to survive things he normally couldn't, such as high burst damage or status effects. Cage Fight and Amplification Matrix can be used in tandem to create an area of death for the enemy team, trapping them into a zone while being pelted on with massive damage from the Matrix. 
+
+|-
+!<center>[[Image:icon-brigitte.png|80px|link=Brigitte]]<br />[[Brigitte]]</center>
+|'''<nowiki>EXTREMELY HIGH PRIORITY  |  LOW RISK</nowiki>'''
+Brigitte is an exceptionally easy target to eliminate as Mauga. While she can block your damage using her barrier, it is very low HP and reduces her move speed, allowing for an easy slam with Overrun. The only way a Brigitte can live against a Mauga is if she uses her Whipshot to keep you away and Shield Bashes to safety. The only risk you really have as Mauga is if you use Cage Fight in front of her while she is in Rally, as she can cancel it. Don't do that.
+
+
+Their Perks - Morale Boost can be pretty good against Mauga, as it's fairly easy to hit Whipshot on him and get the sustain. Inspiring Strike can give her more sustain and time alive against Mauga, buying her team time to force you away. Whiplash can be good in some situations, if she's able to knock you into a wall and stun you for a second.
+
+
+Your Perks - Kinetic Bandolier can be pretty useful against Brigitte, if you're needing to constantly poke her out with your chain guns. Pyromaniac may be a little less effective due to her barrier. Firewalker is a must pick against her, as it is very easy to land an Overrun stomp on Brigitte.
+
+|'''EXCEPTIONAL SYNERGY'''
+A fairly unconventional synergy for Brigitte, but Mauga allows her to brawl all out like a maniac with Cardiac Overdrive and her personal sustain potential. Not only that, while she is using Rally she can act as a great form of protection for Mauga using her barrier. They can play very stacked as a unit and have incredible frontline pressure.
+
+|-
+!<center>[[Image:icon-illari.png|80px|link=Illari]]<br />[[Illari]]</center>
+|'''<nowiki>LOW PRIORITY  |  MEDIUM RISK</nowiki>'''
+Illari is good at playing her range and constantly kiting from Mauga due to her mobility. Don't look to fight her too often, as you'll likely end up in a weird position that her team can punish you in. Her pylons are easily breakable using Incendiary Chaingun and its fire effects. If you get close to her, it's game over for her as she has a low hp pool and predictable movement. When she is using Captive Sun, you can look to use Cage Fight and potentially catch her in it, or block the projectile. Otherwise, she isn't too much of a threat besides her range.
+
+
+Their Perks - Summer Solstice can make Illari harder to track while in Captive Sun, so be careful trying to shoot her if she has it. Solar Flare can provide Illari's team burst sustain that can rival Overdrive, so be careful if she has that as well. Sunburn just provides some extra damage, so track your health pool before engaging on her and be prepared to use Overdrive if needed.
+
+
+Your Perks - Pyromaniac, Firewalker. Same reasons as Baptiste.
+
+|'''BAD SYNERGY'''
+Illari and Mauga don't really mix. They play different tempos and for different things. The only thing they really have going for them is the Cage Fight-Captive Sun combo, which is a guaranteed team wipe a lot of the time.
+
+|-
+!<center>[[Image:icon-Jetpack Cat.png|80px|link=Jetpack Cat]]<br />[[Jetpack Cat]]</center>
+|'''<nowiki>HIGH PRIORITY | MEDIUM RISK</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-Juno.png|80px|link=Juno]]<br />[[Juno]]</center>
+|'''<nowiki>LOW PRIORITY  |  LOW RISK</nowiki>'''
+Juno's mobility makes her incredibly hard to chase down and kill, but she doesn't have much damage or utility to be of threat. Look to poke her with your Incendiary Chaingun and focus on chasing her down when she doesn't have Hyper Ring or Glide Boost. Be careful when she has Orbital Ray, though, as if you slam into her team, even with Overdrive, the damage boost and healing from Orbital Ray can absolutely shut you down. Especially if you use Cage Fight, as you'll be a sitting duck. Pulsar Torpedoes can also be relatively annoying as they do good sustain and have high damage output without much risk for Juno. 
+  
+Their Perks - Locked On gives Juno a faster Torpedoes cooldown against Mauga, as he doesn't have any way to easily block the torpedoes. Faster Blaster can provide extra sustain and damage for Juno, making her a bit more difficult to deal with. Look to force her Glide Boost early if possible. Lift Off provides Juno a very easy escape to high ground, making it hard to pin her down.
+  
+Your Perks - Kinetic Bandolier can be good if you're looking to chase her down constantly and need more ammo, but Pyromaniac can also be good if she constantly peeks you and you want some extra overhealth. Firewalker will generally be a good pick as most comps containing Juno play very stacked to get value out of Hyper Ring and Orbital Ray. 
+
+|'''EXCEPTIONAL SYNERGY'''
+Mauga and Juno play together very well. Juno's high sustain enables Mauga to stay in the fight for a very long time, as well as her Hyper Ring granting him an insane speed boost for using Overrun. If Mauga uses Cage Fight, it can also be combined with Orbital Ray to create a massive area of sustain and Damage in the Cage, leading to a teamwipe.
+
+|-
+!<center>[[Image:icon-kiriko.png|80px|link=Kiriko]]<br />[[Kiriko]]</center>
+|'''<nowiki>MEDIUM PRIORITY  |  HIGH RISK</nowiki>'''
+
+
+Kiriko can be annoying to deal with. High damage, great mobility, and most of all, Protection Suzu being able to clear your burns. Look to poke her out specifically and potentially force her CD's out for your DPS. If she uses her teleport in open space, you can look to run onto her and get an easy kill. Be careful, though, as she can wall climb and escape to a high ground if she needs. If she uses Kitsune Rush, '''run.''' Kitsune is very good at shredding Mauga due to his weak damage mitigation and large hitbox, allowing her to land massive damage alongside her team.
+
+
+Their Perks - Urgent Care allows her to sustain a teammate you may be dueling a bit faster, potentially stealing your kill. Fortune Teller is very good into Mauga, as it enables her to constantly shoot you but still heal her team.  Foxtrot can enable her teammates to build CD's way faster and potentially outpace you as Mauga. Ready Step is underused, but can enable her to pump insane damage numbers into your noggin.
+
+
+Your Perks - Pyromaniac can be nice against Kiriko as the constant cleanses from her teleport and Suzu can give you extra overhealth. Depending on the situation, Firewalker can be good, but could also be cleansed completely away by her Suzu. Look to either force it out or pick Combat Fuel if you can't find an opportunity.
+
+|EXCEPTIONAL SYNERGY
+Kiriko and Mauga play very well together. High sustain, high damage, and exceptional mobility potential. If you ever get low/have a status effect, Kiriko can use her Protection Suzu to cleanse the effect and grant you essentially a second life. Not only that, Kitsune Rush can provide Mauga insane DPS and two potential uses of Cardiac Overdrive in one fight, a massive advantage over the enemy team. Cage Fight can be combined with Kitsune Rush to confirm a teamfight win nearly every time.
+
+|-
+!<center>[[Image:icon-lifeweaver.png|80px|link=Lifeweaver]]<br />[[Lifeweaver]]</center>
+|'''<nowiki>HIGH PRIORITY | MEDIUM RISK</nowiki>'''
+While Lifeweaver has extremely high sustain and good damage, he doesn't have much else going for him. Look to run past his team and tear him apart, as his very large hitbox makes him an easy target. If he uses Life Grip, you can look to take the space that was given with it. Don't let the fight go on too long, though, as his damage output can actually do a considerable amount to Mauga due to its lack of falloff. If he uses Tree of Life, it's one of the few deployables in the game that can be easily destroyed with Mauga's chainguns. Cage Fight can also be countered with a Life Grip, potentially pulling an enemy caught in the cage out. Pay attention to this, as a lot of teams will look to bait your Cage out early and pull the target out with Grip.
+
+
+Their Perks - Cleansing Grasp can be annoying, as it will basically give Lifeweaver a permanently shorter Life Grip cooldown if he pulls a target you set on fire. Lifeweaving will also provide more sustain to a target you're shooting, making it harder to eliminate them. Superbloom provides him with even more damage against Mauga, potentially forcing you to back away due to the extra output. Petal Power can be used on a character like Bastion to provide them with an insane DPS boost, forcing you away.
+
+
+Your Perks - Pyromaniac is a go to here, due to Lifeweaver's large hitbox and lack of good mobility. Firewalker can also be used to damage his Petal Platform and Tree of Life, which can be convenient. If you're unable to get a lot of value out of Firewalker, Combat Fuel can also be useful against a Lifeweaver comp.
+
+|'''OK SYNERGY'''
+Lifeweaver can pull you out of sticky situations with his {{al|Life Grip}}. If you can communicate, this can allow you to use your {{al|Overrun}} aggressively more often. Life Grip can also be used to pull Mauga out of his own cage.
+
+A cheeky strategy that can be used with Lifeweaver is to place Cage Fight on top a {{al|Petal Platform}} on the edge of the map, making any enemies caught and Mauga himself fall off the map once the platform is broken. This can be utilized to clear teams instantly depending on how many get caught, however it is tricky to execute as most enemies would avoid getting so close to Mauga. If you do try this, the ally Lifeweaver can use Life Grip to save you from your own ultimate if available.
+
+
+Cleansing Grasp can also be useful if the enemy team banned Kiriko, giving Mauga a cleanse that can remove Anti-Heals or other status effects.
+
+|-
+!<center>[[Image:icon-lúcio.png|80px|link=Lúcio]]<br />[[Lúcio]]</center>
+|'''<nowiki>MEDIUM PRIORITY  |  MEDIUM RISK</nowiki>'''
+Lucio doesn't typically pose much of a threat to Mauga, and he often plays in a way that makes it very difficult to get near him as Mauga. Look to shoot at him with your Incendiary Chaingun to force him off of speed boost or potentially use Amp It Up. Sound Barrier can be very effective at countering Cage Fight, as the overhealth granted by it can be difficult to get through as Mauga. If you catch Lucio with Cage Fight, though, he becomes very easy to kill due to his inability to Wall Ride.
+
+
+Their Perks - Soundwave Rider can enable Lucio to boop you off the map more consistently, so be aware of where he is when you go near a ledge. Beat Drop makes it harder to kill people affected by Sound Barrier, as they'll have more move speed or healing until it decays. Noise Violation allows Lucio to play a further range away from Mauga but still get effective Amp It Up value.
+
+
+Your Perks - Kinetic Bandolier can be useful if you're trying to chase Lucio down, but it's not recommended. Look to just annoy him with poke and use Pyromaniac Overhealth to sustain yourself. Most Lucio compositions will play relatively stacked to get value out of his Crossfade, so Firewalker is a guarantee value pick for your major.
+
+|'''EXCEPTIONAL SYNERGY'''
+Lucio is great at enabling any close range hero like Mauga to close distance very quickly. Amp it Up enables crazy movement with Overrun, and also provides ample healing when brawling. Sound Barrier can be used to sustain Mauga in a fight and allow him to play very aggressively. 
+Niche Strategy - Cage Fight won't immediately disconnect when someone falls off the map while tethered, so you can have your Lucio boop them off a ledge, then cancel the cage to confirm the kill.
+
+|-
+!<center>[[Image:icon-mercy.png|80px|link=Mercy]]<br />[[Mercy]]</center>
+|'''<nowiki>LOW PRIORITY  |  MEDIUM RISK</nowiki>'''
+Mercy and Mauga don't interact much outside of annoying eachother. Either with Mauga constantly shooting Mercy with his Chainguns, or Mercy damage boosting an individual on her team. Look to shoot her before her pocket target. If she uses Resurrect and is close to the ground, you can either stun it with Overrun or catch her and the res target with Cage Fight.
+
+
+Their Perks - Angelic Resurrection can make it harder to kill Mercy if you stun her with Overrun. Make sure you pay attention to if she has it and be prepared to deal more damage. Chain Boost can be very oppressive, enabling two targets on her team to deal insane damage towards you. If she has this, play your corners tight and use Overrun to avoid being shot as much. Flash heal can be used to save targets that are low on health, so pay attention to when she uses it and use that as a window of engagement.
+
+
+Your Perks - Pyromaniac is a good option, considering her predictable movement, but if she plays out of your LOS, Kinetic Bandolier can be better. Combat Fuel will likely see more success as compositions with Mercy tend to play fairly split.
+
+|'''OK SYNERGY'''
+Mauga and Mercy don't really mix. Mercy wants to play slow and damage boost someone, and Mauga wants to be a violent brawler who attacks quickly. Mercy and allow Mauga to play more aggressive with her damage boost and potentially resurrect him if he goes for a hyper-aggressive play, but outside of that, not much gets done between the two.
+
+|-
+!<center>[[Image:icon-Mizuki.png|80px|link=Mizuki]]<br />[[Mizuki]]</center>
+|'''<nowiki>HIGH PRIORITY | HIGH RISK</nowiki>'''
+<small>
+</small>
+
+|'''TBA SYNERGY'''
+<small>
+</small>
+
+|-
+!<center>[[Image:icon-moira.png|80px|link=Moira]]<br />[[Moira]]</center>
+|'''<nowiki>MEDIUM PRIORITY  |  LOW RISK</nowiki>'''
+Fighting against a Moira is just annoying, but not really that bad. She has very high healing numbers and sustain that makes it hard to kill her or her teammates, so look to force her cooldowns out early and chase her down, as she cannot escape Mauga easily. If she has Coalescence, she will be able to deal massive amounts of healing and damage, giving her team massive momentum in a fight. You can potentially cancel it with Overrun, or trap her with cage and make her an easy target, but be careful as she heals while using it and can heal her team through your barrier.
+
+
+Their Perks - Destructions Divide can make it a bit harder to eliminate people if she focuses healing when you're fighting them. Phantom Step also gives her more potential to survive against your attacks, as she can use Fade to get onto high ground unlike before.
+
+
+Your Perks - Pyromaniac is good against her, as she cleanses burns with Fade, allowing you to get more Overhealth out of it. Kinetic Bandolier can also be good to chase her down as well. Firewalker is VERY good into Moira most of the time, as a lot of comps that involve her play very stacked and usually don't have many, if any means to cleanse burn effects.
+
+|'''EXCEPTIONAL SYNERGY'''
+Moira enables Mauga to play very aggressively due to her high healing output and mobility. Not only that, Coalescence and Cage Fight pair very well together, providing high sustain while damaging the enemy team stuck inside. Their only major weakness is vulnerability to anti heals, but if you are able to target the Ana (or whatever future hero can apply them) and kill them early, those weaknesses go away.
+
+|-
+!<center>[[Image:icon-zenyatta.png|80px|link=Zenyatta]]<br />[[Zenyatta]]</center>
+|'''<nowiki>HIGH PRIORITY  |  EXTREMELY HIGH RISK</nowiki>'''
+Zenyatta is one of the highest damage dealing supports in the game. With his Orb of Discord, he can easily send giant Samoan body into the respawn room. If you have Discord applied to you, hide behind a corner and look to engage once it decays. Zenyatta suffers from very low mobility and a giant hitbox, making him an extremely good target for Mauga. Be aware that a lot of compositions involving Zenyatta do have a lot of damage mitigation or status effects, so don't just wildly run at him expecting to kill him. But, if he is alone on an angle, go and get him. Cage Fight is an easy way to isolate him, but if he has Transcendence, it will hard counter your Cage Fight. What you can do is Cage the Zenyatta alone, force his ultimate, and shoot his team outside the cage, as Transcendence's healing is blocked by barriers.
+
+
+Their Perks - Transcendent Condemnation can be very dangerous as Mauga, as it will permanently put Discord on your regardless of its cooldown. Look to survive against it instead of fight. Give space if you have to. Ascendance can make it a bit harder to kill Zenyatta, as he can traverse decently sized gaps by levitating across them. Focused Destruction can also make it a bit harder to survive against him, as he can do far more burst damage.  
+
+
+Your Perks - Similar to other pokier supports, Pyromaniac will generally be better to sustain yourself against their poke. Firewalker is also a good choice, as it is likely teams will play around their Zenyatta to protect him, providing you a far more consistent amount of targets to ignite with it.
+
+|'''OK SYNERGY'''
+Zenyatta and Mauga are good at two things: Frontline pressure. Use Discord to gain a frontline advantage and potentially outbrawl the enemy team with your Overdrive. Cage Fight can also be used alongside Transcendence to create a very hard to destroy Mauga.
+
+|-
+|}
+
+==Map Strategies==
+
+===Control===
+{{MapStrategyTable/Control
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Antarctic_rating = 
+| Antarctic_feature = 
+| Antarctic_strategy = 
+| Antarctic_Labs_strat = 
+| Antarctic_Sublevel_strat = 
+| Antarctic_Icebreaker_strat = 
+
+| Busan_rating = 
+| Busan_feature = 
+| Busan_strategy = 
+| Busan_Downtown_strat = 
+| Busan_Sanctuary_strat = 
+| Busan_MEKA_strat = 
+
+| Ilios_rating = 
+| Ilios_feature = 
+| Ilios_strategy = 
+| Ilios_Lighthouse_strat = 
+| Ilios_Well_strat = 
+| Ilios_Ruins_strat = 
+
+| Lijiang_rating = 
+| Lijiang_feature = 
+| Lijiang_strategy = 
+| Lijiang_ControlCenter_strat = 
+| Lijiang_Garden_strat = 
+| Lijiang_NightMarket_strat = 
+
+| Nepal_rating = 
+| Nepal_feature = 
+| Nepal_strategy = 
+| Nepal_Village_strat = 
+| Nepal_Shrine_strat = 
+| Nepal_Sanctum_strat = 
+
+| Oasis_rating = 
+| Oasis_feature = 
+| Oasis_strategy = 
+| Oasis_CityCenter_strat = 
+| Oasis_Gardens_strat = 
+| Oasis_University_strat = 
+
+| Samoa_rating = 
+| Samoa_feature = 
+| Samoa_strategy = 
+| Samoa_Beach_strat = 
+| Samoa_Downtown_strat = 
+| Samoa_Volcano_strat = 
+}}
+
+===Escort===
+{{MapStrategyTable/Escort
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| CircuitRoyal_rating = 
+| CircuitRoyal_feature = 
+| CircuitRoyal_strategy = 
+| CircuitRoyal_Attack_strat = 
+| CircuitRoyal_Defense_strat = 
+
+| Dorado_rating = 
+| Dorado_feature = 
+| Dorado_strategy = 
+| Dorado_Attack_strat = 
+| Dorado_Defense_strat = 
+
+| Havana_rating = 
+| Havana_feature = 
+| Havana_strategy = 
+| Havana_Attack_strat = 
+| Havana_Defense_strat = 
+
+| Junkertown_rating = 
+| Junkertown_feature = 
+| Junkertown_strategy = 
+| Junkertown_Attack_strat = 
+| Junkertown_Defense_strat = 
+
+| Rialto_rating = 
+| Rialto_feature = 
+| Rialto_strategy = 
+| Rialto_Attack_strat = 
+| Rialto_Defense_strat = 
+
+| Route66_rating = 
+| Route66_feature = 
+| Route66_strategy = 
+| Route66_Attack_strat = 
+| Route66_Defense_strat = 
+
+| Shambali_rating = 
+| Shambali_feature = 
+| Shambali_strategy = 
+| Shambali_Attack_strat = 
+| Shambali_Defense_strat = 
+
+| Gibraltar_rating = 
+| Gibraltar_feature = 
+| Gibraltar_strategy = 
+| Gibraltar_Attack_strat = 
+| Gibraltar_Defense_strat = 
+}}
+
+===Hybrid===
+{{MapStrategyTable/Hybrid
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| BlizzardWorld_rating = 
+| BlizzardWorld_feature = 
+| BlizzardWorld_strategy = 
+| BlizzardWorld_Attack_strat = 
+| BlizzardWorld_Defense_strat = 
+
+| Eichenwalde_rating = 
+| Eichenwalde_feature = 
+| Eichenwalde_strategy = 
+| Eichenwalde_Attack_strat = 
+| Eichenwalde_Defense_strat = 
+
+| Hollywood_rating = 
+| Hollywood_feature = 
+| Hollywood_strategy = 
+| Hollywood_Attack_strat = 
+| Hollywood_Defense_strat = 
+
+| KingsRow_rating = 
+| KingsRow_feature = 
+| KingsRow_strategy = 
+| KingsRow_Attack_strat = 
+| KingsRow_Defense_strat = 
+
+| Midtown_rating = 
+| Midtown_feature = 
+| Midtown_strategy = 
+| Midtown_Attack_strat = 
+| Midtown_Defense_strat = 
+
+| Numbani_rating = 
+| Numbani_feature = 
+| Numbani_strategy = 
+| Numbani_Attack_strat = 
+| Numbani_Defense_strat = 
+
+| Paraiso_rating = 
+| Paraiso_feature = 
+| Paraiso_strategy = 
+| Paraiso_Attack_strat = 
+| Paraiso_Defense_strat = 
+}}
+
+===Push===
+{{MapStrategyTable/Push
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Colosseo_rating = 
+| Colosseo_feature = 
+| Colosseo_strategy = 
+| Colosseo_Pushing_strat = 
+| Colosseo_Defending_strat = 
+
+| Esperanca_rating = 
+| Esperanca_feature = 
+| Esperanca_strategy = 
+| Esperanca_Pushing_strat = 
+| Esperanca_Defending_strat = 
+
+| NewQueenStreet_rating = 
+| NewQueenStreet_feature = 
+| NewQueenStreet_strategy = 
+| NewQueenStreet_Pushing_strat = 
+| NewQueenStreet_Defending_strat = 
+
+| Runasapi_rating = 
+| Runasapi_feature = 
+| Runasapi_strategy = 
+| Runasapi_Pushing_strat = 
+| Runasapi_Defending_strat = 
+}}
+
+===Flashpoint===
+{{MapStrategyTable/Flashpoint
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Aatlis_rating = 
+| Aatlis_feature = 
+| Aatlis_strategy = 
+| Aatlis_Bazaar_strat = 
+| Aatlis_Garden_strat = 
+| Aatlis_Resort_strat = 
+| Aatlis_Station_strat = 
+| Aatlis_TownCentre_strat = 
+
+| NewJunkCity_rating = 
+| NewJunkCity_feature = 
+| NewJunkCity_strategy = 
+| NewJunkCity_Arena_strat = 
+| NewJunkCity_Foundation_strat = 
+| NewJunkCity_Refinery_strat = 
+| NewJunkCity_Scrapyard_strat = 
+| NewJunkCity_Waterworks_strat = 
+
+| Suravasa_rating = 
+| Suravasa_feature = 
+| Suravasa_strategy = 
+| Suravasa_Gardens_strat = 
+| Suravasa_Market_strat = 
+| Suravasa_Palace_strat = 
+| Suravasa_Ruins_strat = 
+| Suravasa_Temple_strat = 
+}}
+
+==Achievements==
+{{AchievementTable/Start}}
+{{Achievement|Three's A Crowd|Cage Fight icon.png|Trap and eliminate 3 enemies with a single use of Mauga's Cage Fight.|Spray Mauga Cute.png|Cute}}
+{{Achievement|Heartthrob|Cardiac Overdrive icon.png|Deal 900 combined healing and damage with a single one of Mauga's Cardiac Overdrive. (Excludes Total Mayhem and co-op modes.)|Spray Mauga Pixel.png|Pixel}}
+{{AchievementTable/End}}
+
+{{clear}}
+
+==Trivia==
+[[File:Mauga-weebo.jpg|thumb|Mauga]]
+*Instead of using his regular hero portrait, in the battle-pass, Mauga has a unique icon where his mouth is closed instead of his signature cheshire smile.
+**It's also worth pointing out his trial-period used a different portrait, with a slightly different angle, and less saturated colors.
+*When someone is trapped within Mauga's ultimate, a [[Lifeweaver]] can pull them out of the cage.
+*Mauga's chainguns are named "Gunny" and "Cha-Cha."
+
+===Cultural References===
+*Mauga is a Samoan name meaning "mountain."
+**His last name Malosi derives from Losi, a giant trickster from Samoan mythology
+*Mauga's tattoos are a mix of traditional [https://en.wikipedia.org/wiki/Pe%CA%BBa tatau] and designs unique to the game.<ref>2023-11-04, [https://www.reddit.com/r/Overwatch/comments/17nisdt/a_quick_run_down_of_maugas_identity_and_voice/ A quick run down of Mauga's identity and voice lines from a Samoan born and raised]. ''Reddit'', accessed on 2023-11-05</ref>
+*People often compare Mauga to the ''[https://en.wikipedia.org/wiki/Moana_(2016_film) Moana]'' movie character, Maui. This is due to Mauga having a Polynesian background similar to Maui, and looking somewhat similar to each other (boisterous, able to tank a lot of damage, wild hairstyle, affectionate to their weapons, and jumps greater heights for dramatic flair).
+**Interestingly, Mauga's voice actor portrayed Moana's father, Chief Tui, in the [https://en.wikipedia.org/wiki/Moana_(2026_film) 2026 live action adaptation] of that film.
+*In the Portuguese version of ''Overwatch'', one of Mauga's chainguns is named "Sasha." Coincidentally or not, this is the same name as the [https://wiki.teamfortress.com/wiki/Heavy Heavy's] chaingun in ''Team Fortress 2''.
+
+===Development===
+[[File:Mauga Concept 1.png|thumb|Early Mauga concept art]]
+Development on Mauga began in 2018 after the developers saw a piece of concept art.<ref name = "DevelopingSamoan">2024-01-31, [https://www.gamesindustry.biz/developing-overwatch-2s-samoan-hero Developing Overwatch 2's Samoan hero]. ''Games Industry.biz'', accessed on 2024-02-08</ref> Development occurred on-and-off for the following five years. The development team was looking for a character who would fit the archetype of a tank hero with less speed but greater firing power. It was decided that a Samoan could fit this archetype, and the team did research on Samoans and Polynesians, looking for the right look.<ref name = "MakingMauga">2023-12-01, [https://www.rnz.co.nz/international/pacific-news/503702/how-blizzard-created-mauga-a-samoan-hero-in-overwatch-2 How Blizzard created Mauga - a Samoan Hero in Overwatch 2]. ''RNZ'', accessed on 2023-12-06</ref> Blizzard worked with cultural consultants, including artist Si'i Liufau, who specializes in contemporary Polynesian tattoos and Tataus. Liufau called out the initial tattoo the team originally created for Mauga. According to [[Kenny Hudson]], "His [Mauga's] original tattoo was Polynesian inspired but was not done by a true Samoan tattoo artist. We wanted authenticity, and we contracted [Si'i Liufau], a certified master Samoan tattoo artist, and worked hand in hand with him." Liufau drew some stuff up, [[Team 4]] artists drew stuff back, and a middleground was reached due to issues such as rendering. The tattoos that were sketched had such fine details that many game engines couldn't handle it. As such, the middleground was accurate to Samoan culture, but not so detailed that the game couldn't handle it.<ref name = "DevelopingSamoan"/>
+
+Mauga was originally intended to be Hero 31, but as the kit [[Geoff Goodman]] and [[Joshua Noh]] developed came together, they decided it didn't suit Mauga's personality, and instead conceived of an entirely new hero, [[Sigma]], to use it.<ref name="gameplayreveal"/> Development of Sigma forced development of Mauga to take a backseat.<ref name = "DevelopingSamoan"/> In 2019, it was stated that the team still intended to make Mauga a playable hero some day, and had "big plans" for him.<ref name="gameplayreveal">[https://www.youtube.com/watch?v=8Ez9gD0A0iM&t=1410s Sigma Gameplay Reveal with Seagull and Jeff Kaplan.] ''Youtube'', accessed on 2022-10-12</ref> Mauga's rollout as a hero was further delayed due to the Covid-19 pandemic. By this point, work on Mauga was about 80% complete, but the developers needed more time. As such, Mauga and [[Ramattra]] swapped places in the release order. Originally, Mauga had been planned for [[Season]] 2 and Ramattra Season 8. This was swapped, as by this point, work on Ramattra was complete.<ref name = "DevelopingSamoan"/>
+
+[[File:Mauga Concept 2.png|thumb|left|Ditto]]
+In 2022, there was speculation that Mauga would be the hero released for [[Season]] 2 of ''[[Overwatch 2]]''. In June, YouTuber Potxeca claimed developers [[Aaron Keller]] and [[Geoff Goodman]] had told them that Mauga would be released as a hero. It was further speculated that Mauga would be revealed at the 2022 [[Overwatch League]] grand finals, when [[Blizzard Entertainment]] teased a hero reveal.<ref>2022-11-04, [https://www.kotaku.com.au/2022/11/new-overwatch-2-hero-to-appear-at-owl-finals-fans-think-its-mauga/ New Overwatch 2 Hero To Appear At OWL Finals, Fans Think It’s Mauga]. ''Kotaku'', accessed on 2022-11-06</ref> Instead, however, [[Ramattra]] was the hero revealed at the event.<ref name="firstnews">2022-11-05, [https://overwatch.blizzard.com/en-us/news/23876523/ Ramattra Reveal - Overwatch League Grand Finals.] ''Overwatch News'', accessed on 2022-11-06</ref> 
+
+[[File:Overwatch-2-mauga-concept-art-02.webp|thumb|Mauga final concept art]]
+It was reported by GameSpot that a Tank hero would be released in Season 7+, and it would be an [[omnic]].<ref name="UpdateRoadmap">2023-05-16, [https://www.gamespot.com/articles/overwatch-2s-update-roadmap-features-new-characters-story-missions-and-reworks/1100-6514243/ Overwatch 2's Update Roadmap Features New Characters, Story Missions, And Reworks]. ''GameSpot'', accessed on 2023-05-20</ref> While the Tank report was accurate, the omnic claim was not.
+
+For [[Season]] 7, it was announced that a new [[Control]] map named "[[Samoa]]" would be released. This led to speculation that Mauga would be released as a hero in Season 8.<ref>2023-09-27, [https://www.dexerto.com/overwatch/overwatch-2-players-convinced-new-samoa-map-confirms-mauga-as-next-tank-hero-2311099/ Overwatch 2 players convinced new Samoa map confirms Mauga as next tank hero]. ''Dexerto'', accessed on 2023-10-04</ref> Mauga was leaked hours prior to his official reveal at [[BlizzCon 2023]] on the Nintendo e-shop.<ref>2023-11-04, [https://www.kotaku.com.au/2023/11/overwatch-2-introduces-new-tank-hero-mauga-at-blizzcon-2023/ Overwatch 2 Introduces New Tank Hero Mauga At BlizzCon 2023]. ''Kotaku'', accessed on 2023-11-04</ref>
+
+====Ability Development====
+The developers tried a few alternate mobility abilities for Overrun. One of the first ideas was a short range dash that would toss enemies into the air behind Mauga if he impacted them. 
+
+Mauga's weapons weren't always miniguns. There were a few alternates tested such as a flamethrower or incendiary grenade launchers. There were a few attempts at having two very different firing weapons in each hand, with one being hitscan and the other being a projectile. This didn't play well when trying to fire both at the same time, as the weapons had different firing rates, and aiming projectiles was difficult. Furthermore, the player was required to track the ammo pools separately, which was also difficult.
+
+Mauga's Cage Fight differs little in the final version from its inceptions. However, the developers still tried other versions to see what would play best. It was a physical wall instead of a barrier at one point. There was also a completely different ult that was more of an area effect debuff to enemy damage dealt, the opposite of damage boost.<ref>2023-12-12, [https://www.reddit.com/r/Overwatch/comments/18g8m6p/comment/kd0zw2z/?context=3%5D We're the Overwatch 2 hero design team, and we'll be here tomorrow at 11:00 AM PT to answer questions about Mauga's first week in-game!]. ''Reddit'', accessed on 2023-12-16</ref>
+
+==== Removed abilities ====
+
+===== Removed Perks =====
+{{Ability details
+| removed = 1
+| ability_name = Two Hearts
+| ability_image = Perk_TwoHearts.png
+| ability_type = Minor Perk
+| official_description = While on an objective, Mauga counts as 2 heroes and regenerates 20 health per second.
+| heal = 20 per second
+| ability_details =
+* ''Removed in Season 18.''
+}}
+
+==Media==
+===Concept Art===
+<gallery>
+File:Mauga concept transparent.png|Concept Art by Qiu Fang
+File:Mauga Jet Black skin concept art.jpg|Jet Black Skin Concept Art by Angela Song
+File:Mauga Jet Black skin weapons concept art.jpg|Jet Black Skin Weapons Concept Art by Angela Song
+</gallery>
+
+===Videos===
+{{#ev:youtube|AQfRHycUsmQ|400|inline}}
+{{#ev:youtube|PCLjZDkpBoY|400|inline}}
+{{#ev:youtube|py_kGferDww|400|inline}}
+
+== Balance Change Logs ==
+{{ChangelogsTabber
+|owpvp =
+{{PatchTableElement|2026-07-14|
+{{al|Incendiary Chaingun|text=Chainguns}}
+*Maximum spread while firing individual Chainguns increased from 1 to 1.5.
+*Number of shots until maximum spread increased from 0 to 30 shots.
+
+{{DevComment|Mauga could maintain high accuracy when firing a single Chaingun for extended periods. Adding dynamic spread to individual Chainguns encourages switching between weapons to manage spread. This change does not affect accuracy while firing both weapons simultaneously.}}
+}}
+{{PatchTableElement|2025-10-14|
+{{DevComment|Developer Comments: Cage Fight is a powerful ultimate, but its charge rate has been a bit slow. We’ve slightly reduced its cost to help Mauga earn it more consistently, while keeping it balanced relative to its power.}}
+
+* Ultimate cost reduced by 6%.
+
+{{al|Combat Fuel}} – Major Perk
+* Maximum overhealth granted increased from 100 to 150.
+* Critical hits amount of overhealth given increased from 2 to 3.
+}}
+{{PatchTableElement|2025-08-26|
+{{al|Two Hearts}} - Minor Perk
+* Removed.
+
+{{al|Pyromaniac}} - Minor Perk
+* Igniting enemies with Incendiary Chaingun grants 50 overhealth.
+}}
+{{PatchTableElement|2025-06-24|
+{{DevComment|Developer Comments: Berserker’s overhealth conversion has been reverted to restore some of Mauga’s durability to a more balanced state following previous changes.}}
+
+{{al|Berserker}} - Passive
+* Overhealth conversion rate increased from 40% to 50%.
+}}
+{{PatchTableElement|2025-03-25|
+{{al|Cardiac Overdrive}}
+* No longer provides allies with damage reduction.
+{{al|Cage Fight}}
+* Ultimate cost increased 8%.
+* Barrier health reduced from 1500 to 1200 HP.
+{{al|Berserker}}
+* Overhealth conversion rate reduced from 50% to 40%.
+}}
+{{PatchTableElement|2025-02-18|
+;Hero Perks
+
+{{al|Kinetic Bandolier}}
+* Overrun reloads up to 150 ammo while charging.
+
+{{al|Two Hearts}}
+* While on an objective, Mauga counts as 2 heroes and regenerates 20 health per second.
+
+{{al|Firewalker}}
+* Overrun ignites enemies hit.
+
+{{al|Combat Fuel}}
+* Critical hits grant Mauga 2 temporary overhealth on Cardiac Overdrive's next use, up to 100 overhealth.
+}}
+{{PatchTableElement|2024-12-10|
+; Global Projectile Size Bonus
+* Hitscan radius small reduced from 0.05 to 0.04 meters.
+
+; Hero changes
+{{DevComment|Developer Comment: The Overrun changes from the last patch have been great for enabling more active Mauga playstyles. We're converting some of his armor back to normal health to balance out some of the added survivability gained from the Overrun changes.}}
+
+* Base armor reduced from 200 to 150.
+* Base health increased from 375 to 425.
+}}
+{{PatchTableElement|2024-11-12|
+{{DevComment|Developer Comments: Mauga has been underperforming for a while now so we're putting some power into perhaps his most engaging ability, Overrun.}}
+
+{{al|Overrun}}
+* Cooldown reduced from 6 to 5 seconds.
+* Charge movement speed increased 15%.}}
+{{PatchTableElement|2024-10-15|
+{{DevComment|Developer Comment: Increasing the duration of Mauga's burn effect will help better reward going for the smaller, harder to hit targets.}}
+
+{{al|Incendiary Chaingun}}
+* Ignite damage over time duration increased from 3 to 4 seconds.
+}}
+{{PatchTableElement|2024-07-09|
+{{DevComment|Developer Comments: Cardiac Overdrive is Mauga's primary tanking ability that keeps him in the fight, but the previous duration was difficult to counter. It is now a more potent effect with a shorter duration to increase the importance of choosing both the right moment to use it as Mauga and when to try mitigating against it as an enemy.}}
+{{al|Overrun}}
+* Knockback damage increased from 25 to 30
+* Stomp damage increased from 60 to 75
+
+{{al|Cardiac Overdrive}}
+* Duration reduced from 5 to 3 seconds.
+* Lifesteal increased from 60 to 100%.
+* Damage reduction increased from 30 to 40%.
+* Allies now receive only half of the lifesteal and damage reduction effect value.
+}}
+{{PatchTableElement|2024-06-20|
+;General
+* Knockdown time when two charging abilities collide reduced from 2 to 1.7 seconds.
+
+{{DevComment|Developer Comments: This stun time reduction applies to the knockdown that happens when two charging abilities collide and result in a tie (with Reinhardt, Doomfist, Brigitte, Mauga, Bob). The counterplay and interaction of two charging abilities impacting each other is great, but it took both players out of the fight a little too long.}}
+}}
+{{PatchTableElement|2024-03-19|
+* Base Health decreased from 400 to 375.
+{{al|Cardiac Overdrive}}
+* No longer fills overhealth on activation.
+* Duration increased from 4 to 5 seconds.
+* Cooldown increased from 10 to 12 seconds.
+}}
+{{PatchTableElement|2024-03-12|
+{{DevComment|Developer Comments: We are changing Cardiac Overdrive to make it more forgiving when used for yourself especially when Mauga is low health.}}
+{{al|Overrun}}
+* Stomp damage increased from 45 to 60.
+{{al|Cardiac Overdrive}}
+* Duration reduced from 5 to 4 seconds.
+* Cooldown reduced from 12 to 10 seconds.
+* Now fills his passive overhealth by 100.
+}}
+{{PatchTableElement|2024-02-13|
+;General updates
+Most damage-dealing projectile sizes have been increased by a new global modifier added to their base size.
+
+* +0.05 meters for hitscan projectiles with a high rate of fire or spread (e.g., Tracer's Pulse Pistols or Reaper's Hellfire Shotguns).
+* +0.08 meters for hitscan projectiles that are more precise (e.g., Cassidy's Peacekeeper or Soldier:76's Heavy Pulse Rifle).
+* +0.05 meters for travel time projectiles that are shotguns or have a very high rate of fire (e.g., Roadhog's Scrap Gun or Ramattra's Void Accelerator).
+* +0.10 meters for travel time projectile with a speed greater than 50 meters per second (e.g., Zenyatta's Destruction Orb).
+* +0.15 meters for travel time projectile with a speed less than or equal to 50 meters per second (e.g., Pharah's Rocket Launcher).
+* Very large projectiles with a base size greater than 0.5 meters have been excluded from these increases (e.g., Orisa's Energy Javelin or Reinhardt's Fire Strike).
+
+Hero combined HP (base health/armor/shields) increased by 15-25%.
+
+* 150-175 HP heroes increased by 25 HP.
+* 200-300 HP heroes increased by 50 HP.
+* 300+ HP (Tanks) increased by 75-100 HP.
+* Each hero's precise health increases are listed in their patch notes below.
+
+Ultimate Charge
+
+* All Ultimate ability costs increased by 10%.
+
+Regenerative Passive for All Heroes
+
+* All heroes now regenerate 20 health per second after 5 seconds of not taking damage.
+
+Quick Melee
+
+* Damage increased from 30 to 40.
+
+;Hero updates
+
+* Health increased from 300 to 400.
+}}
+{{PatchTableElement|2024-01-09|
+* Base Health increased from 250 to 300.
+* Base Armor decreased from 250 to 200.
+
+{{al|Incendiary Chaingun|text=Incendiary and Volatile Chainguns}}
+* Ammo decreased from 350 to 300.
+
+{{al|Cardiac Overdrive}}
+* Lifesteal decreased from 70% to 60%.
+* Cooldown increased from 10 seconds to 12 seconds.
+
+{{al|Cage Fight}}
+* No longer grants infinite ammo. Still reloads Mauga’s Chainguns at the start of the ultimate.
+
+{{al|Berserker}}
+* Overhealth conversion rate decreased from 60% to 50%.
+}}
+{{PatchTableElement|2023-12-19|
+* Mauga is now available in Competitive Play for players who unlocked him.
+* Base health decreased from 350 to 250.
+* Base armor increased from 150 to 250.
+
+{{al|Incendiary Chaingun|text=Incendiary and Volatile Chainguns}}
+* Number of shots with the Incendiary Chaingun to ignite enemies reverted from 15 to 10.
+* Spread decreased from 1.1 to 1 when only one Chaingun is active.
+
+{{al|Berserker}}
+* Overhealth conversion rate increased from 50% to 60%.
+}}
+{{PatchTableElement|2023-12-12|
+{{al|Incendiary Chaingun|text=Incendiary and Volatile Chainguns}}
+* Chaingun damage reduced from 5 to 4.
+* The number of shots with the Incendiary Chaingun to ignite enemies increased from 10 to 15.
+
+{{al|Cage Fight}}
+* Ultimate duration reduced from 10 to 8 seconds.
+}}
+{{PatchTableElement|2023-12-05|
+* Mauga has been added to the lineup.
+
+{{al|Incendiary Chaingun}} (Primary Fire)
+* Automatic weapon that ignites enemies on repeated impacts.
+
+{{al|Volatile Chaingun}} (Secondary Fire)
+* Automatic weapon that deals critical damage to burning enemies.
+
+{{al|Overrun}} (Ability 1)
+* Charge forward and stomp to launch enemies. You are unstoppable while charging.
+
+{{al|Cardiac Overdrive}} (Ability 2)
+* Nearby allies take reduced damage and heal by dealing damage.
+
+{{al|Cage Fight}} (Ultimate)
+* Deploy a barrier that traps yourself and enemies. Gain unlimited ammo while inside.
+
+{{al|Berserker}} (Passive)
+* Gain temporary health when dealing critical damage.
+
+'''Changes from preview weekend:'''
+
+{{DevComment|Developer Comments: We got a lot of constructive feedback from players when Mauga was available to try during his free preview weekend, so we’ve adjusted his kit for his official launch to give him the ability to last longer in a fight.}}
+
+* Base health reduced from 500 to 350.
+* Base armor increased from 0 to 150.
+* Head hit volume reduced 15%.
+
+{{al|Incendiary Chaingun|text=Incendiary and Volatile Chainguns}}
+* Spread for firing both guns reduced 15%.
+* Fire rate multiplier for firing both guns reduced from 25% to 0%.
+* Damage per shot increased from 4.5 to 5.
+* Damage falloff range increased from 25 to 30 meters.
+* Max ammo increased from 300 to 350.
+* Movement speed penalty reduced from 20% to 15% per gun.
+
+{{al|Overrun}}
+* Can no longer be interrupted by Hack.
+* Damage reduction increased from 30 to 50%.
+
+{{al|Cardiac Overdrive}}
+* Lifesteal increased from 60 to 70%.
+
+{{al|Berserker}}
+* Overhealth conversion rate increased from 40% to 50%.
+}}
+|ow6v6={{PatchTableElement|11-11-2025|
+;6v6 Hero Changes
+
+{{al|Cardiac Overdrive}}
+* Cooldown reduced from 17 to 15 seconds.
+}}
+{{PatchTableElement|2025-03-18|
+{{al|Overrun}}
+* Damage increased from 60 to 75. (undocumented)
+
+{{al|Cardiac Overdrive}}
+* Allied lifesteal increased from 30% to 50%. (undocumented)
+
+{{al|Cage Fight}}
+* Duration increased from 7 to 8 seconds. (undocumented)
+}}
+{{PatchTableElement|2024-12-17|
+* Base armor reduced from 150 to 100.
+* Base health increased from 425 to 450.
+
+{{al|Overrun}}
+* Cooldown increased from 5 to 7 seconds.
+* Stomp damage reduced from 75 to 60.
+
+{{al|Cardiac Overdrive}}
+* Allied lifesteal reduced from 50% to 30%.
+* Cooldown increased from 15 to 17 seconds.
+
+{{al|Cage Fight}}
+* Maximum duration reduced from 8 to 7 seconds.
+}}}}
+
+==References==
+<references />
+{{Heroes}}
+[[Category: Talon members]]
+[[Category:Mauga]]
+[[Category:Heroes]]
+[[Category:Cyborgs]]

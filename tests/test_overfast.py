@@ -88,10 +88,13 @@ def test_errors():
 
 
 def test_parse_command():
-    check("无参数指令", parse_command("  STATUS ") == ("status", ""))
+    check("无参数指令（参数是原文）", parse_command("  STATUS ") == ("status", "STATUS"))
     check("player 参数保留大小写", parse_command("player TeKrop#2217") == ("player", "TeKrop#2217"))
     check("指令名不区分大小写", parse_command("Player  TeKrop-2217 ") == ("player", "TeKrop-2217"))
-    check("空消息", parse_command("") == ("", ""))
+    check("空消息是 connect", parse_command("") == ("connect", ""))
+    check("只写 player 没有参数", parse_command("player") == ("player", ""))
+    check("analyze / label 是指令", parse_command("analyze")[0] == "analyze" and parse_command("Label")[0] == "label")
+    check("其他文本是英雄问答", parse_command("player stats are weird today?")[0] == "player" and parse_command("Tracer HP")[0] == "ask")
 
 
 if __name__ == "__main__":

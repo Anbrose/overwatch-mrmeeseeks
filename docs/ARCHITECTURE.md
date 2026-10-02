@@ -10,6 +10,10 @@
 | `server/ws_server.py` | WebSocket 服务：握手、配对码校验、截图接收、限流，把事件交给 bot |
 | `server/registry.py` | 在线客户端表和配对状态机，不依赖网络和 Discord，便于单独测试 |
 | `server/analyzer.py` | 调用 Claude：先识别画面事实，再基于事实给建议 |
+| `server/heroparse.py` | 把 Overwatch Wiki 英雄页面的 wikitext 解析成规范化 dict（纯函数） |
+| `server/herodata.py` | 英雄数据：从 Wiki 抓取、缓存到 JSON、定时刷新、按中英文名查英雄 |
+| `server/damage.py` | 伤害衰减、护甲/护盾、爆头倍率、几枪击杀（纯函数） |
+| `server/hero_qa.py` | 英雄问答：Claude tool use 循环，数字只来自上面两个模块 |
 | `client/client.py` | 本地客户端：连接/重连、配对码输入、Tab 监听、两段截图、上传 |
 
 ## 客户端状态
@@ -63,12 +67,23 @@
 1. **识别**（`Analyzer.extract`）：输入两张图，输出固定格式的 JSON：地图、模式、攻防、阶段、双方阵容，每项带置信度，看不清就填 `null`。
 2. **建议**（`Analyzer.advise`）：**不给模型看图**，只给第 1 步的 JSON 和 `context` 里的补充数据。系统提示词要求每条建议注明依据，置信度低于 0.6 视为未知，数据不足直接说。
 
+## 英雄问答
+
+`@mrmeeseeks` 后面跟的文本如果不是 connect/status/disconnect/help，就交给 `HeroQA.answer`。
+
+1. **数据**：`herodata.fetch_all` 通过 MediaWiki API 抓取 `Category:Heroes` 下每个英雄的页面，`heroparse.parse_hero` 解析 infobox（血量/护甲/护盾/副职业）、`Ability_details` 中的武器、`ChangelogsTabber` 的 `owpvp` 补丁。快照写到 `HERO_DATA_PATH`；新快照明显变少（Wiki 改版）时不替换旧的。
+2. **工具**：`get_hero_stats`、`get_patch_history`、`shots_to_kill`。英雄名在工具内解析，不唯一时返回候选，由模型反问。
+3. **计算**：`damage.shots_to_kill` 逐发模拟 护盾 → 护甲 → 生命值，规则常量和 Wiki 出处写在 `damage.py` 顶部。
+4. **约束**：系统提示要求所有数字来自工具结果、引用补丁原文和日期、写出假设（弹丸全中、Role Queue 等）。
+
+本期不支持：TTK、技能伤害、perk 加成。
+
 ## 扩展点
 
 `Analyzer.analyze` 里的 `context` 字典就是接入更多事实数据的地方，目前三项都是"暂未接入"：
 
 - `队友生涯数据`：按计分板上的名字调用 OverFast API（https://overfast-api.tekrop.fr/）搜索玩家，取各英雄游戏时长和胜率；重名或生涯私密时标注"无法确认"
 - `地图分段对照`：每张地图每一段的关键位置名称，建议做成一个手动维护的 JSON 文件
-- `版本数据`：OverFast 的英雄资料和使用率
+- `版本数据`：`herodata.HeroStore` 已有当前版本的英雄数值和补丁，可以直接作为 `patch_data` 接入
 
 新增 Discord 指令：在 `MeeseeksBot.on_message` 里按 `cmd` 分发。

@@ -9,8 +9,10 @@ services:
       WS_HOST: 0.0.0.0
       WS_PORT: "8765"
       STATE_DIR: /state
+      # 英雄问答的数据缓存也放在 /state：不能挂卷到 /app/data，那里是镜像自带的模板、地图表
+      HERO_DATA_PATH: /state/heroes.json
     volumes:
-      # 标注的模板和待标注队列，重新部署也保留；容器用户 uid 10001 需要可写
+      # 标注的模板、待标注队列、英雄数据缓存，重新部署也保留；容器用户 uid 10001 需要可写
       - ./state:/state
     ports:
       - "8765:8765"

@@ -1,0 +1,1148 @@
+{{Infobox character
+| name = Reaper
+| image = <gallery>
+OW2 Reaper.png|Overwatch
+Skins-reaper-model-01.png |Overwatch Classic
+</gallery>
+| caption = "You can't escape death."
+| realname = Gabriel Reyes
+| aliases = Soldier: 24<ref name = "SierraQuotes">''[[Overwatch 2]]'', ''[[Sierra/Quotes|Sierra Quotes]]''</ref><br>Smokey (nickname)<ref name = "AGreatDay">''[[A Great Day]]''</ref>
+| birth = December 14th
+| age = 60 (''[[Overwatch 2]]'')<br/>58 (''[[Overwatch]]'')
+| nationality = {{flag|us}} American
+| occupation = Police officer (formerly)<br/>Soldier (formerly)<br/>Strike commander (formerly)<br/>[[Blackwatch]] commander (formerly)<br/>[[Talon]] Field agent/council member (formerly)
+| baseofoperations = [[Los Angeles]], [[United States]] (formerly)<br/>[[Rome]], [[Italy]] (formerly)
+| affiliation = [[Los Angeles Police Department]] (formerly)<br/>[[United States Army]] (formerly)<br/>[[Soldier Enhancement Program]] (formerly)<br/>[[Overwatch (group)|Overwatch]] (formerly)<br/>[[Blackwatch]] (formerly)<br/>[[Talon]] (formerly)
+| cosmetics = 1
+| quotes = 1
+| stadium = 1
+| relations = [[File:Martina Reyes.jpg|20px]] [[Martina Reyes]] (wife)<ref name = "CodeofViolence">''[[Code of Violence]]''</ref><br/>Unnamed son<ref name = "CodeofViolence"/>
+| type = 
+| voice = {{VA stack
+| english = [[Keith Ferguson]]
+| other = [[Jérémie Covillault]] (French)
+<br>Torsten Michaelis † (German, 1st voice)
+<br>Oliviero Corbetta (Italian)
+<br>Ryōta Takeuchi (Japanese)
+<br>Shin Yong-u (Korean)
+<br>Jia Qiu (Mainland Mandarin)
+<br>Lin Gu-jhen (Taiwanese Mandarin)
+<br>Janusz German (Polish)
+<br>Duda Ribeiro (Brazilian Portuguese)
+<br>Maksim Dakhnenko (Russian)
+<br>Iñaki Crespo (European Spanish)
+<br>José Luis Orozco (Latin American Spanish, 1st voice)
+<br>Humberto Vélez (Latin American Spanish, 2nd voice)
+}}
+| role = [[Damage]]
+| sub-role = [[Flanker]]
+| health = 275
+| minor_perk_xp = 1625
+| major_perk_xp = 4065
+| video = {{#ev:youtube|uK4WSF0rCcM|325|inline}}
+}}
+{{HeroTabs}}
+'''Reaper''' is a [[Sub-Roles#Flanker|Flanker]] [[Roles#Damage|Damage]] [[Heroes|hero]] in ''[[Overwatch 2|Overwatch]]''. He is one of the 21 heroes included in the game's release on 24 May 2016.
+
+==Overview==
+[[File:Reaper HS.mp4|left|thumb]] Hellfire Shotguns, the ghostly ability to become immune to damage, and the power to step between shadows make Reaper one of the deadliest beings on Earth.
+
+<gallery>
+File:Icon-Reaper.png|'''3D portrait'''
+File:Reaper Hero.png|'''2D portrait'''
+</gallery>
+==Abilities==
+
+===Passive Abilities===
+{{Sub-Role passive|Flanker}}
+
+{{Ability_details
+| ability_name = The Reaping
+| ability_image = Ability-reaper5.png
+| old_description = Reaper steals health from his enemies as he damages them.
+| official_description = Dealing damage heals you.
+| ability_type = Passive Ability
+| heal = {{#vardefineecho:reaping heal percent|30}}% of damage dealt
+| ability_details = * Counts all damage from Reaper, even from quick melee or [[environmental kill]]s.
+* Does not generate [[ultimate charge]].
+}}
+
+===Weapons===
+{{Ability_details
+| ability_name = Hellfire Shotguns
+| ability_image = Ability-reaper1.png
+| ability_video = z1RyND7eIYE
+| old_description = Reaper tears enemies apart with twin shotguns.
+| official_description = Short-range spread weapons.
+| ability_type = Weapon
+| shot_type = {{proj|shotgun}} (hitscan)
+| damage = 5.75 – 1.725 per pellet<br>{{#vardefineecho:shotgun shot damage|115}} – 34.5 per shot
+| damage_falloff_range = 10 – 20 meters
+| headshot = ✓
+| pellets = 20
+| ammo_drain = 1
+| fire_rate = {{tt|2 shots/s|0.5 seconds recovery}}
+| ammo = 8
+| reload_time = {{tt|1.5 seconds animation|restores ammo after 1.224 seconds}}
+| spread = 6 degrees
+| pradius = 0.04 meters<!-- 0.04 global + 0 -->
+| ability_keywords = critical::hitscan
+| ability_details = * Damage per second: {{CalcDPS|d={{#var:shotgun shot damage}}|t=0.5}} while firing ({{CalcDPS|d={{#var:shotgun shot damage}}|t=0.5|r=1.5|a=6}} overall with reload)
+* Healing per second: {{#expr: {{#var:reaping heal percent}}/100 * {{CalcDPS|d={{#var:shotgun shot damage}}|t=0.5}}}} while firing ({{#expr: {{#var:reaping heal percent}}/100 * {{CalcDPS|d={{#var:shotgun shot damage}}|t=0.5|r=1.5|a=6}}}} overall with reload)
+* {{see also|Hellfire shotgun|Hellfire Shotguns Lore}}
+| dps = 230 while firing (153.33 overall with reload)
+}}
+
+===Special Abilities===
+{{Ability details
+| ability_name = Dire Triggers
+| ability_image = Perk_DireTriggers.png
+| ability_type = Ability
+| official_description = Use (RMB) to fire a volley with long range accuracy from both Hellfire shotguns.
+| key = secondary fire
+| cooldown = 6 seconds
+| damage = 3.45 - 1.035 (per pellet)<br>69 - 20.7 (per blast)<br>138 - 41.4 (both blasts)<!-- 30% falloff floor -->
+| shot_type = {{proj|shotgun}} (hitscan)
+| headshot = yes
+| damage_falloff_range = 25 - 35 meters
+| pellets = 20 per blast<br>{{tt|2 blasts per shot|0.08 seconds between blasts}}
+| pradius = 0.04 meters
+| spread = 3 degrees
+| cast_time = {{tt|0 + 0.5 seconds|0s startup + 0.5s recovery}}
+| ammo_drain = 2
+| ability_keywords = critical::hitscan
+| ability_details = * Damage per pellet is equal to 60% of the base Hellfire Shotguns' damage.
+* Both shotguns will still fire even if there is only one shot left in the magazine.
+}}
+{{Ability_details
+| ability_name = Wraith Form
+| ability_image = Ability-reaper2.png
+| old_description = Reaper becomes a shadow for a short period of time. While in this form, he takes no damage and is able to pass through enemies, but cannot fire his weapons or use other abilities.
+| official_description = Move faster and become invulnerable, but you cannot shoot.
+| ability_type = Ability
+| shot_type = {{proj|movement}}
+| key = ability 1
+| cooldown = 8 seconds
+| duration = 0.4 seconds (min)<br>3 seconds (max)
+| cast_time = 0.4 seconds recovery
+| mspeed_buff = {{tt|+40%|7.7 meters per second}}
+| ignores_speedcap = 1
+| range = 23.1 meters
+| ability_video = 6aqY62EHPSA
+| ability_keywords = lesser cleanse;;stunnable::invulnerable::phased::reloads::strong movement
+| ability_details = * Wraith Form is a [[channeled]] ability; Reaper cannot fire or use other abilities while it's active.
+* Reaper becomes [[phased out]], cleansing him of [[status effects]] and becoming immune to enemy damage and abilities.
+** Reaper can still be hit by {{al|Graviton Surge}}, {{al|Gravitic Flux}} and {{al|Cage Fight}} while phased, however these will only lock his movement, and will not deal any damage or interrupt the ability.
+* Automatically reloads Hellfire Shotguns to full ammo.
+* Can be cancelled early by reactivating the ability.
+* [[Health Pack]]s can be picked up while phased.
+* Wraith Form is not interrupted when pulled by {{al|Life Grip}}.
+* Wraith Form's [[movement speed]] buff does not count towards global movement speed buff cap.
+}}
+
+{{Ability_details
+| ability_name = Shadow Step
+| ability_image = Ability-reaper3.png
+| old_description = After marking a destination, Reaper disappears and reappears at that location.
+| official_description = Teleport to a targeted location.
+| ability_type = Ability
+| key = ability 2
+| shot_type = {{proj|movement}}
+| range = 35 meters
+| cooldown = 10 seconds
+| duration = {{tt|0.53|0.526}} seconds (teleport)<br>{{tt|0.98|0.976}} seconds (invulnerability)
+| cast_time = {{tt|1.15 + 0.13 seconds|1.154s startup + 0.128s recovery}}
+| ability_video = tA4v77rouK4
+| ability_keywords = invulnerable::phased::strong movement
+| ability_details = * Cooldown starts when the ability finishes casting.
+* Can only target walkable surfaces.
+* Can be used while Reaper is in the air, which will reduce Reaper's [[Movement speed#Falling|gravity]] by 70% while its being cast.
+* Shadow Step is a [[channeled]] ability; Reaper cannot fire or use other abilities while it's active and it is interrupted if Reaper is [[stunned]], [[knocked down]], or [[hacked]], including subsidiary effects.
+* Reaper becomes [[invincible]] {{tt|0.7|0.688}} seconds into the startup animation, making him immune to damage, [[stun]]s and [[knockdown]]s. However, he is still vulnerable to being [[hacked]]. The invulnerability ends when the recovery period starts and Reaper is able to move again.
+* {{al|Life Grip}} cannot be used on Reaper while he is using Shadow Step.
+* Destroys fences and other breakables in the target location.
+}}
+
+===Ultimate Ability===
+{{Ability_details
+| ability_name = Death Blossom
+| ability_image = Ability-reaper4.png
+| old_description = In a blur of motion, Reaper empties both Hellfire Shotguns at breakneck speed, dealing massive damage to all nearby enemies.
+| official_description = Damage all nearby enemies.
+| ability_type = Ultimate Ability
+| shot_type = {{proj|hitscan}}
+| ult_req = 2050 points
+| damage = {{tt|185/s|37 every 0.2 seconds}} per enemy
+| headshot = ✕
+| mspeed_pen = {{tt|-50%|2.75 m/s}}
+| radius = 8 meters
+| duration = 3 seconds
+| ability_video = g2NZsSyRA9s
+| ability_keywords = area of effect;;spherical::channel::hitscan::reloads
+| ability_details =
+* Healing per second: {{#expr: {{#var:reaping heal percent}}/100*185}} per enemy
+* Death Blossom locks on to all players and [[objects]] (barriers, turrets, traps, etc.) in its range that are within line of sight, and periodically fires toward each target at the same time.
+** Targets can be hit by shots aimed at targets behind them, causing them to block it and take the damage instead.
+** [[Barrier]]s do not prevent line of sight for acquiring targets.
+* Cannot be manually canceled.
+* Death Blossom is a [[channeled]] ability; Reaper cannot fire or use other abilities while it's active and it is interrupted if Reaper is [[stunned]], [[knocked down]], or [[hacked]], including subsidiary effects.
+* Restores Hellfire Shotguns' ammo after the ability ends, provided it wasn't interrupted.
+* Destroys nearby fences and other breakables.
+}}
+
+== Perks ==
+=== Minor Perks ===
+A Minor [[Perk]] can be chosen at level 2.
+{{Ability details
+| ability_name = Lingering Wraith
+| ability_image = Perk_RavenousWraith.png
+| ability_type = Minor Perk
+| official_description = Leaving Wraith Form grants 30% movement speed for 2 seconds.
+| duration = 2 seconds
+| mspeed_buff = {{tt|+30%|7.15 m/s}}
+| ability_details = 
+}}
+
+{{Ability details
+| ability_name = Soul Reaving
+| ability_image = Perk_SoulReaving.png
+| ability_type = Minor Perk
+| official_description = Collect Soul Globes from dead enemies to restore 50 health.
+| heal = 50
+| duration = 8 seconds
+| radius = 8 meters (pickup radius)
+| ability_details = * A Soul Globe drops as long as Reaper receives an [[Common Terms#Elimination|elimination]] credit from the kill.
+}}
+
+=== Major perks ===
+A Major [[Perk]] can be chosen at level 3.{{Ability details
+| ability_name = Shadow Blink
+| ability_image =Shadow_Blink.png 
+| ability_type = Major Perk
+| official_description = Shadow Step's cast time and cooldown are 25% faster, but the range is reduced by 25%.
+| cooldown = 10 → 7.5 seconds
+| range = 35 → 23.2 meters
+| duration = 0.5 → 0.8 seconds (teleportation)<br>0.98 → 1.2 seconds (invulnerability)
+| cast_time = {{tt|1.15 + 0.13 seconds|1.154s startup + 0.128s recovery}} → {{tt|0.54 + 0.1 seconds|0.542s startup + 0.096s recovery}}
+| ability_details =
+* The initial cast time before you teleport is sped up, whilst the duration between teleporting and exiting teleport is left the same as before, however the total duration is reduced from 1.8 to 1.44 seconds, which matches the description's "25% faster".
+* Invulnerability starts much earlier at {{tt|0.14|0.144}} seconds.
+}}
+
+{{Ability details
+| ability_name = Trigger Finger
+| ability_image = Perk_Trigger_Finger.png
+| ability_type = Major Perk
+| official_description = Refresh Dire Triggers' cooldown whenever using an ability or reloading.
+| ability_details = 
+}}
+
+== Hero-specific options ==
+{|class ="listtable"
+! Setting name !! Options !! Description
+|-
+| rowspan="2"| '''Hold to use Wraith Form'''
+| Off (default)
+| Wraith Form deactivates when player presses the button again.
+|-
+| On
+| Wraith Form deactivates when player stops holding the button.
+|-
+| rowspan="4"| '''Shadow Step confirmation input'''
+| Primary Fire (default)
+| Shadow Step is activated by pressing Ability 2 then Primary Fire. Secondary Fire to cancel.
+|-
+| Secondary Fire
+| Shadow Step is activated by pressing Ability 2 then Secondary Fire. Primary Fire to cancel.
+|-
+| Ability 2 press
+| Shadow Step is activated by pressing Ability 2 twice. Secondary Fire to cancel.
+|-
+| Ability 2 release
+| Shadow Step is activated by pressing and releasing Ability 2. Secondary Fire to cancel.
+|-
+| rowspan="3" |'''Wraith Form cancel input'''
+|All (default)
+|Wraith Form deactivates when any of the buttons under are pressed.
+|-
+|Ability 1
+|Wraith Form only deactivates when Ability 1 is pressed.
+|-
+|Primary fire
+|Wraith Form only deactivates when Primary fire is pressed.
+|-
+| rowspan="2" |'''Hide Wraith Form cancel text'''
+|Off (default)
+|Cancel text UI element is displayed to the left of the crosshair.
+|-
+|On
+|Cancel text UI element is hidden.
+|}
+
+==Strategy==
+;Strength
+Reaper is a short-ranged flanker and one of the deadliest heroes in the game up close, with even Tanks like [[Reinhardt]] and [[Roadhog]] melting under the power of his Hellfire Shotguns. Wraith Form is one of the greatest invulnerability tools in the game; Reaper can use it to escape or chase his enemies thanks to his increased speed and immediate reload. Shadow Step is another flanking ability; provided enough time to set it up, he can use it to move to any location within his line-of-sight. When the main fight begins, Death Blossom can turn the tide of battle when using it in the middle of the fight. Its high constant damage can tear most heroes to shreds if they are not prepared. Reaper's relative simplicity makes him a good hero for new players, while still remaining deadly in experienced hands.
+
+;Weakness
+Reaper lacks in-combat mobility, as his Wraith Form is mainly used to save his life and escape from near-death situations, and Shadow Step is very loud and makes Reaper unable to move for a while, so he becomes easy prey if spotted. Reaper works best in close-combat and is nearly useless in fighting at mid- to- long range due to quick damage falloff and the large spread of his weapon. Death Blossom is easy to shut down by [[Crowd Control#Stun|stunning]] Reaper or blocking it with a friendly [[barrier]]. Reaper is most effective in a team composition or a map that keeps the fight in close-quarters.
+
+===Weapons & Abilities===
+
+*'''{{al|The Reaping}} (Passive):''' Reaper's sustain ability. As Reaper damages his foes, he receives a portion of the damage he deals back as Health.
+**This provides Reaper with a steady stream of healing, so long as he's in combat. This can help him to survive for long periods of time in areas without many Health Packs.
+**This can provide Reaper with valuable in-combat healing. If up against multiple opponents, aim to damage the targets with the highest Health to maintain your own Health.
+
+*'''{{al|Hellfire Shotguns}}:''' Reaper's primary weapon. The primary fire will cause Reaper to alternate shooting his two shotguns, with no secondary fire mode.  These shotguns have a wide spread and deal high damage at short range, but have high damage falloff past that range.
+**Hellfire Shotguns deal extremely high damage at short range, allowing Reaper to quickly kill targets that he gets the jump on, especially Tanks with large hitboxes which allows most of the pellets to connect.
+**As the shotguns have high damage falloff and a wide spread, aim to get up close to your enemies so that you can deal the most damage possible.
+
+*'''{{al|Wraith Form}}:''' When activated, Reaper assumes a gaseous purple form for a short period of time. While in this form, he is invincible and untargetable by any enemy weapons or abilities and ignores enemy collision. He also moves faster for the duration. However, he cannot attack or use any abilities during this time.
+**This is Reaper's main method of escape. If you suddenly find yourself surrounded by enemies, activate Wraith Form and make a break for the safest location you can find.  Offensively, it can also be used to chase down enemies due to the speed increase.
+**When timed properly, Reaper can avoid potentially deadly attacks with this ability, such as [[Roadhog|Roadhog's]] [[Chain Hook]], [[Reinhardt|Reinhardt's]] [[Charge]], or [[McCree|Cassidy's]] [[Flashbang]]. Try to anticipate your enemy's attacks and use Wraith Form before they hit.
+**Using Wraith Form will remove [[Zenyatta|Zenyatta's]] [[Orb Of Discord]] as well as [[Tracer|Tracer's]] [[Pulse Bomb]]. It will also remove the effect of [[Ana|Ana's]] [[Biotic Grenade]] and [[Widowmaker|Widowmaker's]] [[Venom Mine]].
+**Try luring the enemy to waste some strong attack by staying close to them and using Wraith Form to avoid it, such as Roadhog's Hook or Cassidy's Flashbang. Once they lose it, cancel Wraith Form early and attack them at point-blank range before their cooldown timer expires. Remember that your shotguns will be fully reloaded upon using this ability.
+
+*'''{{al|Shadow Step}}:''' When activated, Reaper will switch to a targeting mode, allowing him to select a point within his line of sight to Shadow Step to. Once he finds a suitable point, he can press the primary fire button to teleport to the target location after a short delay. 
+**This is Reaper's main method of flanking. Use Shadow Step to get to higher ground or behind enemy lines without having to travel there directly.
+**Note that Reaper is immobile and cannot use weapons or abilities while using Shadow Step. He is also completely vulnerable to attack at the target location while the teleportation completes.  Try to only Shadow Step from and to a safe position, as you otherwise make an easy target, especially for snipers such as [[Widowmaker]], [[Hanzo]], and [[Ana]].
+**Shadow Step's voice line is loud enough that Reaper can be heard from a considerable distance away, though announcing your ultimate charge will negate the voice line completely. Be careful when using it as a flank method, and make sure that the enemy won't hear his approach. 
+
+*'''{{al|Death Blossom}} (Ultimate):''' Reaper's [[Ultimate]] ability. When activated, Reaper begins to fire his shotguns at all enemies in a large radius around himself, dealing massive damage to all nearby enemies that are within his line of sight for a short period of time. His movement speed is slowed for the duration, and he cannot use normal attacks or abilities. This is a [[channeled]] ability, and stuns will immediately end Death Blossom's effect.
+**Death Blossom is of the deadliest Ultimates in the game against a stacked enemy team. Look for opportunities where your opponents are clumped together and where you can silently approach to unleash Death Blossom.
+**Death Blossom's damage is treated in much the same way as Hellfire Shotguns, meaning that it will be blocked by [[barrier]]s, [[D.Va|D.Va's]] [[Defense Matrix]], and solid objects as well as enemy players themselves. Try to make sure that your opponents don't have a corner they can duck behind when you activate Death Blossom, or you may end up wasting your Ultimate.
+**Death Blossom '''fires shots''' towards each enemy (including objects) in range, instead of directly damaging each enemy, as an area ability would. As a result, if a target is in front other targets, it will take '''all''' the damage aimed at everyone behind them.
+***When there is a priority enemy to eliminate, this can be used to your advantage by positioning yourself such that they are between you and any other nearby players and objects.
+***This will also make quick work of barriers, if there are multiple targets behind it.
+**It is paramount to the success of your ult that you make sure the enemy team does not have any CC abilities ready. Neglecting to do this will result in you being slept, stunned, hooked and even environmentally killed. Even [[Ana|Ana's Biotic Grenade]] can disrupt your ultimate by stopping your self healing. Either keep track of and bait cooldowns, or force the enemy to switch by focusing them.
+***Another way to keep yourself safe while using Death Blossom is to coordinate with your team to protect you (i.e [[Zarya|Zarya's Projected Barrier]] or [[Kiriko|Kiriko's Protection Suzu]]. )
+
+===General Strategies===
+*Reaper's high damage output makes him a great counter to durable characters like [[Winston]] or [[Roadhog]]. Consider using Reaper if up against multiple Tanks.
+
+*Reaper is usually not effective as a straightforward Assault hero like [[Pharah]] or [[Soldier: 76]]. Instead, use a combination of Shadow Step and side routes to carefully maneuver behind your opponents so that you can ambush them with your Hellfire Shotguns. Having good knowledge of each map and learning where Reaper can use Shadow Step effectively greatly increases his usefulness. Don't be afraid to spend time in a Custom Game on each of the maps finding out where Shadow Step can take you.
+
+*Try to focus your gameplay around Wraith Form's cooldown. When Wraith Form is off cooldown, you can afford to play more aggressively, since you have it available to escape if needed. When Wraith Form is on cooldown, play more defensively and don't take unnecessary risks.
+
+*When flanking, look to pick off lone targets rather than charging straight into a group (unless Death Blossom is available). While Reaper is more durable than other flankers, his lack of in-combat mobility means that he relies solely on Wraith Form to escape, and its short duration means that enemy heroes can follow and kill you easily if you're too far away from your own team.
+
+*It can be tempting to use Death Blossom when at low health, since this would remove the sources of the damage you're taking. Never do this. The enemy team will focus on you as soon as you use it, and Death Blossom ends immediately when Reaper dies.
+
+*When ambushing with Death Blossom, look for ledges or other raised areas that you can leap off of to get into the middle of the enemy team before activating your Ultimate. Always use the element of surprise in your favor.
+
+*When Reaper reloads, his magazine refills very quickly after reloading — roughly at the point Reaper fully releases his shotguns and they fall from his view — meaning you don't have to finish the animation. Taking an action other than firing (being stunned, using a quick melee attack, etc.) at the moment the ammo counter shows a full magazine of 8/8 allows for less time watching a useless animation and a faster response time, which is helpful against targets such as [[Reinhardt]] and [[Roadhog]], who can kill you while you are vulnerable reloading.
+**Keep in mind that Wraith Form will reload your shotguns as one of its own side-effects, so using Wraith Form just as a means to cancel your reload animation is essentially wasting Wraith Form.
+
+==Match-Ups and Team Synergy==
+<!--When proving match-up or team synergy advice, please write all advice from the sake of someone playing as this hero, not as someone who wishes to counter this hero. Also, please try to be as objective as possible. Taking personal skill out of the equation, please provide advice that would apply to any player who knows how to play these characters well.-->
+
+===Tank===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero
+! |Match-Up
+! |Team Synergy</small>
+|-
+|<center>[[File:icon-dva.png|75px|link=D.Va]]<br />[[D.Va]]</center>
+|<small>While D.Va will struggle to kill you, she can be annoying to deal with. Her Defense Matrix will force you to either waste shots or waste time, and it can block all the damage from Death Blossom. D.Va can also easily escape with her Boosters should the fight turn against her, making her difficult to kill. In a sustained fight with her, though, you will usually come out on top; if you can wait out the duration of her Defense Matrix and catch her while Boosters is on cooldown, you can rip through her health with a few accurate shots. You can also use Wraith Form to either flee from a poor engagement or to quickly reload and finish D.Va's Mech off before she can use Boosters or Defense Matrix. If you destroy her Mech, try to quickly kill her Pilot form before she can escape; while she can be easily dispatched at close range, she'll have you beat at long range with her accurate and powerful Light Pistol.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-orisa.png|75px|link=Orisa]]<br />[[Orisa]]</center>
+|<small> Although Orisa's large hitbox and slow movement should her a perfect target to tear apart with your shotguns, her high damage resistance and headshot immunity during {{al|Fortify}} make her difficult to kill. she can easily disrupt you with her {{al|Javelin Spin}} and {{al|Energy Javelin}}, so it's recommended to focus her mostly after she's used her abilities. Be wary of using {{al|Death Blossom}} near her, as she can stun you out of it or move you away with {{al|Javelin Spin}}. Instead, try focus her [[Support]]s or [[Damage|DPS]], who will be easier to eliminate. For {{al|Terra Surge}}, escape with {{al|Wraith Form}} or {{al|Shadow Step}}, or take the opportunity to damage her, as she is immobile.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-reinhardt.png|75px|link=Reinhardt]]<br />[[Reinhardt]]</center>
+|<small>While you and Reinhardt both prefer to fight at close range, your massive damage output and self-healing will make it almost impossible for Reinhardt to kill you without a well-aimed Charge or Earthshatter. If Reinhardt is attempting to hit you with his hammer, you can easily stay just outside its range and attack away with your shotguns; if he chooses instead to lift his barrier, just walk through it and shoot him point blank. If you anticipate an oncoming Charge, have Wraith Form at the ready to dodge it. If timed right, you can avoid {{al|Earthshatter}} with {{al|Wraith Form}}, saving yourself from an easy elimination.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-roadhog.png|75px|link=Roadhog]]<br />[[Roadhog]]</center>
+|<small>Be wary of Roadhog's hook combo, as it can kill you if you're not careful. Watch the ground for his {{al|Pig Pen}}, as he'll likely be nearby ready to hook you. If you do step on the trap, prepare to {{al|Wraith Form}} to dodge his hook, or reposition quickly to avoid him completely. A fight with Roadhog is a fight of positioning and attrition, as you both deal your best damage at close range and you both have self-heal abilities. If you avoid his Chain Hook, though, your massive damage should be able to rip through him before he has time to use it again. Roadhog can totally shut down Death Blossom with a well-placed hook, so be wary of him when using it.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-sigma.png|75px|link=Sigma]]<br />[[Sigma]]</center>
+|<small>Sigma's only defences against your assaults are his Kinetic Grasp and Accretion, which he can use to buy time to escape or keep you at bay. Otherwise, you can easily tear through his health and his Barrier won't do much to stop you. In a 1v1, take the time to reload if you need to while he uses Kinetic Grasp as he can't cancel it to fight back, and shooting into it will give him more health. You can also avoid his Accretion altogether with Wraith Form. You can't escape {{Al|Gravitic Flux}} with your abilities, so if you hear him use his Ultimate, use your abilities to escape the targeted area. If you are caught in his ultimate, you can immediatly use {{al|Wraith Form}} afterwards to escape, given you survive. While lifted by his ultimate, try and shoot the Sigma or any enemies to lifesteal and hopefully stay above half health to survive the slam.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-wrecking_ball.png|75px|link=Wrecking Ball]]<br />[[Wrecking Ball]]</center>
+|<small>Due to Wrecking Ball's high mobility you'll rarely be able to confirm a kill on him unless he commits to a 1v1, however you can reduce his effectiveness by playing around your vulnerable teammates he would want to dive, like your Supports or a friendly sniper. You can force him to retreat with a few shots and make him play more cautiously and wary.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-winston.png|75px|link=Winston]]<br />[[Winston]]</center>
+|<small>With a massive body, slow movement and weak weapon, Winston is one of your weakest opponents. Watch where Winston jumps, and if he lands close enough to chase down, don't hesitate to use Wraith Form to catch up to him and finish him off. If Winston is trying to heckle your weaker teammates, stick close to them and you'll prove to be a massive deterrent. If Winston activates Primal Rage, you can try to gun him down as he'll have difficulty killing you with his weak punches; just be wary of any nearby cliffs, as he can send you flying to your doom with little means to save yourself.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-zarya.png|75px|link=Zarya]]<br />[[Zarya]]</center>
+|<small>With well-timed shots and usage of Wraith Form, you can wait out Zarya's energy barrier. If you're not careful, though, Zarya's barriers on herself and her team can absorb your high damage to power her up. While you can burst down Zarya's barriers instead of waiting them out, this puts you at risk of a high-energy Zarya. If she (or the ally she's protecting) is at low health, it may be worth it to run through the barrier, otherwise it would be better to wait it out so Zarya doesn't get her massive charge. One on one, you should have little difficulty dealing with Zarya, but if Zarya is with a group, you shouldn't engage without support. During {{al|Graviton Surge}}, save your Wraith for when you're close to death, as using it too early may only save you from the initial damage.</small>
+|<small>While you have high damage output, you're not particularly fast, meaning it can be difficult to avoid oncoming fire. A friendly Zarya barrier can free you up to lay waste to your opponents, all while making your Zarya stronger should your opponents choose to attack you. A group of enemies clustered with Graviton Surge can serve as easy pickings for Death Blossom, or even simply for some point-blank shotgun fire.</small>
+|}
+
+===Damage===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero
+! |Match-Up
+! |Team Synergy</small>
+|-
+|<center>[[File:icon-ashe.png|75px|link=Ashe]]<br />[[Ashe]]</center>
+|<small>If you can flank Ashe successfully, you can easily take her out with a few shots before she can react. However if you don't surprise her she can either gun you down from afar or create distance with her Coach Gun. She will usually use the ability as soon as she turns and looks at you in a panic, so try to pre-emptively Wraith Form when she sees you and you can avoid the knockback and chase her down for a quick kill.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-bastion.png|75px|link=Bastion]]<br />[[Bastion]]</center>
+|<small>Bastion will tear you down in seconds if he catches you out in the open, therefore he can be quite problematic for Reaper. If he's alone and not being supported by his team, you can attempt to flank him and take him out by yourself, however you will need to be quick and effective before he can react, as he can still out-damage you at your effective range if you're not careful, and his {{al|A-36 Tactical Grenade}} can knock you away from him.</small> 
+|<small>(To be added)</small>
+|-
+|<center>[[File:Icon-cassidy.png|75px|link=McCree]]<br />[[McCree|Cassidy]]</center>
+|<small>Like other ranged heroes, Cassidy will make quick work of you at a distance. Unlike other ranged heroes, flanking him is difficult because he can turn the tables with a single Flashbang. Like with Ashe, Cassidy will likely use the ability as soon as he looks at you, so fire one or two shots, then Wraith Form to dodge the Flashbang and confirm a kill.</small>
+|<small>Cassidy makes a good teammate for Reaper, as Cassidy’s longer range compliments Reaper’s close range. Cassidy’s flashbang and secondary fire make him still effective at close range. When using Death Blossom, Cassidy can lay down suppressing fire to keep Reaper alive while using his ultimate.</small>
+|-
+|<center>[[File:icon-doomfist.png|75px|link=Doomfist]]<br />[[Doomfist]]</center>
+|<small>Reaper can beat Doomfist almost every time in a 1v1 due to your lifesteal and significantly better close range damage. Don't be afraid to take his combos as you can take them and do even stronger damage back to him, either killing him or forcing him to flee. Smart Doomfists will try to avoid you and target other players on your team, however if there is no one on your team more suitable to do so, you can play the role of a flank watcher and try to shut down his flanks by playing with your vulnerable teammates. The one trick up Doomfist's sleeve is his Rocket Punch, as he can one shot you if you're not careful. Fortunately, because Doomfist is loud he'll rarely get the jump on you and you can Wraith Form to dodge the blow.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-echo.png|75px|link=Echo]]<br />[[Echo]]</center>
+|<small>Unless you can catch her without her Flight, try not to bother with Echo as she can quickly maneuver out of your effective range and burst you down from afar. Generally speaking Echo is strong against Reaper due to her aerial mobility, so consider switching if she is making your life harder.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-genji.png|75px|link=Genji]]<br />[[Genji]]</center>
+|<small>Genji can easily stay out of your effective range and if he ends up too close he can use his Deflect to send your shots back at you. However, he doesn't necessarily have the killing power to put you down, and can't get into point-blank range for long enough to use Fan of Blades for obvious reasons.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-hanzo.png|75px|link=Hanzo]]<br />[[Hanzo]]</center>
+|<small>While Reaper can quickly dispatch Hanzo if you can get close, Hanzo's Storm Arrows can run through you at close distances. At any sort of significant range, Hanzo has the clear advantage, as his arrows work just fine at range while Reaper's damage rapidly declines. Worse, Hanzo's Sonic Arrow can reveal you if you try to sneak around. While it is often the case that Reaper can survive an encounter with Hanzo by using Wraith Form, it is best to avoid engagement with Hanzo unless you can get the drop on him.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-junkrat.png|75px|link=Junkrat]]<br />[[Junkrat]]</center>
+|<small>A lot of Junkrat's strategies are foiled by Wraith Form. You can phase right through chokepoints flooded with grenades, Steel Trap and Total Mayhem, albeit at the cost of your escape mechanism. You will likely win at close range, unless Junkrat has his Concussion Mine off cooldown, which can cause problems.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-mei.png|75px|link=Mei]]<br />[[Mei]]</center>
+|<small>Since you can avoid getting frozen by Mei with Wraith Form and you tear her apart when within range of her Endothermic Blaster, she will struggle to deal with you. However, Mei's walls can both spoil your approach as well as prevent you from retreating with Wraith Form. At range, Mei has a clear advantage with her Icicles. Mei also has Cyro-Freeze to save herself when at low health or to stall and wait for her allies to arrive. Your heavy damage can sometimes kill her before she realizes she's in danger, particularly with a close-range head shot.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-pharah.png|75px|link=Pharah]]<br />[[Pharah]]</center>
+|<small>Pharah is a strong counter to Reaper because she will usually be hovering in the air where you can't do anything to her. She can also spam you down from afar with rockets and displace you with Concussive Blast, forcing you to Wraith Form every time. If you don't have a ranged hero suitable for dealing with Pharah, it's advised you switch to one if she is a problem.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-reaper.png|75px|link=Reaper]]<br />[[Reaper]]</center>
+|<small>Reaper vs Reaper simply comes down to who kills who first. Aim for the head and be ready to activate Wraith Form should the fight go sour.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-Soldier 76.png|75px|link=Soldier:_76]]<br />[[Soldier: 76]]</center>
+|<small>Soldier: 76 will win if he maintains his distance and fires in short, quick bursts, using his Helix Rockets to quickly finish you off before he has a chance to escape with Wraith Form. Up close though, Reaper is much more likely to win, as 76's damage doesn't increase up close unlike his.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-sombra.png|75px|link=Sombra]]<br />[[Sombra]]</center>
+|<small>A Hack from Sombra can keep you on ground without Wraith Form to flee from or pursue her and her team. Her Hack and EMP will also stop Death Blossom mid-use, blinding your action in the team fight. However, you have more firepower to use against Sombra and a large amount of health. Even if hacked, in a 1 on 1 situation you should be able to handle Sombra at close range.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-symmetra.png|75px|link=Symmetra]]<br />[[Symmetra]]</center>
+|<small>Symmetra Photon Projector has high damage output just like your Hellfire Shotguns, but her health is 200 compared to your 250, and at point blank range you should be able to outdamage her even if her weapon is powered up. Should you spot her turrets, a single shot should be able to take them out. If caught off guard by multiple turrets, though, it may be wiser to use Wraith Form to fall back and heal before going back in to take the turrets out. A well-timed Photon Barrier can block all of the damage from Death Blossom, so be wary.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-torbjörn.png|75px|link=Torbjörn]]<br />[[Torbjörn]]</center>
+|<small>Torbjörn, much like Reaper, has a powerful shotgun-like attack with his Rivet Gun. A well-placed Turret can annoy you, as you will be able to do little to it while at long range, while safely flanking it could cost you the use of your Wraith Form. Torbjorn's Overload can save him from Death Blossom. If Torbjörn's teammates aren't nearby, however, you shouldn't hesitate to flank his turret, as even when fighting both the turret and him, your massive damage output and self-heal should keep you alive long enough to kill him and his turret. Just watch your health when choosing which target to take down first, as The Reaping won't activate when damaging Torbjörn's turret, only Torbjörn himself.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-tracer.png|75px|link=Tracer]]<br />[[Tracer]]</center>
+|<small>Tracer and Reaper both thrive in close-range combat, but while Tracer has mobility, you have higher firepower. Just one good shot will kill Tracer if immediately followed by a quick melee, and Tracer's Recall won't serve her much good due to how quickly you can put out damage. However, this doesn't necessarily mean you should play Reaper specifically to counter Tracer. You will only win if Tracer keeps fighting in close range with poor Blink usage. If she's attacking you from a safe middle distance, try to regroup with your team, where she'll have more difficulty picking you off.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-widowmaker.png|75px|link=Widowmaker]]<br />[[Widowmaker]]</center>
+|<small>Widowmaker is capable of staying far outside your range and picking you off in one headshot. You should avoid playing in her sightlines where she can easily see and snipe you before you can do anything about it. It's also difficult to flank her because of her Venom Mine and ability to evade you with a well time Grappling Hook. A good Widowmaker will make your life very difficult so either let your team deal with her or swap to another hero better at dealing with her.</small>
+|<small>When Infra-Sights is active, you can get a better of view of any lone enemies who can fall victim to your ambush.</small>
+|}
+
+===Support===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero
+! |Match-Up
+! |Team Synergy
+</small>
+|-
+|<center>[[File:icon-ana.png|75px|link=Ana]]<br />[[Ana]]</center>
+|<small>Ana will normally be far out of your range, and should you attempt to get close, she can use her Sleep Dart and Biotic Grenade to keep you away, if not outright kill you. However, she doesn't have a reliable escape option like Widowmaker or other Support characters do. If attempting to flank her, be wary of her Sleep Dart and Biotic Grenade, and use Wraith Form to dodge them if need be. If you can evade these tools and her teammates aren't nearby, you should have no difficulty ripping through her. Bear in mind that when affected by Biotic Grenade, The Reaping will no longer heal you. If you're in a group fight and you are hit by Biotic Grenade, it may be better to avoid combat, as without your usual self-healing, beefier enemies may be able to kill you before you can kill them. Beware of Ana when using Death Blossom, as an accurate Sleep Dart can shut you down.</small>
+|<small>While you will have a tendency to want to flank your opponents, it's important to keep an eye on where your Ana is; not only will she rely on you to deal with harassing threats such as Winston and Wrecking Ball, she also won't be able to heal you unless you're in her line of sight. If affected by a friendly Biotic Grenade, all sources of healing will be magnified; this includes The Reaping, so you can be braver for a period of time with less risk of getting killed should you put out significant damage. You are a reasonable target for Nano-Boost, especially if you combine it with Death Blossom, which can rip through even the sturdiest of barriers to slaughter a group of enemies.</small>
+|-
+|<center>[[File:icon-baptiste.png|75px|link=Baptiste]]<br />[[Baptiste]]</center>
+|<small>Baptiste's Exo Boots and Immortality Field allow him to escape you easily to a range where he's more comfortable. His Immortality Field will also completely neuter your Ultimate and save his team from it. Either destroy or wait it out before you death blossom.</small> 
+|<small>If you feel the need for additional security when using Death Blossom, you can request a friendly Baptiste to throw his Immortality Field your way. This will keep you safe for the duration of your Ultimate, and can help rip through hunkered down enemies that would normally kill you before you can kill them, such as a Bastion set up with an Orisa and Baptiste.</small>
+|-
+|<center>[[File:icon-brigitte.png|75px|link=Brigitte]]<br />[[Brigitte]]</center>
+|<small>Although she can't exactly beat you in a 1v1 , Brigitte can reduce your effectiveness. She can Shield Bash you to cancel your Ultimate or simply knock you away from her team with a well placed whip. Her crowd control abilities, Inspire passive ability and ability to block full blasts from your shotguns mean she can defend herself or her teammates from your assaults. You're better off prioritising other targets.</small>
+|<small>As you and Brigitte both benefit from close-quarters engagements, it's in the best interests of both of you to stick together; her Inspire will keep you constantly healed, while you will be able to fend off any flankers as well as large targets that stand in your way. This strategy is best suited for traveling through tight indoor spaces, though, as out in the open you're both at the mercy of long-range attackers such as Widowmaker or Cassidy.</small>
+|-
+|<center>[[File:icon-lúcio.png|75px|link=Lúcio]]<br />[[Lúcio]]</center>
+|<small>With his Speed Boost and Soundwave, Lúcio can keep you away from his team, severely dampening your potential to finish him and his allies off. Sound Barrier can also be used to mitigate a large portion of the damage from Death Blossom, so try to keep track of whether Lúcio has it ready, and if he does, attempt to bait it out before using Death Blossom. On the plus side, because Lúcio relies on keeping his teammates close, this can makes them unwitting fodder for Death Blossom should you catch them when Sound Barrier isn't ready.</small>
+|<small>Lúcio's Speed Boost can improve your slow walking speed, which can help you keep up with and kill fleeing enemies.</small>
+|-
+|<small><center>[[File:icon-mercy.png|75px|link=Mercy]]<br />[[Mercy]]</center>
+|<small>Mercy is practically defenseless against Reaper. Be wary of Guardian Angel, though, as she can use it as an emergency escape to get away from your standard attacks, or even to avoid a Death Blossom.</small>
+|<small>Mercy's damage boost can improve the healing you receive from The Reaping, effectively giving you both a damage boost ''and'' a health boost. When you activate Death Blossom, it may be wise for a courageous Mercy to keep her damage boost on you, which can help you run through the enemy team with greater ease.</small>
+|-
+|<center>[[File:icon-moira.png|75px|link=Moira]]<br />[[Moira]]</center>
+|<small>Flanking Moira is tough because if you fail to get the jump on her or don't kill her quickly enough she can create a lot of distance with Fade and heal herself. If she didn't go far however, you can use Wraith Form to catch up to her and finish her off. Her damage orbs can be a serious threat in enclosed and narrow areas so avoid fighting Moira where she can bounce them around a lot.</small>
+|<small>As Moira's healing requires her allies to be close by, try not to lose sight of her, or in the very least be ready to return to her when disengaging from the enemy team.</small>
+|-
+|<center>[[File:icon-zenyatta.png|75px|link=Zenyatta]]<br />[[Zenyatta]]</center>
+|<small>Depending on the skill of both parties, Zenyatta can be an even match-up against you. While his mobility is low, he has a significant range advantage as well as the ability to amplify his damage on you with Orb of Discord. While Wraith Form will dispel Orb of Discord, Zenyatta can instantly reapply it when you rematerialize. Even at point blank range, an accurate Zenyatta may be able to land consecutive boosted headshots on you before you can finish him off, and in an emergency Zenyatta can activate Transcendence to save himself and to regroup with his team. Your best bet against Zenyatta is to catch him by surprise and flank him before he has a chance to call allies for support. Zenyatta's Transcendence can completely negate all of the damage from Death Blossom, so try to either bait Transcendence out first or kill Zenyatta before activating Death Blossom.</small>
+|<small>If you stay within Zenyatta's line of sight, Orb of Harmony can keep you sufficiently healthy to allow you to stand your ground and attack opponents, while Orb of Discord can help you quickly run through enemies one after the other.</small>
+|}
+
+==Map Strategies==
+
+===Control===
+{{MapStrategyTable/Control
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Antarctic_rating = 
+| Antarctic_feature = 
+| Antarctic_strategy = 
+| Antarctic_Labs_strat = 
+| Antarctic_Sublevel_strat = 
+| Antarctic_Icebreaker_strat = 
+
+| Busan_rating = 
+| Busan_feature = 
+| Busan_strategy = 
+| Busan_Downtown_strat = 
+| Busan_Sanctuary_strat = 
+| Busan_MEKA_strat = 
+
+| Ilios_rating = 
+| Ilios_feature = 
+| Ilios_strategy = 
+| Ilios_Lighthouse_strat = 
+| Ilios_Well_strat = 
+| Ilios_Ruins_strat = 
+
+| Lijiang_rating = 
+| Lijiang_feature = 
+| Lijiang_strategy = 
+| Lijiang_ControlCenter_strat = 
+| Lijiang_Garden_strat = 
+| Lijiang_NightMarket_strat = 
+
+| Nepal_rating = 
+| Nepal_feature = 
+| Nepal_strategy = 
+| Nepal_Village_strat = 
+| Nepal_Shrine_strat = 
+| Nepal_Sanctum_strat = 
+
+| Oasis_rating = 
+| Oasis_feature = 
+| Oasis_strategy = 
+| Oasis_CityCenter_strat = 
+| Oasis_Gardens_strat = 
+| Oasis_University_strat = 
+
+| Samoa_rating = 
+| Samoa_feature = 
+| Samoa_strategy = 
+| Samoa_Beach_strat = 
+| Samoa_Downtown_strat = 
+| Samoa_Volcano_strat = 
+}}
+
+===Escort===
+{{MapStrategyTable/Escort
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| CircuitRoyal_rating = 
+| CircuitRoyal_feature = 
+| CircuitRoyal_strategy = 
+| CircuitRoyal_Attack_strat = 
+| CircuitRoyal_Defense_strat = 
+
+| Dorado_rating = 
+| Dorado_feature = 
+| Dorado_strategy = 
+| Dorado_Attack_strat = 
+| Dorado_Defense_strat = 
+
+| Havana_rating = 
+| Havana_feature = 
+| Havana_strategy = 
+| Havana_Attack_strat = 
+| Havana_Defense_strat = 
+
+| Junkertown_rating = 
+| Junkertown_feature = 
+| Junkertown_strategy = 
+| Junkertown_Attack_strat = 
+| Junkertown_Defense_strat = 
+
+| Rialto_rating = 
+| Rialto_feature = 
+| Rialto_strategy = 
+| Rialto_Attack_strat = 
+| Rialto_Defense_strat = 
+
+| Route66_rating = 
+| Route66_feature = 
+| Route66_strategy = 
+| Route66_Attack_strat = 
+| Route66_Defense_strat = 
+
+| Shambali_rating = 
+| Shambali_feature = 
+| Shambali_strategy = 
+| Shambali_Attack_strat = 
+| Shambali_Defense_strat = 
+
+| Gibraltar_rating = 
+| Gibraltar_feature = 
+| Gibraltar_strategy = 
+| Gibraltar_Attack_strat = 
+| Gibraltar_Defense_strat = 
+}}
+
+===Hybrid===
+{{MapStrategyTable/Hybrid
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| BlizzardWorld_rating = 
+| BlizzardWorld_feature = 
+| BlizzardWorld_strategy = 
+| BlizzardWorld_Attack_strat = 
+| BlizzardWorld_Defense_strat = 
+
+| Eichenwalde_rating = 
+| Eichenwalde_feature = 
+| Eichenwalde_strategy = 
+| Eichenwalde_Attack_strat = 
+| Eichenwalde_Defense_strat = 
+
+| Hollywood_rating = 
+| Hollywood_feature = 
+| Hollywood_strategy = 
+| Hollywood_Attack_strat = 
+| Hollywood_Defense_strat = 
+
+| KingsRow_rating = 
+| KingsRow_feature = 
+| KingsRow_strategy = 
+| KingsRow_Attack_strat = 
+| KingsRow_Defense_strat = 
+
+| Midtown_rating = 
+| Midtown_feature = 
+| Midtown_strategy = 
+| Midtown_Attack_strat = 
+| Midtown_Defense_strat = 
+
+| Numbani_rating = 
+| Numbani_feature = 
+| Numbani_strategy = 
+| Numbani_Attack_strat = 
+| Numbani_Defense_strat = 
+
+| Paraiso_rating = 
+| Paraiso_feature = 
+| Paraiso_strategy = 
+| Paraiso_Attack_strat = 
+| Paraiso_Defense_strat = 
+}}
+
+===Push===
+{{MapStrategyTable/Push
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Colosseo_rating = 
+| Colosseo_feature = 
+| Colosseo_strategy = 
+| Colosseo_Pushing_strat = 
+| Colosseo_Defending_strat = 
+
+| Esperanca_rating = 
+| Esperanca_feature = 
+| Esperanca_strategy = 
+| Esperanca_Pushing_strat = 
+| Esperanca_Defending_strat = 
+
+| NewQueenStreet_rating = 
+| NewQueenStreet_feature = 
+| NewQueenStreet_strategy = 
+| NewQueenStreet_Pushing_strat = 
+| NewQueenStreet_Defending_strat = 
+
+| Runasapi_rating = 
+| Runasapi_feature = 
+| Runasapi_strategy = 
+| Runasapi_Pushing_strat = 
+| Runasapi_Defending_strat = 
+}}
+
+===Flashpoint===
+{{MapStrategyTable/Flashpoint
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Aatlis_rating = 
+| Aatlis_feature = 
+| Aatlis_strategy = 
+| Aatlis_Bazaar_strat = 
+| Aatlis_Garden_strat = 
+| Aatlis_Resort_strat = 
+| Aatlis_Station_strat = 
+| Aatlis_TownCentre_strat = 
+
+| NewJunkCity_rating = 
+| NewJunkCity_feature = 
+| NewJunkCity_strategy = 
+| NewJunkCity_Arena_strat = 
+| NewJunkCity_Foundation_strat = 
+| NewJunkCity_Refinery_strat = 
+| NewJunkCity_Scrapyard_strat = 
+| NewJunkCity_Waterworks_strat = 
+
+| Suravasa_rating = 
+| Suravasa_feature = 
+| Suravasa_strategy = 
+| Suravasa_Gardens_strat = 
+| Suravasa_Market_strat = 
+| Suravasa_Palace_strat = 
+| Suravasa_Ruins_strat = 
+| Suravasa_Temple_strat = 
+}}
+
+== Achievements ==
+{{AchievementTable/Start}}
+{{Achievement|Waste Not, Want Not|Ability-reaper1.png|Get 3 solo kills with a single clip of Reaper's shotguns in Quick or Competitive Play.|Spray Reaper Pixel.png|Pixel}}
+{{Achievement|Die Die Die... Die|Ability-reaper4.png|Kill 4 enemies with a single use of Reaper's [[Death Blossom]] in Quick or Competitive play.|Spray Reaper Cute.png|Cute}}
+{{AchievementTable/End}}
+
+==Trivia==
+[[File:Reaper-statue.jpg|thumb|The Reaper statue]]
+*A statue of Reaper was present at GamesCom 2015.<ref>2015-08-06, [http://overwatch.blizzplanet.com/blog/comments/gamescom-2015-overwatch-life-size-statues-by-fx-deco-studio GamesCom 2015 – Overwatch Life-Size Statues by FX Deco Studio]. ''Blizzplanet'', accessed on 2015-08-20</ref>
+*Reaper's face mask's design is similar to the [[Blackwatch]] logo as well as his emblem, possibly to highlight that he was the leader of the group or they all symbolize an owl which represents death.
+*It is possible for Reaper to one hit kill every hero except Bastion and tanks.
+*Reaper's guns open up when fired on all of his skins and on his default sets have vents on the outside that say "🔺Caution" with the red arrow pointing to them as well as a glowing red switch that's always set to "OFF" as it says. Similarly his set of shotguns on his Soldier: 24 skin say "◀ Caution Moving Part" on them.
+*Reaper's guns have different words on them for each set of skins such as:
+**Default sets say "RPNT", "RPNT MK6", "MN 666-SHGX1", and "WTL-Type 8 Devil Chamber"
+**Blackwatch Reyes say "BLK001"
+**Plague Doctor and Nevermore say "CRW-ND"
+**Biker say "Speed Fang", "T4", and "REAPER"
+**Soldier: 24 say "RVGR" and "US ADVANCED MILITARY ARMS RESEARCH INSTITUTE ALLOY SUPERFOIL TYPE-24"
+*Reaper's ''Pumpkin'' skin is shown on the poster of [[The Reapening]].
+*In some early concept art for the game, the name <nowiki>''Gabriel King'' can be seen. There is a strong possibility that this could be Reaper's old name as Spanish surname ''Reyes'' translates to ''kings''</nowiki>. 
+
+===Misc. Character Information===
+*Reaper wears bandoliers of grenade shells.<ref name="ArtofOverwatch">''[[The Art of Overwatch]]''</ref>
+*According to Reaper's dog tag on his Soldier: 24 skin, his blood type is AB Negative, his soldier ID number is 06 0000 0024, and he has no religion.
+*Reaper was a big basketball and football fan.<ref>2017-04-17, [https://twitter.com/westofhouse/status/854198483892305920 Michael Chu's Twitter]. ''Twitter'', accessed on 2018-10-17</ref> His favorite team was the L.A Lakers.<ref>2017-03-30, [https://twitter.com/westofhouse/status/847585096332787712 Michael Chu's Twitter]. ''Twitter'', accessed on 2018-10-17</ref>
+*Reaper is of Latino descent.<ref>2019-11-03, [https://www.youtube.com/watch?v=2OTcKgGcCBU BlizzCon 2019 Q&A]. ''YouTube'', accessed on 2020-01-20</ref>  
+*His Mariachi skin might imply that he is of Mexican ancestry.
+*As Reaper, Reyes has apparently spent much of his time stalking Martina.<ref name = "ReaperQuotes">''[[Overwatch 2]]'', ''[[Reaper/Quotes|Reaper Quotes]]''</ref>
+*Reaper dislikes [[Oasis]].<ref name = "ReaperQuotes"/>
+
+====Disputed Information====
+*Contradictory information exists as to the nature of Reaper and Morrison's relationship. An [[Atlas News]] post in 2015 stated that Morrison becoming head of Overwatch was the source of the rift between them.<ref name = "FadingGlory">2015-07-07, [http://us.battle.net/overwatch/en/blog/19809396/ Fading Glory: On the Trail of Jack Morrison]. ''Blizzard Entertainment'', accessed on 2015-07-07</ref>  In 2018, [[Jeff Kaplan]] stated that there was no rift, that Reyes was happy for Morrison to have the more political role and be "number two," as there would be less accountability.<ref name = "KaplanReaper">January, 2018, [https://www.reddit.com/r/Overwatch/comments/7bs5z4/jeff_kaplan_on_morrison_and_reyes/ Jeff Kaplan on Morrison and Reyes]. ''Reddit'', accessed on 2018-02-08</ref>
+*At some point after Null Sector's return, Reaper and his fellow Talon members engaged Overwatch in a firefight at [[Petra]]. Talon was forced to retreat.<ref name = "VentureNew">2024-03-28, [https://www.youtube.com/watch?v=JF6tLqe_FSA Venture | New Hero Gameplay Trailer | Overwatch 2]. ''YouTube'', accessed on 2024-03-28</ref>
+
+===Cultural References===
+*Reaper bears resemblance to the [http://en.wikipedia.org/wiki/Death_%28personification%29 Grim Reaper], from various real-world cultures.
+*Reaper's reload animation is possibly a reference to the lobby shootout scene from ''The Matrix''.
+*Reaper's legendary ''Cursed Captain'' skin is a possible nod to [https://en.wikipedia.org/wiki/The_Walt_Disney_Company Disney]'s rendition of [https://pirates.fandom.com/wiki/Davy_Jones Davy Jones]. The main Antagonist of the 2006 film [https://en.wikipedia.org/wiki/Pirates_of_the_Caribbean:_Dead_Man%27s_Chest Pirates of the Caribbean: Dead Man's Chest].
+*Death Blossom might be a reference to 
+**a weapon used in the 1984 movie ''The Last Starfighter'' named Death Blossom.
+**Katarina from League of Legends, whose ultimate "Death Lotus" behaves similarly.
+**Strafe, an ability for the Demon Hunter class from Diablo III'','' another Blizzard title.
+**the art of Gun-kata from the movie Equilibrium.
+**a military term used to describe a group of men firing wildly in all directions surrounding the group.
+*The "CRW-ND" written on Plague Doctor and Nevermore skins' guns might be a reference to "[https://www.youtube.com/watch?v=xO7NB46hvsI crowning]", a technique from the game Left 4 Dead that involves focusing the devastating fire of a shotgun in point blank range on the Witch, a very high health enemy, essentially killing her before she can react - this being a reference to Reaper's tank busting abilities.
+**It may be a play on the gaming term "owned", crossed with the skins' "crow" theme ("crow-ned", rather than "crown-ed").
+
+====In Other Blizzard Games====
+*[http://starcraft.wikia.com/wiki/Reaper Reapers] are a type of unit in [[Blizzard Entertainment]]'s ''StarCraft'' series. Like Reaper himself, they dual-wield firearms and wear masks.
+*A Reaper portrait is available in ''[http://starcraft.wikia.com/wiki/StarCraft_II StarCraft II]'' for those who purchase the ''[[Origins Edition]]''.<ref>2015-11-06, [http://overwatch.blizzplanet.com/blog/comments/overwatch-origins-edition-pre-orders-have-begun Overwatch: Origins Edition (PC) Pre-Orders have Begun]. ''Blizzplanet'', accessed on 2015-11-07</ref>
+*Reaper's stance bears resemblance to the ''Diablo III'' antagonist Malthael.
+*Reaper appears as a cosplay skin for Valla in ''[[Heroes of the Storm]]''.
+
+===Merchandise===
+*A Funko Pop Reaper figurine was released in June, 2016.<ref>2016-02-26, [http://overwatch.blizzplanet.com/blog/comments/pre-order-funko-overwatch-pop-vinyl-figures Pre-Order FUNKO Overwatch POP Vinyl Figures]. ''Blizzplanet'', accessed on 2016-03-11</ref>
+*A 12" Reaper statue was made available in 2017.<ref>2016-11-26, [http://www.polygon.com/2016/11/26/13752638/overwatch-reaper-statue-premium Overwatch’s newest premium collectible is a badass Reaper statue]. ''Polygon'', accessed on 2016-11-28</ref>
+*A Figma Reaper statue became available in 2019.<ref>[https://gear.blizzard.com/us/figma-reaper Figma Reaper], ''Blizzard Store''. Accessed on 2018-05-17</ref>
+
+===Development===
+[[File:ReaperTitan.jpg|200px|left|thumb|The Reaper class from Project Titan]]
+[[File:Reaperearlyart.jpg|thumb|Reaper early concept art]]
+Prior to the development of ''Overwatch'', Reaper was the name of one of the player classes in the cancelled [[Project Titan]], which in the original pitch for the game that would become ''Overwatch'' was envisioned as wielding dual shotguns and a magnum, and using the abilities Death Blossom and Shadow Walk.<ref>Blizzcon 2017, Overwatch: Archives</ref> This class was reworked into the present day Reaper as one of the first three characters designed for ''Overwatch'', alongside Tracer and Widowmaker.<ref>2016-04-22, [https://www.youtube.com/watch?v=bTMnJ5XJH6Q The Story of Overwatch: Return of the 90s Shooter]. ''YouTube'', accessed on 2016-09-08</ref> The character of Reaper was inspired entirely by concept art for the game&mdash;his actual character was developed after his appearance was presented.<ref name = "Origins">2015-05-27, [http://overwatch.blizzplanet.com/blog/comments/blizzcon-2014-overwatch-origins-panel-transcript/3 BlizzCon 2014 – Overwatch Origins Panel Transcript]. ''Blizzplanet'', accessed on 2015-05-30</ref> Originally, he only had a single shotgun.<ref>''[[Forging Worlds: Stories Behind the Art of Blizzard Entertainment]]''</ref>
+
+Under ''Overwatch'''s original leveling system, Reaper's wraith form would give him healing abilities once he reached a certain level.<ref>2015-12-19, [http://www.polygon.com/2015/12/16/10323334/overwatch-blizzard-progression-system Overwatch's two failed progression systems explained]. ''Polygon'', accessed on 2015-12-19</ref> Reaper once had a slimmer design with a mask that was more human looking and dual wielded SMGs.<ref name="ArtofOverwatch"/>
+
+[[File:Overwatch2Reaper.jpeg|thumb|Overwatch 2 Reaper early concept art]]
+Along with most heroes, Reaper's appearance was redesigned for ''[[Overwatch 2]]''. They spoke about integrating his armour, cloak and iconic cowl into his new look, while keeping the classic reaper silhouette. They experimented with his colour scheme in development, such as trying completely silver arms and more jacket layers. Ultimately, they replaced his "bone white" mask and other features with a more "deadly, edgy silver" to change his colour scheme. <ref name = "Overwatch2BehindScenes">2021-02-20, [https://www.youtube.com/watch?v=lRj-GotnNaQ BlizzConline 2021 | Behind the Scenes of Overwatch 2 | Overwatch]. ''YouTube'', accessed on 2021-03-13</ref>.
+
+==== Removed abilities ====
+
+===== Removed Perks =====
+{{Ability details
+| removed = 1
+| ability_name = Death's Shadow
+| ability_image = Perk_DeathsShadow.png
+| ability_type = Minor Perk
+| official_description = Shadow Step reloads hellfire shotguns and has 25% increased range.
+| ability_details =
+* ''Removed in Season 18.''
+}}
+
+{{Ability details
+| removed = 1
+| ability_name = Ravenous Wraith
+| ability_image = Perk_RavenousWraith.png
+| ability_type = Major Perk
+| official_description = Leaving Wraith Form grants 40% additional lifesteal for 3 seconds.
+| ability_details =
+* ''Removed in Season 19.''
+}}
+
+==Media==
+
+=== Images ===
+
+;Former Portrait
+<gallery>
+File:OW1Icon Reaper.png|Overwatch 1 Hero Portrait
+</gallery>
+;Gameplay Screenshots
+<gallery widths="200">
+File:Reaper Overwatch 001.jpg
+File:Reaper Overwatch 002.jpg
+File:Reaper Overwatch 003.jpg
+File:Reaper Overwatch 004.jpg
+File:Reaper Overwatch 005.jpg
+File:Reaper Overwatch 006.jpg
+File:Reaper Overwatch 008.jpg
+File:Reaper Overwatch 009.jpg
+File:Reaper Overwatch 010.jpg
+File:Reaper Overwatch 011.jpg
+File:Reaper Overwatch 012.jpg
+File:Reaper Overwatch 013.jpg
+File:Reaper Overwatch 014.jpg
+</gallery>
+;Concept Art
+<gallery>
+File:Reaper Anubis skin concept art.jpg|0Anubis Skin Concept Art by Yiming Liu
+File:Reaper Anubis skin levels concept art.jpg|Anubis Skin Levels Concept Art by Yiming Liu
+File:Reaper Anubis skin levels2 concept art.jpg|Anubis Skin Back Levels Concept Art by Yiming Liu
+File:Reaper Anubis skin ideations concept art.jpg|Anubis Skin Ideations Concept Art by Yiming Liu
+File:Reaper Anubis skin variations concept art.jpg|Anubis Skin Color Variations Concept Art by Yiming Liu
+File:Reaper Anubis skin weapon concept art.jpg|Anubis Skin Weapon Concept Art by Yiming Liu
+File:Reaper Chained King skin exploration concept art.jpg|Chained King Skin Exploration Concept Art by Armando Gonzalez-Dorta
+File:Reaper Chained King skin concept art.jpg|Chained King Skin Concept Art by Armando Gonzalez-Dorta
+File:Reaper Chained King skin weapon concept art.jpg|Chained King Skin Weapon Concept Art by Armando Gonzalez-Dorta
+File:Reaper Dracula skin weapon concept art.jpg|Dracula Skin Weapon Concept Art by Anh Dang
+File:Reaper Heartbreaker skin concept art.jpg|Heartbreaker Skin Concept Art by Emily Siu
+File:Reaper Heartbreaker skin weapon concept art.jpg|Heartbreaker Skin Weapon Concept Art by Emily Siu
+File:Reaper Lu Bu skin concept art.jpg|Lü Bu Skin Concept Art by Qiu Fang
+File:Reaper Masquerade skin concept art.jpg|Masquerade Skin Concept Art by Anh Dang
+File:Reaper Masquerade skin weapon concept art.jpg|Masquerade Skin Weapon Concept Art by Anh Dang
+File:Reaper Pumpkin skin concept art.jpg|Pumpkin Skin Concept Art by Ben Zhang
+File:Reaper Ultrawatch skin concept art.jpg|Ultrawatch Skin Concept Art by Emily Siu
+File:Reaper Ultrawatch skin weapon concept art.jpg|Ultrawatch Skin Weapon Concept Art by Emily Siu
+</gallery>
+
+===Videos===
+{{#ev:youtube|uK4WSF0rCcM|400|inline}}
+{{#ev:youtube|NQMuuCzsv-g|400|inline}}
+{{#ev:youtube|sB5zlHMsM7k|400|inline}}
+{{#ev:youtube|py_kGferDww|400|inline}}
+
+==Balance Change Logs==
+{{ChangelogsTabber
+| owpvp =
+{{PatchTableElement|2026-07-14|
+{{al|Soul Reaving}} - Minor Perk
+*Pickup radius of Soul Globes increased from 5 to 8 meters.
+{{al|The Reaping}}
+*Lifesteal increased from 25% to 30%.
+
+{{DevComment|Reaper's reduced health pool has limited his ability to sustain through extended engagements. Increasing the effectiveness of his passive restores some of that durability while rewarding aggressive play.}}
+}}
+{{PatchTableElement|2026-06-16|
+{{DevComment|Dire Triggers has increased Reaper’s strengths across many matchups and added more lethality to his kit. Combined with his survivability, this pushes him past intended durability and kill potential. Reducing his health lowers his survivability while preserving the lethality Dire Triggers provides.}}
+
+*Health reduced from 300 to 275.
+
+{{al|Lingering Wraith}} – Minor Perk
+*Movement speed bonus reduced from 40% to 30%.
+}}
+{{PatchTableElement|2026-04-14|
+{{DevComment|Dire Triggers has been moved into Reaper’s base kit to give him more consistent mid‑range options on a cooldown. This change adds additional decision‑making and skill expression to his gameplay.}}
+
+{{al|Dire Triggers}}
+* Moved from Perk to Baseline ability.
+* Cooldown increased from 3 to 6 seconds.
+
+{{al|Trigger Finger}} – Major Perk 
+* Added.
+* Using an ability or reloading refreshes Dire Triggers’ cooldown.
+}}
+{{PatchTableElement|2026-02-10|
+{{al|Shadow Step}}
+* No longer cleanses on use.
+}}
+{{PatchTableElement|2025-12-09|
+{{DevComment|Reaper’s sustain from his passive leads to high survivability in close-range duels. A slight reduction in lifesteal maintains his durability while reducing his self-healing reliability in extended engagements.}}
+
+{{al|The Reaping}}
+* Lifesteal reduced from 30% to 25%.
+}}
+{{PatchTableElement|2025-10-14|
+{{al|Wraith Form}} - Ability 1
+* Movement speed while active reduced from 50% to 40%
+
+{{al|Shadow Blink}} - Major Perk
+* Moved from Minor to Major Perk
+
+{{al|Ravenous Wraith}} - Major Perk
+* Removed
+
+{{al|Lingering Wraith}} - Minor Perk
+* New Minor Perk
+* Leaving Wraith Form grants 40% movement speed for 2 seconds.
+}}
+{{PatchTableElement|2025-08-26|
+{{al|Death's Shadow}} - Minor Perk
+* Removed.
+
+{{al|Shadow Blink}} - Minor Perk
+* New Minor Perk.
+* Shadow Step's cast time and cooldown are 25% faster, but the range is reduced by 25%.
+}}
+{{PatchTableElement|2025-07-22|
+{{al|Death Blossom}} - Ultimate Ability
+* Ultimate cost increased 9%.
+}}
+{{PatchTableElement|2025-05-20|
+{{DevComment|Developer Comments: Part of the reason heroes like Reaper and Tracer had their damage reduced in the past was due to the shift to the 5v5 format—solo tanking and less frequent peeling made flanking heroes more effective—along with their strong performance on certain maps and game modes like Push and Flashpoint. This is now less of a concern with the introduction of map voting and hero bans, which help limit overperformance, so we're restoring some of their damage potency.}}
+
+{{al|Hellfire Shotguns}} - Primary Fire
+* Damage per pellet increased from 5.4 to 5.75 (108 to 115 per volley).
+}}
+{{PatchTableElement|2025-05-20|
+{{DevComment|Developer comments: We're aligning the recovery of Dire Triggers with Reaper’s primary fire to improve the flow when alternating between the two.}}
+
+{{al|Dire Triggers}} - Major Perk
+* Recovery reduced from 0.7 to 0.5 seconds.
+}}
+{{PatchTableElement|2025-03-18|
+{{DevComment|Developer Comments: The recovery time change will allow Reaper to weave primary fire shots between uses of Dire Trigger, reducing the friction of using this ability.}}
+{{al|Dire Triggers}}
+* Recovery time reduced from 0.9 to 0.7 seconds.
+}}
+{{PatchTableElement|2025-02-18|
+;Hero Perks
+
+{{al|Death's Shadow}}
+* Shadow Step reloads Hellfire Shotguns and has 25% increased range.
+
+{{al|Soul Reaving}}
+* Collect Soul Globes from dead enemies to restore 50 health.
+
+{{al|Dire Triggers}}
+* Use Secondary Fire to fire a volley with long range accuracy from both Hellfire Shotguns.
+
+{{al|Ravenous Wraith}}
+* Leaving Wraith Form grants 40% additional lifesteal for 3 seconds.
+}}
+{{PatchTableElement|2024-12-10|
+; Global Projectile Size Bonus
+* Hitscan radius small reduced from 0.05 to 0.04 meters.
+}}
+{{PatchTableElement|2024-11-12|
+{{DevComment|Developer Comments The added survivability from this passive is being tuned down now that Reaper has 300 health and more reliable mobility after the cast time reduction to Shadow Step.}}
+
+{{al|The Reaping}}
+* Lifesteal reduced from 35 to 30%.}}
+{{PatchTableElement|2024-06-20|
+{{DevComment|Developer Comments: With the previous patch change to how armor reduces damage, shotgun weapon heroes like Reaper lost some value since much of their gameplan revolved around pressuring large tank heroes. To help shift Reaper toward being more effective against smaller targets we're tightening the weapon spread on the Hellfire Shotguns and reducing the amount of time enemies have to react to his Shadow Step teleport.}}
+
+{{al|Hellfire Shotguns}}
+* Weapon spread reduced from 6.5 to 6 degrees.
+
+{{al|Shadow Step}}
+* Cast time reduced from 1.5 to 1.2 seconds.
+}}
+{{PatchTableElement|2024-03-12|
+{{al|Death Blossom}}
+* Damage per second increased from 170 to 185.
+* Ultimate cost decreased by 12%.
+}}
+{{PatchTableElement|2024-02-13|
+;General updates
+Most damage-dealing projectile sizes have been increased by a new global modifier added to their base size.
+
+* +0.05 meters for hitscan projectiles with a high rate of fire or spread (e.g., Tracer's Pulse Pistols or Reaper's Hellfire Shotguns).
+* +0.08 meters for hitscan projectiles that are more precise (e.g., Cassidy's Peacekeeper or Soldier:76's Heavy Pulse Rifle).
+* +0.05 meters for travel time projectiles that are shotguns or have a very high rate of fire (e.g., Roadhog's Scrap Gun or Ramattra's Void Accelerator).
+* +0.10 meters for travel time projectile with a speed greater than 50 meters per second (e.g., Zenyatta's Destruction Orb).
+* +0.15 meters for travel time projectile with a speed less than or equal to 50 meters per second (e.g., Pharah's Rocket Launcher).
+* Very large projectiles with a base size greater than 0.5 meters have been excluded from these increases (e.g., Orisa's Energy Javelin or Reinhardt's Fire Strike).
+
+Hero combined HP (base health/armor/shields) increased by 15-25%.
+
+* 150-175 HP heroes increased by 25 HP.
+* 200-300 HP heroes increased by 50 HP.
+* 300+ HP (Tanks) increased by 75-100 HP.
+* Each hero's precise health increases are listed in their patch notes below.
+
+Ultimate Charge
+
+* All Ultimate ability costs increased by 10%.
+
+Regenerative Passive for All Heroes
+
+* All heroes now regenerate 20 health per second after 5 seconds of not taking damage.
+
+Damage Role Passive
+
+* Reload speed bonus on elimination has been removed.
+* New role passive: Dealing damage reduces enemy healing received by 20% for 2 seconds.
+
+Quick Melee
+
+* Damage increased from 30 to 40.
+
+;Hero updates
+
+* Health increased from 250 to 300.
+}}
+{{PatchTableElement|2023-06-13|
+{{DevComment|Developer Comment: The Reaper and Moira changes are addressing an inconsistency with the interaction of Wraith Form or Fade with mobility-locking effects such as Junkrat's Steel Trap, Sigma's Gravitic Flux, Zarya's Graviton Surge, and Cassidy's Magnetic Grenade. They are now disabled similarly to Tracer's Recall or Sombra's Translocator, which are abilities that also phase out and can move the player.}}
+
+{{al|Wraith Form}}
+* Can no longer be activated while affected by mobility-locking effects (Magnetic Grenade, Steel Trap, Graviton Surge, etc.).
+}}
+{{PatchTableElement|2023-02-07|
+{{Al|Death Blossom}}
+*Ultimate cost reduced 8%
+}}
+{{PatchTableElement|2022-10-04|
+{{Al|Hellfire Shotguns}}
+*Spread reduced from 8 to 7 degrees
+}}
+{{PatchTableElement|2022-04-26|
+;GENERAL
+*Phase effects no longer clear the Zarya {{Al|Graviton Surge}} or Sigma {{Al|Gravitic Flux}} movement restriction effects
+**E.g., Reaper can still use {{Al|Wraith Form}} while in Graviton Surge to prevent damage but can’t walk out of it
+*Sombra {{Al|Hack}} effect is now removed by phase effects
+;HERO
+{{Al|Hellfire Shotguns}}
+*Damage per pellet reduced from 6 to 5.4
+*Spread increased from 6 to 8
+|beta=1}}
+
+|owstadium={{#section-h:Reaper/Stadium|Balance Change Log}}<!-- this section is transcluded from the /Stadium page and must be edited from there -->
+
+| ow1 =
+{{PatchTableElement|2021-06-03|{{Al|The Reaping}}
+*Life Steal amount increased from 30% to 35%
+
+''This adjustment brings Reaper's self-healing with his Hellfire Shotguns back to about where it was before the recent weapon tuning changes.''
+}}
+{{PatchTableElement|2021-03-11|{{Al|Hellfire Shotguns}}
+*Damage per projectile increased from 5.5 to 6
+''Developer Comment: The recent adjustment to Reaper's shotguns ended up being less beneficial than intended so we're increasing the damage per projectile slightly.''
+}}
+{{PatchTableElement|2021-02-18|{{Al|Hellfire Shotguns}}
+*Spread reduced from 8 to 6
+*Damage per projectile reduced from 7 to 5.5
+''Developer Comment: Reaper's shotguns have a high damage potential but require close range or large targets to fully utilize. We're smoothing this out by extending the range at which he can consistently deal damage while lowering the maximum damage of each shot.''
+}}
+{{PatchTableElement|2020-09-10|
+General
+* Shotgun patterns no longer apply random rotation. This will affect the following heroes:
+** Ashe
+** Doomfist
+** D.Va
+** Reaper
+** Roadhog
+** Torbjörn
+
+''We’re making weapons that utilize shotgun patterns more reliable by removing the random rotation applied to each shot. Individual pellets within the shot will still have a tiny amount of variance to their firing angle for the sake of the shotgun weapon feel, but this change will provide significantly more control over aiming these weapons.''
+}}
+{{PatchTableElement|2020-01-28|{{Al|The Reaping}}
+*Life Steal reduced from 40% to 30% of damage dealt
+}}
+{{PatchTableElement|2019-09-24|
+* Reverted edge-placement change for ground targeted abilities (Reaper's Shadowstep, Mei's Icewall, Symmetra's Teleporter, etc)
+}}
+{{PatchTableElement|2019-09-17|
+* Ground targeted abilities (Reaper’s Shadowstep, Mei’s Icewall, Symmetra’s Teleporter, etc) will now more heavily prefer edges over placing as far away as possible.
+}}
+{{PatchTableElement|2019-04-16|{{Al|Shadow Step}}
+*Can now be used in air
+*Time to exit Shadow Step reduced from 1.0 second to 0.5 of a second
+*Reaper is now invisible for the entire time it takes to exit shadow step
+*Railings and other breakable objects no longer block teleporting
+*Disabled by Zarya’s Graviton Surge and Junkrat’s Steel Trap
+''Developer Comments: Shadow Step was originally intended to be purely an out-of-combat mobility tool to traverse the map, since Wraith Form was already a great tool for disengaging. However, this made Shadow Step very situational, so we’re increasing its flexibility to make it a better, less niche ability. This will enable Reaper to use Shadow Step in more offensive situations.''
+}}
+{{PatchTableElement|2019-03-19|{{Al|The Reaping}}
+*Life steal reduced from 50% to 40% of damage dealt
+
+''Developer Comments: A recent change that increased Reaper’s healing while he dealt damage was a bit too strong, sometimes making opponents feel like Reaper was unstoppable.''
+}}
+{{PatchTableElement|2019-01-24|{{Al|The Reaping}}
+*Life steal increased from 30% to 50% of damage dealt
+''Developer Comments: Reaper’s passive enables him to play aggressively when near enemies. This change allows him to keep the pressure up while he’s dishing damage to his enemies. The added life steal is particularly effective against tanks, as they tend to do less damage than other heroes, and also take more damage from his Hellfire Shotguns due to their larger hit volumes.''
+}}
+{{PatchTableElement|2018-11-13|{{Al|Hellfire Shotguns}}
+*Spread randomization reduced by 50%
+*Spread pattern adjusted
+{{Al|The Reaping}}
+*Life steal increased from 20% to 30% of damage dealt
+
+''Developer Comments: Reaper's specialty is fighting at a very close range. The more consistent spread pattern and increase in healing from his passive ability will make him more capable of standing toe-to-toe with his enemies.''
+}}
+{{PatchTableElement|2018-04-10|{{Al|Death Blossom}}
+*Reloads Hellfire Shotguns after use
+{{Al|Wraith Form}}
+*Move speed bonus increased from 25% to 50%
+*You can now cancel the ability by pressing the Shift or Primary Fire hotkey
+
+''Developer Comments: These changes help Reaper use Wraith Form more consistently as an escape, but they also open up new options, such as chasing down key targets.''
+}}
+{{PatchTableElement|2017-07-27|{{Al|Shadow Step}}
+Sound effect and VO distance has been reduced by 50%
+
+''Developer Comment: Even though Shadow Step wasn't intended to be used as a way for players to teleport right next to an enemy without their knowledge, the sound effects were audible from distances that made teleportation difficult from nearly anywhere. This change allows Reaper to be a bit more sneaky with his flanking options.''
+}}
+{{PatchTableElement|2017-06-20|{{Al|The Reaping}}
+*Removed health orbs
+*Now regains 20% of all damage done to heroes as Health
+
+''Developer Comment: Reaper’s old healing passive was useful if you could kill a bunch of enemies in a row. But since enemies needed to be dead for it to work, it wasn’t very helpful unless the situation was already in your favor. His new passive lets him get immediate benefit from it, especially when fighting Tank heroes, which tend to be larger targets that deal lower damage.''
+}}
+{{PatchTableElement|2017-05-23|{{Al|Wraith Form}}
+*Ammo is now entirely refilled when Wraith Form is used
+
+''Developer Comments: Wraith Form is typically used as an escape ability after firing. This change gives Reaper a fighting chance if an enemy chases him down as he uses it.''
+}} }}
+
+==References==
+<references/>
+
+==External links==
+* [http://playoverwatch.com/en-us/heroes/reaper/ Official Site - Reaper]
+* [http://www.icy-veins.com/overwatch/reaper-guide-strategy-gameplay Reaper Guide on Icy Veins]
+{{Heroes}}
+[[Category: Heroes]] 
+[[Category: Reaper|]
+[[Category:Overwatch members]]
+[[Category:American Southwest Characters]]
+[[Category:Soldier Enhancement Program personnel]]

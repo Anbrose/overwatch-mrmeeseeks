@@ -8,6 +8,7 @@
   @mrmeeseeks label      拿出待标注的未知头像
   @mrmeeseeks disconnect 解绑当前频道里的客户端
   @mrmeeseeks help       显示帮助
+  @mrmeeseeks <问题>     英雄问答（数值、补丁、几枪击杀），见 hero_qa.py
 """
 from __future__ import annotations
 
@@ -22,10 +23,13 @@ from pathlib import Path
 
 import discord
 import numpy as np
+from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
 
 import overfast
 from analyzer import Analyzer, format_facts
+from hero_qa import Cooldown, HeroQA
+from herodata import HeroStore, load_aliases, refresh_loop
 from label_ui import Roster, build_roster, send_prompts
 from labeling import LabelStore
 from registry import CODE_TTL_SECONDS, ClientConn, PairingError, Registry
@@ -49,16 +53,31 @@ HELP_TEXT = (
     "`@mrmeeseeks analyze` Re-run advice on the latest recognized situation in this channel\n"
     "`@mrmeeseeks label` Label portraits I couldn't recognize\n"
     "`@mrmeeseeks disconnect` Unpair the client bound to this channel\n"
-    "`@mrmeeseeks help` Show this help"
+    "`@mrmeeseeks help` Show this help\n"
+    "`@mrmeeseeks <question>` Ask about heroes, e.g. `was Cassidy nerfed recently?`, "
+    "`Tracer HP`, `how many Cassidy headshots kill Mauga at 30m?`"
 )
+COMMANDS = ("connect", "status", "disconnect", "help", "analyze", "label")
+ARG_COMMANDS = ("player",)     # 带参数的指令；参数保留大小写（BattleTag 大小写敏感）
+ASK_COOLDOWN_SECONDS = 5
 
 
-def parse_command(text: str) -> tuple[str, str]:
-    """拆成 (小写指令名, 原样参数)。参数保留大小写，因为 BattleTag 大小写敏感。"""
-    parts = text.strip().split(maxsplit=1)
-    if not parts:
-        return "", ""
-    return parts[0].lower(), parts[1].strip() if len(parts) > 1 else ""
+def parse_command(text: str, explicit: bool = True) -> tuple[str, str]:
+    """去掉 @ 之后的文本 -> (指令, 参数)。
+
+    空文本是 connect；无参数指令要整句完全匹配，参数是原文；`player Name#1234` 的参数是后半句；
+    其余都当作英雄问答，参数是原文。explicit=False 表示消息里没有写 @mrmeeseeks（只是回复了
+    bot 的消息）：这种情况下普通文本（如 "thanks"）显示帮助，不调用付费的问答。
+    """
+    stripped = text.strip()
+    if not stripped:
+        return "connect", ""
+    if stripped.lower() in COMMANDS:
+        return stripped.lower(), stripped
+    head, _, rest = stripped.partition(" ")
+    if head.lower() in ARG_COMMANDS:
+        return head.lower(), rest.strip()
+    return ("ask" if explicit else "help"), stripped
 
 
 def _age(seconds: float) -> str:
@@ -134,7 +153,8 @@ class ClientSelectView(discord.ui.View):
 # ---------------- Bot 本体 ----------------
 class MeeseeksBot(discord.Client):
     def __init__(self, registry: Registry, analyzer: Analyzer | None, recognizer: Recognizer,
-                 labels: LabelStore, roster: Roster):
+                 labels: LabelStore, roster: Roster,
+                 store: HeroStore | None = None, hero_qa: HeroQA | None = None):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents, allowed_mentions=discord.AllowedMentions(everyone=False, roles=False))
@@ -146,6 +166,9 @@ class MeeseeksBot(discord.Client):
         self.names = {key: name for heroes in roster.values() for key, name in heroes}
         self.situations: dict[int, Situation] = defaultdict(Situation)
         self.overfast = overfast.OverFast()
+        self.store = store
+        self.hero_qa = hero_qa
+        self.ask_cooldown = Cooldown(ASK_COOLDOWN_SECONDS)
 
     def hero_name(self, key: str) -> str:
         return self.names.get(key) or overfast.hero_name(key)
@@ -167,11 +190,13 @@ class MeeseeksBot(discord.Client):
         if message.author.bot or self.user is None or self.user not in message.mentions:
             return
         text = message.content
-        for token in (f"<@{self.user.id}>", f"<@!{self.user.id}>"):
+        tokens = (f"<@{self.user.id}>", f"<@!{self.user.id}>")
+        explicit = any(t in text for t in tokens)
+        for token in tokens:
             text = text.replace(token, "")
-        cmd, arg = parse_command(text)
+        cmd, arg = parse_command(text, explicit)
 
-        if cmd in ("", "connect"):
+        if cmd == "connect":
             await self._connect_flow(message)
         elif cmd == "status":
             await self._status(message)
@@ -183,8 +208,29 @@ class MeeseeksBot(discord.Client):
             await self._reanalyze(message)
         elif cmd == "label":
             await self._label(message)
-        else:
+        elif cmd == "help":
             await message.reply(HELP_TEXT)
+        else:
+            await self._ask(message, arg)
+
+    async def _ask(self, message: discord.Message, question: str) -> None:
+        if self.hero_qa is None:
+            await message.reply("Hero Q&A needs ANTHROPIC_API_KEY to be set.")
+            return
+        if self.store is None or not self.store.ready:
+            await message.reply("Hero data is not ready yet, try again in a minute.")
+            return
+        if not self.ask_cooldown.allow(message.author.id):
+            await message.reply(f"Please wait {ASK_COOLDOWN_SECONDS} seconds between questions.")
+            return
+        try:
+            async with message.channel.typing():
+                answer = await self.hero_qa.answer(question)
+        except Exception:
+            log.exception("Hero Q&A failed for %r", question)
+            await message.reply("Sorry, I couldn't answer that right now. Please try again later.")
+            return
+        await message.reply(answer[:1990] or "I couldn't come up with an answer.")
 
     async def _player(self, message: discord.Message, arg: str) -> None:
         tag = overfast.normalize_battletag(arg)
@@ -348,11 +394,18 @@ async def main() -> None:
         heroes = await overfast.OverFast().heroes()
     except (overfast.OverFastUnavailable, overfast.PlayerNotFound) as e:
         log.warning("Could not fetch hero list from OverFast (%s); using bundled list", e)
-        heroes = json.loads((DATA_DIR / "heroes.json").read_text(encoding="utf-8"))
+        heroes = json.loads((DATA_DIR / "roster.json").read_text(encoding="utf-8"))
     roster = build_roster(heroes)
 
+    server_dir = os.path.dirname(os.path.abspath(__file__))
+    store = HeroStore(os.environ.get("HERO_DATA_PATH", "").strip() or os.path.join(server_dir, "data", "heroes.json"),
+                      load_aliases())
+    store.load()
+    hero_qa = HeroQA(AsyncAnthropic(api_key=api_key), model, store) if api_key else None
+    refresh_hours = float(os.environ.get("HERO_REFRESH_HOURS", "24"))
+
     registry = Registry()
-    bot = MeeseeksBot(registry, analyzer, recognizer, labels, roster)
+    bot = MeeseeksBot(registry, analyzer, recognizer, labels, roster, store, hero_qa)
     ws = WSServer(
         registry, bot,
         host=os.environ.get("WS_HOST", "0.0.0.0"),
@@ -362,6 +415,7 @@ async def main() -> None:
 
     async with bot:
         await ws.start()
+        refresher = asyncio.create_task(refresh_loop(store, refresh_hours))
         try:
             await bot.start(token)
         except discord.LoginFailure:
@@ -369,6 +423,7 @@ async def main() -> None:
         except discord.PrivilegedIntentsRequired:
             raise SystemExit("Discord refused the connection: enable Message Content Intent on the Bot page of the Developer Portal.")
         finally:
+            refresher.cancel()
             await ws.close()
 
 

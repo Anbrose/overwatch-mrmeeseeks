@@ -1,0 +1,1146 @@
+{{Infobox character
+| name = Zenyatta
+| image = <gallery>
+OW2 Zenyatta.png|Overwatch
+OW Zenyatta.png|Overwatch Classic
+</gallery>
+| caption = "Amid discord, we will find tranquility."
+| realname = Tekhartha Zenyatta
+| relations = [[Tekhartha Mondatta]] (mentor, deceased)<br/>[[File:Icon-Genji.png|20px]] [[Genji|Genji Shimada]] (disciple)<br/>[[File:Icon-Ramattra.png|20px]] [[Ramattra]] (brother)
+| birth = July 14th
+| age = 33 (''[[Overwatch 2]]'')<br/>31 (''[[Overwatch]]'')
+| occupation = Wandering guru <br>Adventurer
+| baseofoperations = [[Shambali Monastery]], [[Nepal (country)|Nepal]] (formerly)
+| affiliation = [[Anubis]] (forced, formerly)<br/>[[Shambali]]
+| voice = {{VA stack
+  | english = [[Feodor Chin]]<ref>2015-04-07, [https://twitter.com/feochin/status/585488518153117697 "Back in the booth."]. ''Twitter''. Accessed on 2016-05-18</ref>
+  | other = [[Marc Perez]] (French)<br>Frank Schaff (German)<br>Gabriele Calindri (Italian)<br>Mammoth Nishio (Japanese)<br>An Hyo-min (Korean)<br>Li Yuantao (Chinese Mandarin)<br>Li Yong (Taiwanese Mandarin)<br>Krzysztof Dracz (Polish)<br>Ricardo Juarez (Brazilian Portuguese)<br>Andrey Phinyagin (Russian)<br>Abraham Aguilar (European Spanish)<br>Arturo Mercado Jr. (Latin American Spanish)
+  }}
+| cosmetics = 1
+| quotes = 1
+| stadium = 1
+| type = 
+| role = [[Support]]
+| sub-role = [[Tactician]]
+| health = 75
+| shield = 175
+| minor_perk_xp = 1880
+| major_perk_xp = 4700
+| video = {{#ev:youtube|SBXpKdmJBLU|325|inline}}
+}}
+{{HeroTabs}}
+'''Zenyatta''' is a [[Sub-Roles#Tactician|Tactician]] [[Roles#Support|Support]] [[Heroes|hero]] in ''[[Overwatch 2|Overwatch]]''. He is one of the 21 heroes included in the game's release on 24 May 2016.
+
+==Overview==
+[[File:Zenyatta HS.mp4|left|thumb|Hero Selection Screen]] Zenyatta calls upon orbs of harmony and discord to heal his teammates and weaken his opponents, all while pursuing a transcendent state of immunity to damage.
+
+<gallery>
+File:Icon-Zenyatta.png|'''3D portrait'''
+File:Zenyatta Hero.png|'''2D portrait'''
+</gallery>
+==Abilities==
+
+===Passive Abilities===
+{{Sub-Role passive|Tactician}}
+
+{{Ability_details
+| ability_name = Snap Kick
+| ability_image = Snap-kick-passive.png
+| old_description = Zenyatta's melee deals more damage and high knockback
+| official_description = Quick melee damage increased by 50%, and its knockback is significantly increased.
+| ability_type = Passive Ability
+| shot_type = {{proj|melee}}
+| damage = 60
+| kbspeed = {{tt|15.8 m/s|H: 15 m/s, V: 5.0 m/s}} (max)
+| ignores_barrier = 1
+| ignores_matrix = 1
+| ignores_window = 1
+| key = quick melee
+| ability_video = 
+| ability_keywords = melee
+| ability_details =
+* Results in up to ~7 meters knockback on flat ground.
+* Vertical component of the knockback is reduced the further the target is.
+}}
+
+===Weapons===
+{{Ability_details
+| ability_name = Orb of Destruction
+| ability_image = Ability-zenyatta1.png
+| ability_video = yiAaKKwuzPU
+| old_description = Zenyatta projects his destructive energy orbs individually.
+| official_description = Energy projectile weapon.
+| ability_type = Weapon;;Primary Fire
+| shot_type = {{proj|proj}}
+| damage = 50
+| headshot = ✓<!-- ✓/✕ -->
+| fire_rate = {{tt|2.5 shots/s|1 shot every 0.4 seconds}}
+| ammo = 25
+| reload_time = {{tt|1.5 seconds animation|restores ammo after 1.182 second}}
+| spread = None
+| pspeed = 90 m/s
+| pradius = 0.225 meters<!--0.075 global + 0.15 -->
+| ability_keywords = critical::travel time
+| ability_details = * Damage per second: {{CalcDPS|d=50|t=0.4}} while firing ({{CalcDPS|d=50|t=0.4|a=25|r=1.5}} overall w/reload)
+* Damage per second: {{CalcDPS|d=65|t=0.4}} (w/ discord) ({{CalcDPS|d=65|t=0.4|a=25|r=1.5}} overall w/reload)
+| dps = 125 while firing (108.7 overall w/reload) 156.25 while firing w/ discord
+}}
+
+{{Ability_details
+| ability_name = Orb of Destruction Alt Fire
+| ability_image = Ability-zenyatta1.png
+| ability_video = yiAaKKwuzPU
+| old_description = Zenyatta projects his destructive energy orbs in a rapid-fire volley after a few seconds spent gathering power.
+| official_description = Charge to release more projectiles.
+| ability_type = Weapon;;Secondary Fire
+| key = secondary fire
+| shot_type = {{proj|proj}}
+| damage = 50 per orb<br>250 per volley
+| headshot = ✓<!-- ✓/✕ -->
+| fire_rate = 1 orb per 0.524 seconds (charging)<br>1 shot per 0.144 seconds (firing)<br>0.6 seconds recovery
+| ammo = 25
+| ammo_drain = Up to 5 per volley
+| reload_time = {{tt|1.5 seconds animation|Restores ammo after 1.182 second}}
+| spread = None
+| pspeed = 90 m/s
+| pradius = 0.225 meters<!-- 0.075 global + 0.15 -->
+| ability_keywords = critical::travel time
+| ability_details = * Damage per second: {{CalcDPS|d=250|t=3.22}} while firing ({{CalcDPS|d=250|t=3.22|a=5|r=1.5}} overall w/reload)
+* Damage per second: {{CalcDPS|d=325|t=3.22}} while firing (w/ discord) ({{CalcDPS|d=325|t=3.22|a=5|r=1.5}} overall w/reload)
+| dps = 77.64 while firing (68.18
+overall w/reload)
+}}
+
+===Special Abilities===
+{{Ability_details
+| ability_name = Orb of Harmony
+| ability_image = Ability-zenyatta2.png
+| old_description = Zenyatta casts an orb over the shoulder of a targeted ally. So long as Zenyatta maintains line of sight, the orb slowly restores health to his ally. Only one ally can receive the orb's benefit at a time.
+| official_description = Launch this orb at an ally to heal them.
+| ability_type = Ability
+| key = ability 1
+| shot_type = {{proj|targeted}}<br>{{proj|proj}}
+| heal = {{tt|35 health per second|6.72 every 0.192 seconds}}
+| range = 40 meters
+| pspeed = 90 m/s
+| duration = 3 seconds (if out of sight)
+| headshot = <!-- ✓/✕ -->
+| ignores_barrier = 1
+| ignores_matrix = 1
+| ignores_deflect = 1
+| ignores_boost = 1
+| ignores_window = 1
+| ability_video = 81cEVFP_Nr4
+| ability_keywords = ignore barrier;;target ally::strong projectile
+| ability_details = * Orb of Harmony remains on the target indefinitely, while they stay within line of sight of Zenyatta.
+** One Orb of Harmony can be active at a time.
+** The orb is removed if the line of sight to the target is obstructed for more than 3 seconds.
+** Barriers do not block line of sight neither for targeting nor maintaining the effect.
+* Multiple orbs from different Zenyattas stack additively.
+}}
+
+{{Ability_details
+| ability_name = Orb of Discord
+| ability_image = Ability-zenyatta3.png
+| old_description = Attaching the orb of discord to an opponent amplifies the amount of damage they receive for as long as Zenyatta maintains line of sight. Only one opponent can suffer the orb's effects at a time.
+| official_description = Launch this orb at an enemy to increase the damage they take.
+| ability_type = Ability
+| key = ability 2
+| shot_type = {{proj|targeted}}<br>{{proj|proj}}
+| damage_amp = +30% taken
+| pspeed = 90 m/s
+| range = 40 meters
+| duration = 1.5 seconds (if out of sight)
+| ignores_barrier = partial
+| ignores_matrix = 1
+| ignores_deflect = 1
+| ignores_boost = 1
+| ignores_window = 1
+| ability_video = AYi1kI6ei9Q
+| ability_keywords = amp incoming::cleansable::strong projectile
+| ability_details = * Orb of Discord remains on the target indefinitely, while they stay within line of sight of Zenyatta.
+** One Orb of Discord can be active at a time.
+** The orb is removed if the line of sight to the target is obstructed for more than 1.5 seconds.
+** [[Barrier]]s prevent applying Orb of Discord but do not break line of sight to a target that is already affected by it.
+* When Orb of Discord is removed from a target, they cannot be targeted by it again for 6 seconds.
+** A UI element with a timer will be displayed while aiming toward a target the orb cannot be applied to.
+| 6v6_details = * Damage amplification reduced from 30% to 25%.
+}}
+
+===Ultimate Ability===
+{{Ability_details
+| ability_name = Transcendence
+| ability_image = Ability-zenyatta4.png
+| ability_video = W87APa-4hao
+| old_description = Zenyatta enters a state of heightened existence for a short period of time. While transcendent, Zenyatta cannot use abilities or weapons, but is immune to damage and automatically restores his health and that of nearby allies.
+| official_description = Become invulnerable, move faster, and heal nearby allies.
+| ability_type = Ultimate Ability
+| shot_type = {{proj|aoe}}
+| ult_req = 2500 points
+| heal = {{tt|400 health per second|76.8 every 0.192 second}}
+| radius = 10 meters
+| mspeed_buff = {{tt|+100%|11 m/s}}
+| duration = 6 seconds
+| ignores_matrix = 1
+| ignores_deflect = 1
+| ignores_boost = 1
+| ignores_window = 1
+| ignores_speedcap = 1
+| ability_keywords = area of effect;;spherical::lesser cleanse;;stunnable::invulnerable::reloads::transformation
+| ability_details = * Zenyatta becomes [[invulnerable]], preventing damage and making him immune to [[slow]]s, [[stun]]s and [[knockdown]]s.
+** Additionally, activating Transcendence removes [[damage over time]], [[anti-heal]] and {{al|Hack}} from Zenyatta.
+** Zenyatta can still be affected by other negative [[status effect]]s, such as knockbacks and gravity effects.
+* Zenyatta cannot shoot or use abilities during Transcendence.
+* {{al|Orb of Destruction}}'s ammunition is restored upon activation.
+* Transcendence does not work through walls or barriers. If allies are in the AoE but behind walls, they will not be healed.
+* Zenyatta cannot capture objectives while casting Transcendence. He can still contest them, however.
+* Transcendence's [[movement speed]] buff does not count towards global movement speed buff cap.
+}}
+
+== Perks ==
+=== Minor Perks ===
+A Minor [[Perk]] can be chosen at level 2.
+{{Ability details
+| ability_name = Discordant Repair
+| ability_image = Perk_Discordant_Repair.png
+| ability_type = Minor Perk
+| official_description = Zenyatta gains 15% lifesteal against enemies affected by Discord Orb.
+| heal = 9.75 (bodyshot, per orb)<br>19.5 (headshot, per orb)<br>11.7 (Snap Kick, per orb)
+| ability_details = * The healing received is reduced by the global healing reduction passive and does not generate ultimate charge.
+}}
+
+{{Ability details
+| ability_name = Ascendance
+| ability_image = Perk_Ascendance.png
+| ability_type = Minor Perk
+| official_description = Activate and hold Double Jump to hover for up to 3 seconds.
+| key = jump
+| shot_type = {{proj|movement}}
+| ignores_barrier = 1
+| ignores_matrix = 1
+| ignores_deflect = 1
+| ignores_boost = 1
+| ignores_window = 1
+| duration = 3 seconds
+| ability_details = * Jump can be held to hover (1.27 m altitude).
+* Double jumping may marginally increase or decrease levitation height depending on timing (up to 1.32 m altitude).
+}}
+
+=== Major perks ===
+A Major [[Perk]] can be chosen at level 3.
+{{Ability details
+| ability_name = Focused Destruction
+| ability_image = Perk_FocusedDestruction.png
+| ability_type = Major Perk
+| official_description = Secondary fire charges 20% faster and can store 1 extra Orb of Destruction.
+| fire_rate = 1 orb per 0.42 seconds (charging)<br>1 shot per 0.144 seconds (firing)<br>0.6 seconds recovery
+| ammo_drain = Up to 6 per volley
+| ability_details = * Damage per second: {{CalcDPS|d=300|t=2.52}} while firing ({{CalcDPS|d=300|t=2.52|a=6|r=1.5}} overall w/reload)
+* Damage per second: {{CalcDPS|d=390|t=2.52}} while firing (w/ discord) ({{CalcDPS|d=390|t=2.52|a=6|r=1.5}} overall w/reload)
+* Max damage per volley increased from 250 to 300.
+}}
+{{Ability details
+| ability_name = Dual Harmony
+| ability_image =Perk_Dual_Harmony.png 
+| ability_type = Major Perk
+| official_description = Gain a 2nd Harmony Orb but they both heal for 70% effectiveness.
+| heal = 35 → 24.5 per second
+| ability_details = 
+* Healing penalty applies regardless of how many orbs are currently in use.
+* Each orb checks line of sight and times out separately.
+}}
+
+== Hero-specific options ==
+{|class ="listtable"
+! Setting name !! Options !! Description
+|-
+| rowspan="2" |'''Toggle Secondary fire'''
+|Off (default)
+|The orb(s) are launched when the player stops holding Secondary fire or when you exceed the maximum charging time.
+|-
+|On
+|The orb(s) are launched when the player presses Secondary fire again or when you exceed the maximum charging time.
+|-
+| '''Orb of Harmony sensitivity'''
+| 10% ... 100% (default: 100%)
+| Adjusts the targeting sensitivity of Orb of Harmony. Setting this to a lower value reduces the maximum view angle for acquiring a target.
+|-
+| '''Orb of Discord sensitivety '''
+| 10% ... 100% (default: 100%)
+| Adjusts the targeting sensitivity of Orb of Discord. Setting this to a lower value reduces the maximum view angle for acquiring a target.
+|-
+| rowspan="4" |'''Harmony and Discord Orb cancel reload'''
+|On (default)
+|Activating either Orb of Harmony or Orb of Discord interrupts reload.
+|-
+|Harmony only
+|Activating Orb of Harmony interrupts reload. Orb of Discord doesn't.
+|-
+|Discord only
+|Activating Orb of Discord interrupts reload. Orb of Harmony doesn't.
+|-
+|Off
+|Activating either Orb of Harmony or Orb of Discord cannot be done during reload.
+|-
+| rowspan="2"| '''Hide Transcendence timer'''
+| Off (default)
+| Timer UI element is displayed around the crosshair.
+|-
+| On
+| Timer UI element is hidden.
+|}
+
+==Strategy==
+Zenyatta is a potent offense-focused Support. He stands out from the other supports due to his incredible killing power: his Orb of Destruction and Orb of Discord can let him shred through even the sturdiest of Tanks with well-aimed shots. While not as powerful a healer as [[Lifeweaver]], his Orb of Harmony and Transcendence abilities are more than enough to let him keep a team alive when used intelligently. All of this power is counterbalanced by a severe lack of mobility. Unless Zenyatta is using his ultimate, he moves at a relatively slow pace and has no abilities to increase movement speed. This makes him vulnerable to agile flankers or large amounts of incoming fire.
+
+===Weapons & Abilities===
+
+*'''{{al|Orb of Destruction}}:''' Zenyatta's primary weapon. These fast-moving orb projectiles fire at a steady rate, dealing damage to enemies. The secondary fire is a charge ability: Zenyatta will gradually prepare up to five orbs, with the number of orbs increasing the longer he charges. He can let go of the secondary fire button at any time to release the stored orbs, firing them straight forward at his crosshairs in a rapid burst. He will automatically fire his stored orbs if the secondary fire button is held down long enough.
+**The small size of the orbs Zenyatta fires masks their incredible damage potential. Zenyatta can out-damage many Damage heroes if he is accurate with his shots.
+**The orbs do have a small amount of travel time. As with other projectiles, lead your shots slightly so that they will hit moving targets.
+**Use the secondary fire to ambush stationary targets like [[Bastion]] or [[Widowmaker]]. The sudden burst of orbs can kill them instantly, not giving them time to react.
+**These orbs have no damage falloff, meaning that they do the same amount of damage regardless of the distance to the target.
+
+*'''{{al|Orb of Discord}}:''' When activated, Zenyatta will place an Orb of Discord on the enemy within his crosshairs, causing them to take greatly increased damage from all sources. Orb of Discord is removed when the Zenyatta applies the Orb to a different target, loses line of sight for one and a half seconds, or dies. Orb of Discord cannot be applied to targets who are behind a barrier.
+**This is a powerful basic ability with no cooldown between uses, though it may not be reapplied to a target within 6 seconds of that target losing the orb.
+**Who you put this on usually depends on who the biggest threat to your team is at that moment. In general, Tanks are prime targets because they are often at the front line of the enemy team and their high health pools make them otherwise very difficult to eliminate. However, Discord can be even more valuable against enemy Damage or Support heroes that expose themselves to your team's line of fire because of the much quicker time-to-kill compared to Tanks.
+**Try not to change the Orb's target too frequently, since that might both potentially prevent you from applying it to a target in a crucial moment and can make it more difficult for your team to follow up with focused damage. For this reason, it is often preferable to wait until an enemy is in the open to apply Discord -- otherwise they can duck behind cover for a few seconds and then have a much longer period of time where they cannot be affected by it.
+
+*'''{{al|Orb of Harmony}}:''' When activated, Zenyatta will place an Orb of Harmony on the targeted ally, causing them to slowly regenerate health over time. The Orb is removed when Zenyatta applies the Orb to a different target, loses line of sight for five seconds, or dies. Unlike the Orb of Discord, there is no limit to how frequently the Orb of Harmony can be applied to a single Hero.
+**While the Orb of Harmony provides much slower healing than most other supports, the upside is that it requires little maintenance to stay activated and allows Zenyatta to focus on damaging enemies while still passively healing his team. The Orb is most effective when used proactively on teammates with low health pools, such as a flanking [[Genji]] or [[Tracer]], since it will allow them to be more aggressive in their engagements. However, the Orb can still be used to keep tanks or other high HP alive when they are being focus fired or are disengaging due to low health. 
+**The Orb of Harmony will remain on the target for several seconds after they leave Zenyatta's line of sight. Take advantage of this by constantly ducking in and out of sight with them to refresh the duration while still avoiding enemy fire.
+**Constantly swap the Orb between injured allies in order to keep everyone's Health topped up.
+
+*''{{al|Transcendence}} (Ultimate):'' Zenyatta's [[Ultimate]] ability. When activated, he becomes invulnerable to damage for several seconds and generates an aura around himself that rapidly heals any allies standing within it. Zenyatta cannot use any other weapons or abilities while Transcendence is active, though his movement speed is increased during this time. Zenyatta does remain targetable and can still be affected by knockbacks.
+**Transcendence should generally be used as a last resort when either Zenyatta or one of his teammates are at critical health and it is unlikely that they would otherwise survive. It can also be used proactively in situations where there is a high amount of incoming damage, at the cost of reducing the amount of outgoing damage his team is able to produce.
+**The healing from Transcendence is massive, able to easily outpace many Ultimates like [[Pharah]]'s [[Barrage]]. Keep in mind that it will not keep an ally alive if they take a single burst of damage in excess of their maximum Health, such as from [[Tracer|Tracer's]] [[Pulse Bomb]] or [[Junkrat|Junkrat's]] RIP-Tire.
+**Transcendence will not heal allies if they are not in line of sight or behind an enemy barrier.
+**Transcendence will not heal allies if they are prevented from being healed due to effects from [[Ana]]'s Biotic Grenade or [[Junker Queen]]'s Rampage.
+**Zenyatta can still die during Transcendence if he falls off a cliff or into a pit.
+
+===General Strategies===
+
+*Zenyatta is a challenging Support to play. With an average health pool and no way to speed himself up or dodge attacks beyond moving erratically, he has the potential to be instantly killed by a wide variety of heroes (with [[Hanzo]] and [[Widowmaker]] being the most prominent). While his abilities are rather simple, his gameplay is not, requiring you to balance helping your team by dealing damage while staying alive so that Orb of Discord and Orb of Harmony remain active.
+*Due to Orb of Harmony's low health regen rate, it is encouraged to play Zenyatta when you have a main healer on your team (e.g. [[Mercy|Ana]], [[Baptiste]]) or on a team that is prevalent in multiple healing abilities (e.g. [[Roadhog|Roadhog's]] Take A Breather, [[Soldier: 76]]'s Biotic Field, etc.).
+*Due to Orb of Destruction's lack of damage falloff, Zenyatta can be very powerful if played in a sniper position. Do be aware though that if you are too far away, you will not be able to use Orb of Harmony or Orb of Discord. Target enemies that struggle to deal with snipers such as [[Tracer]], [[Reaper]], [[Junkrat]], [[Bastion]], and [[Torbjörn|Torbjörn's]] [[Deploy Turret|turret]] (if you can outrange it).
+*As above; Zenyatta's projectiles are a very effective way of dealing with an enemy [[Bastion]] in Assault configuration. Because the Orb of Destruction has no damage falloff and Bastion's minigun does, Zenyatta can consistently put a high amount of pressure onto Bastion from medium to long range whereas Bastion cannot do the same. Couple that with the Orb of Discord which negates Bastion's Assault configuration's Ironclad passive and it can make it difficult for Bastion to take an aggressive position.
+*Try to position yourself so that you minimize the number of directions the enemy team can fire at you from. This is especially critical if the enemy team has a good [[Widowmaker]], as a charged bodyshot will take off a large amount of your health. Keep a constant eye on nearby side routes and listen for the sounds of approaching flankers so that you can be prepared for them.  
+*Try to stay at the back of your team to minimize the amount of damage you take. Your Orb of Harmony can heal targets who are far away from you, so long as you can continue to maintain line of sight with them, and your Orb of Destruction has no damage falloff. However, if you are being constantly harassed by flankers, it can be better to stay close to your team in order to increase the risk that the flankers must take to engage you.
+*If an enemy flanker (such as [[Genji]] or [[Tracer]]) manages to get behind you, don't try to run; Zenyatta cannot outrun mobile heroes like them. Instead, hit them with Orb of Discord and move erratically while firing your Orb of Destruction at them. One headshot and one bodyshot from a Discord-empowered Orb of Destruction is enough to kill Tracer, assuming she doesn't have bonus Health from sources like [[Brigitte|Brigitte's]] Rally or [[Lifeweaver|Liveweaver's]] Tree of Life.  
+*The majority of Zenyatta's health is composed of shields. Retreating into cover for just a few seconds will activate both shield regeneration and the Support health regeneration passive, allowing him to quickly restore to full HP.
+*The auto-targeting reticle from Orb of Discord can be useful when firing at distant enemies, as it will give you a general idea of their location. This is especially helpful if they are obscured by large particle effects (such as [[Hanzo|Hanzo's]] [[Dragonstrike]]).
+*Transcendence still allows you to be targeted by enemy abilities. Though they will deal no damage to you, they can still knock you back and away from your team, nullifying the healing on your allies. If up against enemies with strong knockbacks like [[Pharah]] or [[Roadhog]], try to position yourself so that you will be flung into a corner or a nearby wall in order to stay near to your allies.  
+*Like [[Junkrat]], Zenyatta can easily fire down a choke point and prevent easy movement through. His large amount of ammo and projectile weapon can provide almost constant sustained fire.
+*If an enemy is on the other side of a corner, it's sometimes a good idea to charge a shot and release it just after turning that corner to deal a large amount of damage before they can react.
+*If being rushed by an enemy tank with nowhere to run, you can do decent damage or even land a kill by doing the following: apply Orb of Discord, shoot twice and after the second shot (which should be your left arm) use Snap Kick to cancel the animation and maximize damage. For the best maximum damage, keep using Snap Kick against a wall to throw off the tanks aim. This isn't guaranteed to work, depending on matchup, and should only be used as a last resort.
+
+==Match-Ups and Team Synergy==
+<!--When proving match-up or team synergy advice, please write all advice from the sake of someone playing as this hero, not as someone who wishes to counter this hero. Also, please try to be as objective as possible. Taking personal skill out of the equation, please provide advice that would apply to any player who knows how to play these characters well.-->
+
+===Tank===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero
+! |Match-Up
+! |Team Synergy</small>
+|-
+|<center>[[File:icon-dva.png|75px|link=D.Va]]<br />[[D.Va]]</center>
+|<small>Of all of the Support heroes, you're one of the most well-equipped to handle D.Va. Her Defense Matrix and Boosters allow her to quickly close the gap on you, but even so, your Orb of Discord and her massive frame make it a somewhat even fight. You'll need to be very jumpy and use smart Orb Volleys to remove her Mech before she kills you. If she's at a distance, she's even easier to hit with your Orb of Discord, which she has no way of blocking with her Defense Matrix. She's even more vulnerable when out of her Mech, but be cautious as her Light Gun's high firepower can still finish you off before you can eliminate her. Transcendence won't counter Self-Destruct, but in an emergency it can be used to survive or escape its blast radius.</small>
+|<small>Running a D.Va along with Zenyatta is a great idea. Her  Defense Matrix is especially useful for your survival, as your large hit box and lack of movement abilities leave you as the enemy's first target. Orb of Discord  helps D.Va do more damage, which is just as well for her burst damage engages.</small>
+|-
+|<center>[[File:icon-orisa.png|75px|link=Orisa]]<br />[[Orisa]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-reinhardt.png|75px|link=Reinhardt]]<br />[[Reinhardt]]</center>
+|<small>Reinhardt will usually be standing firm and protecting his team and you'll be hanging back alongside your own team, making engagements rare. While you can't hit him with Orb of Discord through his shield, should he drop it for whatever reason, you can target him with it and it will remain stuck on him even if he puts his shield back up. Be careful if he closes the distance on you, though; even with Orb of Discord on him, he severely outdamages you and can clobber you in a few hammer swings.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-roadhog.png|75px|link=Roadhog]]<br />[[Roadhog]]</center>
+|<small>Always be wary of Roadhog and always keep your distance from him. If you're too far away for him to snag you with his Chain Hook, he's a prime target for Orb of Discord and can be mowed down in seconds. If he sneaks up on you, though, one good Hook and you're down for the count. Stick with your team and be aware of his location whenever possible.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-sigma.png|75px|link=Sigma]]<br />[[Sigma]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-wrecking_ball.png|75px|link=Wrecking Ball]]<br />[[Wrecking Ball]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-winston.png|75px|link=Winston]]<br />[[Winston]]</center>
+|<small>Winston's Jump Pack allows him to instantly approach you and begin attacking, but don't panic; your Orb of Discord and his massive frame still gives you a fighting chance to take him out. At a distance, Winston's much easier to handle. His Barrier Protector will protect him and allies from being targeted by Orb of Discord, but without it, his Tesla Cannon's pitiful range will give him no way to counter your Orbs of Destruction, outside of fleeing to safety.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-zarya.png|75px|link=Zarya]]<br />[[Zarya]]</center>
+|<small>Zarya's Barrier instantly nullifies your Orb of Discord, making it difficult to apply consistent damage to her. If her Barrier is down, you can still outdamage her at a distance. Just be exceptionally careful when she closes the gap on you (which is much easier with her Barrier up); with a charged up laser, you have no means of surviving her attacks. Transcendence won't help you escape Graviton Surge, but it can protect your allies from being killed during its duration.</small>
+|<small>(To be added)</small>
+
+|}
+
+===Damage===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero
+! |Match-Up
+! |Team Synergy</small>
+|-
+|<center>[[File:icon-ashe.png|75px|link=Ashe]]<br />[[Ashe]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-bastion.png|75px|link=Bastion]]<br />[[Bastion]]</center>
+|<small>Bastion's stationary nature makes it easy for you to attach your Orb of Discord on it and pelt it with Orbs of Destruction. While it is powerful even at a distance, your Orb of Discord will cause it to take rapid damage before it can react. You have about the same mobility as it while it's in Recon mode, but your firepower generally outpaces Bastion's. If it severely wounds you, duck behind cover while popping your head out every few seconds to make sure your Orb of Discord stays on Bastion. Your shields will recover and it'll be able to self-heal, but your Orb of Discord's presence means that your teammates can continue firing on it and dealing bonus damage. Your Orb of Discord can't be sent through barriers, so if Bastion is set up in a defensive position, you may need your team to break his protective barrier before you can apply your Orb on him.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-Cassidy.png|75px|link=Cassidy]]<br />[[Cassidy]]</center>
+|<small>While Cassidy's Peacekeeper can easily land shots on Zenyatta at mid to long range, his magazine is much smaller than yours, meaning you can harass Cassidy with Orbs for a prolonged period of time. His damage also suffers much more falloff than your Orbs do. Orb of Discord's visual notification can help your team spot Cassidy when he's hiding behind a wall for an ambush, letting you and your team hunt him down and kill him. Cassidy's Combat Roll is only his mobility skill, so he can't chase you down if you're too far away. However, don't get too confident when chasing Cassidy; if he ambushes you with Flashbang, you're done for. Be wary that Transcendence does nothing to protect your allies from Cassidy's Deadeye, as its one-shot burst damage will still kill anyone in its range excluding yourself. Still, if you're in Deadeye's range, activating Transcendence is acceptable as at least it will protect you from being shot down.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-doomfist.png|75px|link=Doomfist]]<br />[[Doomfist]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-echo.png|75px|link=Echo]]<br />[[Echo]]</center>
+|<small>When it comes to facing an enemy Echo as Zenyatta, You're going to need quick reflexes and good aiming, most of the time, an enemy Echo will consider you easy prey due to your lack of  mobility and slow movement speed, which makes it easy for her to land her abilities, while this is true, you can usually defend yourself fairly well against an enemy Echo if you have good aim and she doesn't catch you by surprise, orb of discord also helps with this, if there's an enemy echo on the other team, keep watching your surroundings since an enemy Echo can easily flank you and your teammates due to her superior mobility, An enemy Echo duplicating you is rare, since there are usually better heroes to transform into, but should it happen, you should try to avoid facing her unless you're VERY confident with your aim, because even if you do win the matchup, once she loses all of her health during her ultimate she'll go back to being Echo, which can be very bad if you find yourself at low health.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-genji.png|75px|link=Genji]]<br />[[Genji]]</center>
+|<small>Zenyatta's low mobility makes it difficult for you to flee from a Genji who's out to get you. Genji's vertical mobility and Swift Strike make it easy for him to approach you from any angle, and his Deflect gives him the upper hand when combating his master. While Orb of Discord can amplify your killing potential, Genji's Deflect will buy him time or reflect some of your orbs back at you. As long as Genji is at a close range, he can continue to harass you with Shuriken and then finish you off once you have low health with a Swift Strike. Since you can't outrun or outmaneuver Genji, your only option if caught alone is to fight back while backpedaling to regroup with your team. Even though it may be a tough fight, if you're accurate in your shots, you may be able to take the Genji out as your Orbs can hit exceptionally hard, especially when augmented with Orb of Discord. If Genji is far away from you and there's some good space separating you, you can pelt him with Orbs from a distance and there's very little he can do about it. Transcendence is a fantastic counter to Genji's Dragonblade, as it will deny Genji of the kills he needs to recharge his Swift Strike. If the enemy team has a coordinated Genji (especially if they plan to combo with Zarya's Graviton Surge), save Transcendence for that emergency.</small>
+|<small>Orb of Discord can help Genji quickly kill enemies with Swift Strike one after the other.</small>
+|-
+|<center>[[File:icon-hanzo.png|75px|link=Hanzo]]<br />[[Hanzo]]</center>
+|<small>You excel at fighting foes at long range; unfortunately, so does Hanzo. Your slow speed and predictable movement makes it easy for him to land shots on you. Even if you duck for cover indoors, Sonic Arrow will keep him notified of your exact position. If he manages to close the gap on you, Storm Arrows will quickly kill you before you have a chance to retaliate. Dragonstrike can also be very difficult to avoid; while Transcendence can help you escape the attack and protect your teammates, there are usually other Ultimate abilities that are more dangerous that you would want to save Transcendence for.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-junkrat.png|75px|link=Junkrat]]<br />[[Junkrat]]</center>
+|<small>Because your Orb of Discord requires constant line of sight, it can difficult to battle a Junkrat, who will usually be staying behind cover while launching indirect grenades your way. Should you get trapped by his Steel Trap, it's incredibly simple for him or another enemy to kill you while you're immobile, vulnerable and wounded. Concussion Mine can also launch you away from your teammates into enemy territory where you'll be surrounded and outgunned. If Junkrat is in the open, you can take the opportunity to attack at a distance. Be careful not to be hit by his grenades, though, as it only takes a few to kill you and your low mobility makes you an easy target to hit. Transcendence does little to combat RIP-Tire, outside of saving yourself.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-mei.png|75px|link=Mei]]<br />[[Mei]]</center>
+|<small>Mei is extremely dangerous at close range, since she can quickly freeze you and you lack any means of escaping her Endothermic Blaster. Always try to be aware of her location and keep your distance. Your Orbs of Destruction will generally outdamage her icicles, but don't get cocky, as one or two well-aimed icicle shots can still make quick work of you. Transcendence won't stop your allies from being frozen by Blizzard, but it can protect them from the resulting enemy assault that usually follows Mei's Ultimate.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-pharah.png|75px|link=Pharah]]<br />[[Pharah]]</center>
+|<small>Zenyatta's large magazine allows you to fight back against Pharah at any range. Although Pharah's airborne status helps her avoid most projectiles, your Orb of Destruction's speed is fast enough to catch Pharah mid-air. With Orb of Discord attached to her as well, she will receive more damage and a visual identifier, making her easy for you and your teammates to shoot down. Orb of Discord can force Pharah to fall back for cover, removing her great asset of aerial supremacy. Should Pharah catch you by surprise, however, your low mobility gives you no means to escape from her. If she attacks you in an open area with little cover, you'll be forced to fight back unless your team's around to protect you. Transcendence can protect you and your teammates from Barrage, but you'll need to be able to react at a moment's notice; if you wait even a split second too long, Barrage's quick damage output can kill your or your teammates before you can protect them.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-reaper.png|75px|link=Reaper]]<br />[[Reaper]]</center>
+|<small>Reaper has to engage Zenyatta at very close range; should you keep your distance, he has no means with which to outdamage you. However, should Reaper close the distance on you, he's one of the most deadly opponents for you to deal with. His Hellfire Shotguns are extremely powerful at close range, and your slow movement makes it easy for him to land the few shots necessary to eliminate you. With higher health than most Damage heroes, Reaper can withstand more of your Orbs of Destruction even if he has Orb of Discord attached. Reaper can escape from a poor engagement with Wraith Form, as well as to quickly reload or to pursue should you make some distance from him, all while removing an Orb of Discord that's on him. Transcendence will negate Reaper's Death Blossom, since your healing will overwhelm his consistent damage output. Unlike Pharah's Barrage, Death Blossom's damage isn't quite so sudden, which gives you a little more reaction time before you're eliminated.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-Soldier 76.png|75px|link=Soldier:_76]]<br />[[Soldier: 76]]</center>
+|<small>Like most Damage heroes, it can be difficult to handle Soldier: 76 if he attacks you at close range. However, if you keep your distance, you can maintain superiority over Soldier: 76. Be wary of his Helix Rockets, though, as their burst damage can quickly take you out before you can react. Transcendence can easily protect your team from Tactical Visor, giving your team the opportunity to strike back and take Soldier: 76 out.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-sombra.png|75px|link=Sombra]]<br />[[Sombra]]</center>
+|<small>Should Sombra hack you, you'll lose the ability to fire your Orbs of Harmony and Discord. If they're on a target prior to the hack, however, they will remain there until automatically recalled (via line of sight or if their target dies). Even without your Orbs, you can handle decently in a fight with Sombra. Just keep in mind that she can escape from a poor engagement with her Translocator. If she does so, it's usually not wise to pursue; your low mobility means it'll be difficult to back out if she lures you towards the rest of her team. EMP will immediately rob you of 75% of your health while also cutting off your ability to protect your team from a big push with Transcendence; if hit by EMP, huddle behind your team and pray they can protect you, because with no mobility or health, you're going to be a prime target.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-symmetra.png|75px|link=Symmetra]]<br />[[Symmetra]]</center>
+|<small>Symmetra's Photon Protector is lethal at high charge, so try to keep your distance if possible. If Symmetra shows herself out in the open, her low mobility makes it easy for you to hit her with your Orbs of Discord and Destruction to quickly strike her down. Try not to lead the charge, or else you'll be caught by her Sentry Turrets; let bulkier teammates push forward and keep them healed while they handle her turrets. While you tend to hold up the back line, keep an eye out for Symmetra's Teleporter, since if she and her team sneak up behind your team, you'll be the first target to go.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-torbjörn.png|75px|link=Torbjörn]]<br />[[Torbjörn]]</center>
+|<small>Orb of Discord has no effect on Torbjörn's Turret, making it very difficult for you to eliminate it since its damage output is around equal to your own (and the Torbjörn can simply continue repairing his Turret while you take damage). For the most part, it's best to stay behind and heal your teammates while they attack the Turret. If it's distracted, though, you can quickly provide support fire, since even without Orb of Discord, your Orbs of Destruction can still deal substantial damage. If you catch Torbjörn without his Turret, he has low mobility and firepower. However, don't underestimate him at close range, as his secondary fire can quickly turn you into scrap, especially when Overload is active.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-tracer.png|75px|link=Tracer]]<br />[[Tracer]]</center>
+|<small>Tracer's slim model and significant mid-combat mobility makes it easy for her to avoid any and all of Zenyatta's fire when at close range. While you have the upper hand at long range, she can use Blink to either escape to cover or close the distance and flank you. Should you get her to low health, her Recall ability not only lets her recover health, but it also removes the Orb of Discord. If the enemy team has a Tracer, try to stick close to your team, as they can help you fend off a Tracer attempting to flank you.</small>
+|<small>Placing Orb of Discord on an enemy before Tracer plants a Pulse Bomb on them can ensure that the Pulse Bomb finishes them off. Also, because Orb of Discord will remain on opponents at a distance, a friendly Tracer can flank around the enemy and attack those affected by your Orb.</small>
+|-
+|<center>[[File:icon-widowmaker.png|75px|link=Widowmaker]]<br />[[Widowmaker]]</center>
+|<small>Your lack of mobility and slow movement make you an ideal target for Widowmaker. A fully charged bodyshot will leave you with extremely low health, making you easy to finish off unless you go for cover. It may be tempting to hit a distracted Widowmaker with Orb of Discord and try to quickly take her out, but be cautious, since if she swivels around and shoots you, you're as good as dead. It's also very easy for you to trip on a Venom Mine; your shields will eventually recover, but not until the Mine's gradual damage wears off. Your lower health will make you even easier to gun down, and Widowmaker will be able to see your exact position to land the killing blow. Be extremely cautious if you hear Widowmaker activate Infra-Sight; should you so much as peek your head out from around a corner, you may end up on the receiving end of a lethal headshot.</small>
+|<small>(To be added)</small>
+|}
+
+===Support===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero
+! |Match-Up
+! |Team Synergy
+</small>
+|-
+|<center>[[File:icon-ana.png|75px|link=Ana]]<br />[[Ana]]</center>
+|<small>Like most snipers, Ana retains superiority over you at a distance due to her superior aim. If you two fight at closer range, the fight is even less in your favor, as her Biotic Grenade and Sleep Dart are excellent close range tools, while you have no means of handling enemies at close range. Her Biotic Grenade in particular not only renders your Shield regeneration useless, it will also block your affected teammates from being healed by your Orb of Harmony or Transcendence. Should you activate your Ultimate to protect your team from an enemy push, a single Biotic Grenade splash will deny your teammates from receiving your healing and will make them more vulnerable to attack. That being said, Transcendence can help protect your team from a Nano-Boosted hero, so judge accordingly. Overall, though, try to stay out of Ana's sights if possible.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-baptiste.png|75px|link=Baptiste]]<br />[[Baptiste]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-brigitte.png|75px|link=Brigitte]]<br />[[Brigitte]]</center>
+|<small>Brigitte is only a threat at close range, aside from her whip shot, she has no long range weapons to damage you, meaning that as long as you keep your distance, you can quite easily pressure her with your primary fire, do be wary though, while she has low mobility just like you, her shield bash can be used to close the distance on you, and once you're on close range with Brigitte you have no means of escaping, at which point your only hope is to hit as many shots as you can before she can kill you.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-lúcio.png|75px|link=Lúcio]]<br />[[Lúcio]]</center>
+|<small>Lúcio's high mobility will often make it difficult for you to hit him with successive Orbs of Destruction, but with Orb of Discord, your team can take him out quicker. Just be careful that he doesn't use Soundwave to knock you towards his team or off a cliff.</small>
+|<small>(To be added)</small>
+|-
+|<small><center>[[File:icon-mercy.png|75px|link=Mercy]]<br />[[Mercy]]</center>
+|<small>Mercy's only option when fighting you is to hide behind teammates, but Orb of Discord can keep her location known to your teammates, allowing them to quickly home in on her and take her out.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-moira.png|75px|link=Moira]]<br />[[Moira]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-zenyatta.png|75px|link=Zenyatta]]<br />[[Zenyatta]]</center>
+|<small>A Zenyatta mirror match is one of the most fair in the game, as you can both instantly hit each other with Orb of Discord, at which point it's simply a matter of who has superior aim at landing their Orbs of Destruction. If fighting at a long distance, try to fight close to a wall so you can fall back and recharge your Shields if your health falls to dangerous levels. Since your Orb of Discord will keep you notified of the enemy Zenyatta's location, you can take this opportunity to charge up an Orb Volley e and bombard the other Zenyatta when peeking from around a corner.</small>
+|<small>(To be added)</small>
+|}
+
+==Map Strategies==
+
+===Control===
+{{MapStrategyTable/Control
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Antarctic_rating = 
+| Antarctic_feature = 
+| Antarctic_strategy = 
+| Antarctic_Labs_strat = 
+| Antarctic_Sublevel_strat = 
+| Antarctic_Icebreaker_strat = 
+
+| Busan_rating = 
+| Busan_feature = 
+| Busan_strategy = 
+| Busan_Downtown_strat = 
+| Busan_Sanctuary_strat = 
+| Busan_MEKA_strat = 
+
+| Ilios_rating = 
+| Ilios_feature = 
+| Ilios_strategy = 
+| Ilios_Lighthouse_strat = 
+| Ilios_Well_strat = 
+| Ilios_Ruins_strat = 
+
+| Lijiang_rating = 
+| Lijiang_feature = 
+| Lijiang_strategy = 
+| Lijiang_ControlCenter_strat = 
+| Lijiang_Garden_strat = 
+| Lijiang_NightMarket_strat = 
+
+| Nepal_rating = 
+| Nepal_feature = 
+| Nepal_strategy = 
+| Nepal_Village_strat = 
+| Nepal_Shrine_strat = 
+| Nepal_Sanctum_strat = 
+
+| Oasis_rating = 
+| Oasis_feature = 
+| Oasis_strategy = 
+| Oasis_CityCenter_strat = 
+| Oasis_Gardens_strat = 
+| Oasis_University_strat = 
+
+| Samoa_rating = 
+| Samoa_feature = 
+| Samoa_strategy = 
+| Samoa_Beach_strat = 
+| Samoa_Downtown_strat = 
+| Samoa_Volcano_strat = 
+}}
+
+===Escort===
+{{MapStrategyTable/Escort
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| CircuitRoyal_rating = 
+| CircuitRoyal_feature = 
+| CircuitRoyal_strategy = 
+| CircuitRoyal_Attack_strat = 
+| CircuitRoyal_Defense_strat = 
+
+| Dorado_rating = 
+| Dorado_feature = 
+| Dorado_strategy = 
+| Dorado_Attack_strat = 
+| Dorado_Defense_strat = 
+
+| Havana_rating = 
+| Havana_feature = 
+| Havana_strategy = 
+| Havana_Attack_strat = 
+| Havana_Defense_strat = 
+
+| Junkertown_rating = 
+| Junkertown_feature = 
+| Junkertown_strategy = 
+| Junkertown_Attack_strat = 
+| Junkertown_Defense_strat = 
+
+| Rialto_rating = 
+| Rialto_feature = 
+| Rialto_strategy = 
+| Rialto_Attack_strat = 
+| Rialto_Defense_strat = 
+
+| Route66_rating = 
+| Route66_feature = 
+| Route66_strategy = 
+| Route66_Attack_strat = 
+| Route66_Defense_strat = 
+
+| Shambali_rating = 
+| Shambali_feature = 
+| Shambali_strategy = 
+| Shambali_Attack_strat = 
+| Shambali_Defense_strat = 
+
+| Gibraltar_rating = 
+| Gibraltar_feature = 
+| Gibraltar_strategy = 
+| Gibraltar_Attack_strat = 
+| Gibraltar_Defense_strat = 
+}}
+
+===Hybrid===
+{{MapStrategyTable/Hybrid
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| BlizzardWorld_rating = 
+| BlizzardWorld_feature = 
+| BlizzardWorld_strategy = 
+| BlizzardWorld_Attack_strat = 
+| BlizzardWorld_Defense_strat = 
+
+| Eichenwalde_rating = 
+| Eichenwalde_feature = 
+| Eichenwalde_strategy = 
+| Eichenwalde_Attack_strat = 
+| Eichenwalde_Defense_strat = 
+
+| Hollywood_rating = 
+| Hollywood_feature = 
+| Hollywood_strategy = 
+| Hollywood_Attack_strat = 
+| Hollywood_Defense_strat = 
+
+| KingsRow_rating = 
+| KingsRow_feature = 
+| KingsRow_strategy = 
+| KingsRow_Attack_strat = 
+| KingsRow_Defense_strat = 
+
+| Midtown_rating = 
+| Midtown_feature = 
+| Midtown_strategy = 
+| Midtown_Attack_strat = 
+| Midtown_Defense_strat = 
+
+| Numbani_rating = 
+| Numbani_feature = 
+| Numbani_strategy = 
+| Numbani_Attack_strat = 
+| Numbani_Defense_strat = 
+
+| Paraiso_rating = 
+| Paraiso_feature = 
+| Paraiso_strategy = 
+| Paraiso_Attack_strat = 
+| Paraiso_Defense_strat = 
+}}
+
+===Push===
+{{MapStrategyTable/Push
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Colosseo_rating = 
+| Colosseo_feature = 
+| Colosseo_strategy = 
+| Colosseo_Pushing_strat = 
+| Colosseo_Defending_strat = 
+
+| Esperanca_rating = 
+| Esperanca_feature = 
+| Esperanca_strategy = 
+| Esperanca_Pushing_strat = 
+| Esperanca_Defending_strat = 
+
+| NewQueenStreet_rating = 
+| NewQueenStreet_feature = 
+| NewQueenStreet_strategy = 
+| NewQueenStreet_Pushing_strat = 
+| NewQueenStreet_Defending_strat = 
+
+| Runasapi_rating = 
+| Runasapi_feature = 
+| Runasapi_strategy = 
+| Runasapi_Pushing_strat = 
+| Runasapi_Defending_strat = 
+}}
+
+===Flashpoint===
+{{MapStrategyTable/Flashpoint
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Aatlis_rating = 
+| Aatlis_feature = 
+| Aatlis_strategy = 
+| Aatlis_Bazaar_strat = 
+| Aatlis_Garden_strat = 
+| Aatlis_Resort_strat = 
+| Aatlis_Station_strat = 
+| Aatlis_TownCentre_strat = 
+
+| NewJunkCity_rating = 
+| NewJunkCity_feature = 
+| NewJunkCity_strategy = 
+| NewJunkCity_Arena_strat = 
+| NewJunkCity_Foundation_strat = 
+| NewJunkCity_Refinery_strat = 
+| NewJunkCity_Scrapyard_strat = 
+| NewJunkCity_Waterworks_strat = 
+
+| Suravasa_rating = 
+| Suravasa_feature = 
+| Suravasa_strategy = 
+| Suravasa_Gardens_strat = 
+| Suravasa_Market_strat = 
+| Suravasa_Palace_strat = 
+| Suravasa_Ruins_strat = 
+| Suravasa_Temple_strat = 
+}}
+
+== Achievements ==
+{{AchievementTable/Start}}
+{{Achievement|Rapid Discord|Ability-zenyatta3.png|Get 4 kills or assists with Zenyatta's [[Orb of Discord]] within 6 seconds in Quick or Competitive play.|Spray Zenyatta Pixel.png|Pixel}}
+{{Achievement|The Iris Embraces You|Ability-zenyatta4.png|Restore 1250 Health with a single use of Zenyatta's [[Transcendence]] in Quick or Competitive play.|Spray Zenyatta Cute.png|Cute}}
+{{AchievementTable/End}}
+
+==Trivia==
+*Zenyatta is one of [[Chris Metzen]]'s favorite heroes in the game.<ref name = "Transcript3">2014-11-24, [http://overwatch.blizzplanet.com/blog/comments/blizzcon-2014-overwatch-unveiled-panel-transcript/3 BlizzCon 2014 – Overwatch Unveiled Panel Transcript]. ''Blizzplanet'', accessed on 2015-03-08</ref>
+*Zenyatta is one of three heroes with no footstep sounds, as he floats instead of walking. The others are [[Sigma]] and [[Echo]].
+
+===Cultural References===
+*The healing aspect of his orbs and the chime-like sound they make may take inspiration from [[Wikipedia:Baoding balls|Baoding balls]], also known as Chinese medicine balls, among other names. They are popular among advocates as a form of alternative medicine for stress relief and improving dexterity and strength in the hands.
+*Zenyatta's name has been observed to be a combination of the word "Zen", which is the Japanese name for Chan Buddhism, and "Śūnyatā", which means "emptiness" in Pali, a Buddhist concept referring to the idea that the world is without a true essence or sense of self.
+**It's also likely a reference to the The Police album ''Zenyatta Mondatta'', considering his late counterpart's name is Mondatta.
+**The name they share between Mondatta and Zenyatta, "Tekhartha," could play off of the name of the Buddha before he achieved nirvana, Siddhartha Gautama, and "Tek" pronounced like "Tech" as a play on the fact that they are robots.
+*A number of players have likened the relationship between Zenyatta and [[Ramattra]] as akin to [https://marvel.fandom.com/wiki/Professor_X Charles Xavier] and [https://marvel.fandom.com/wiki/Magneto Magneto] from ''X-Men''.<ref>2022-11-08, [https://www.kotaku.com.au/2022/11/overwatch-2-reveals-new-hero-ramattra-locked-behind-battle-pass/ Overwatch 2 Reveals New Hero Ramattra, Locked Behind Battle Pass]. ''Kotaku'', accessed on 2022-11-10</ref>
+*Zenyatta's Cultist and Zealot skins are both references to the fictional cosmic entity [https://en.wikipedia.org/wiki/Cthulhu Cthulhu]. This is especially apparent with Zenyatta having tentacles for a mouth, which is identical to the visual depiction of Cthulhu.
+
+===Misc. Character Information===
+*Zenyatta believes that as long as free will exists, there will always be evil in the world, yet to deny free will would also be evil. He has the ability to dream.<ref name = "OW2ZenyattaQuotes">''[[Overwatch 2]]'', ''[[Zenyatta/Quotes|Zenyatta Quotes]]''</ref>
+*Zenyatta found humans' manner of speech perplexing at first, having little grasp of metaphors. He still occasionally struggles with their figures of speech.<ref name = "StoneByStone">''[[Stone By Stone]]''</ref>
+*Like all Shambali, despite being unable to eat, Zenyatta knows how to prepare food.<ref name = "Cookbook">''[[Overwatch: The Official Cookbook]]''</ref> 
+*Zenyatta likes being near the coast, as it reminds him of where he was constructed.<ref name = "OW2ZenyattaQuotes"/>
+
+====Disputed Information====
+*In a gameplay trailer for ''[[Overwatch 2]]'', Zenyatta was seen working for Talon against his will, and reuniting with Genji, leading to a battle against Talon forces. The events were apparently due to occur in [[Story Missions]].<ref name = "OW2Gameplay">2019-11-01, [https://www.youtube.com/watch?v=dZl1yGUetjI Overwatch 2 Gameplay Trailer]. ''YouTube'', accessed on 2019-11-08</ref> With Story Missions apparently cancelled (or at least de-prioritized under Microsoft),<ref name = "StoryCancelled">2024-03-18, [https://kotaku.com/overwatch-2-story-missions-campaign-canceled-blizzard-1851345720 Overwatch 2 Devs Fear Story Missions Have Been Canceled]. ''Kotaku'', accessed on 2024-04-01</ref> the canonicity of these events is dubious.
+*In [[Venture]]'s gameplay trailer, Zenyatta is again seen working with Talon at [[Petra]] against Overwatch, before Overwatch forces Talon to retreat with Venture's help.<ref name = "VentureNew">2024-03-28, [https://www.youtube.com/watch?v=JF6tLqe_FSA Venture | New Hero Gameplay Trailer | Overwatch 2]. ''YouTube'', accessed on 2024-03-28</ref>
+
+===Merchandise===
+[[File:Zenyatta cultist pop.png|thumb|Cultist Zenyatta]]
+* A Zenyatta Figma statue is available.<ref>2020-02-24, [https://overwatch.blizzplanet.com/blog/comments/toy-fair-ny-2020-figma-overwatch-action-figures Toy Fair NY 2020: Figma Overwatch Action Figures]. ''Blizzplanet'', accessed on 2020-04-10</ref>
+*A Zenytatta statue is available from the Blizzard store.<ref>2018-09-28, [https://www.kotaku.com.au/2018/09/zenyatta-overwatch-figure-comes-with-all-the-glowing-orbs/ Zenyatta Overwatch Figure Comes With All The Glowing Orbs]. ''Kotaku'', accessed on 2018-09-28</ref>
+*Zenyatta is one of the first officially revealed Overwatch POP! vinyl with a skin, specifically the [[Zenyatta/Cosmetics|Cultist Zenyatta skin]], it was released during [[Halloween Terror]] 2018.
+
+===Development===
+[[File:Early zenyatta.png|thumb|Early Zenyatta concept art]]
+*Sources deviate for the source of Zenyatta. According to a GamesCom panel in 2015, the idea for him came from a piece of omnic concept art.<ref>2015-08-08, [http://overwatch.blizzpro.com/2015/08/08/gamescom-livestream-panel-w-the-devs/ GAMESCOM LIVESTREAM PANEL W/ THE DEVS]. ''Blizzpro'', accessed on 2015-08-22</ref> According to ''[[Forging Worlds: Stories Behind the Art of Blizzard Entertainment]]'', Zenyatta was developed first, and the idea for omnics came later.<ref name = "ForgingWorlds">''[[Forging Worlds: Stories Behind the Art of Blizzard Entertainment]]''</ref>
+**Further according to this account, the idea for Zenyatta came from Chris Metzen, who asked "what if there's a cybermonk?" in a meeting. The developers latched onto the idea.<ref name = "ForgingWorlds"/>
+*Early designs for Zenyatta had him multi-limbed, referencing Eastern religious archtypes.<ref name="DesignEvolution">2022-11-28, [https://www.youtube.com/watch?v=4Rxne0rbQ-A Overwatch 2: Ramattra's Design Evolution | Dev Update] ''Youtube'', accessed on 2022-11-27</ref>
+*Zenyatta's age was originally given as 20, which did not sync with the timeframe of the Omnic Crisis. This was later changed to 33, establishing that he was built a few years before the war.
+*Zenyatta is the first hero to have his total hit points changed (from 50 Health/100 Shield to 50 Health/150 Shield) through a patch in July 19, 2016. This was followed by [[D.Va]] in September 1, 2016.
+*The relationship between Ramattra and Zenyatta will be fleshed out in Overwatch 2's PvE missions.<ref name = "RamattraZenyatta"/>
+
+==== Removed Abilities ====
+
+===== Removed Perks =====
+{{Ability details
+| removed = 1
+|ability_name = Zenith Kick
+|ability_image = Perk_ZenithKick.png
+|ability_type = Minor Perk
+|shot_type = {{proj|melee}}
+|official_description = Snap Kick's knockback distance is increased by 30%.
+|kbspeed = {{tt|15.8 m/s|H: 19.5 m/s, V: 6.5 m/s}} (max)
+|ignores_barrier = 1
+|ignores_matrix = 1
+|ignores_window = 1
+|key = quick melee
+|ability_details = 
+* ''Removed in Season 18.''
+*Increases horizontal knockback by 30%, from 15 m/s to 19.5 m/s.
+*Increases vertical knockback by 30%, from 5.0 m/s to 6.5 m/s.
+*Results in up to ~9.1 meters knockback on flat ground (was ~7 m).
+*Vertical knockback scales with distance from target.
+*This perk does not affect Snap Kick's damage.
+*Can displace light heroes more effectively into environmental hazards.
+}}
+{{Ability details
+| removed = 1
+| ability_name = Duality
+| ability_image = Perk_Duality.png
+| ability_type = Major Perk
+| shot_type = {{proj|targeted}}
+| official_description = Zenyatta heals Orb of Harmony targets for 40% of his damage dealt to Orb of Discord targets.
+| heal = 40% of damage dealt
+| range = 40 meters
+| pspeed = 90 m/s
+| duration = 5 seconds (if out of sight)
+| ignores_barrier = 1
+| ignores_matrix = 1
+| ignores_deflect = 1
+| ignores_boost = 1
+| ignores_window = 1
+| ability_details = 
+* ''Removed in Season 18.''
+* Heals for {{#expr: 50*0.4}} per Orb of Destruction and {{#expr: 60*0.4}} per Snap Kick.
+** A full volley can heal up to 75 HP (90 HP with the Focused Destruction perk).
+* This healing is in addition to the base healing from Orb of Harmony.  
+}}
+{{Ability details
+| removed = 1
+| ability_name = Transcendent Condemnation
+| ability_image =Perk_Transcendent_Condemnation.png 
+| ability_type = Minor Perk
+| official_description = While using Transcendence, apply Discord Orb to all enemies within range.
+| ability_details = * ''Removed in Reign of Talon Season 1''
+* Discord Orbs remain attached to the targets only as long as they remain in the area.
+* Requires line of sight. Cannot apply through enemy [[barrier]]s or terrain.
+}}
+
+==Media==
+
+=== Images ===
+
+;Former Portrait
+<gallery>
+File:OW1Icon Zenyatta.png|Overwatch 1 Hero Portrait
+</gallery>
+;Gameplay Screenshots
+<gallery widths="200">
+File:Zenyatta Overwatch 001.jpg
+File:Zenyatta Overwatch 002.jpg
+File:Zenyatta Overwatch 003.jpg
+File:Zenyatta Overwatch 004.jpg
+File:Zenyatta Overwatch 005.jpg
+File:Zenyatta Overwatch 006.jpg
+File:Zenyatta Overwatch 008.jpg
+File:Zenyatta Overwatch 009.jpg
+File:Zenyatta Overwatch 010.jpg
+File:Zenyatta Overwatch 011.jpg
+File:Zenyatta Overwatch 012.jpg
+</gallery>
+;Concept Art
+<gallery>
+File:Zenyatta Clockwork skin concept art.jpg|Clockwork Skin Concept Art by Tim Guo
+File:Zenyatta Fastball skin concept art.jpg|Fastball Skin Concept Art by Anh Dang
+File:Zenyatta Royal Astronomer skin concept art.jpg|Royal Astronomer skin concept art by Allison Yu
+File:Zenyatta Subaquatic skin concept art.jpg|Subaquatic Skin Concept Art by Armando Gonzalez-Dorta
+File:Zenyatta Toybot skin concept art.jpg|Toybot Skin Concept Art by Yiming Liu
+File:Zenyatta Z-3N Destroyer skin concept art.jpg|Z-3N Destroyer Skin Concept Art by Armando Gonzalez-Dorta
+File:Armando-gonzalez-dorta-nullsectro-zenyatta-explorations-posting.jpg|Z-3N Destroyer Skin early Concept Art by Armando Gonzalez-Dorta
+File:Zenyatta Pixiu skin concept art.jpg|Pixiu Zenyatta Mythic Skin Concept Art by Angela Song
+</gallery>
+
+===Videos===
+{{#ev:youtube|75tk1awcUcw|400|inline}}
+{{#ev:youtube|K7Yh_YywD-U|400|inline}}
+{{#ev:youtube|fiPrZFSkEfE|400|inline}}
+
+==Balance Change Logs==
+{{ChangelogsTabber
+| owpvp =
+{{PatchTableElement|2026-02-10|
+{{al|Transcendent Condemnation}} – Minor Perk
+* Removed.
+
+{{al|Discordant Repair}} – Minor Perk
+* Zenyatta gains 10% lifesteal against enemies affected by Discord Orb.
+}}
+{{PatchTableElement|2026-01-08|
+{{al|Orb of Discord|Discord Orb}}
+* Damage amplification increased from 25% to 30%.
+}}
+{{PatchTableElement|2025-08-26|
+{{DevComment|Developer Comments: Recent Harmony Orb buffs have allowed Zenyatta to charge Transcendence much faster. Increasing its cost helps balance the improved healing of the ultimate.}}
+
+{{al|Transcendence}} - Ultimate Ability
+* Ultimate Cost increased by 9%
+
+{{al|Zenith Kick}} - Minor Perk
+* Removed.
+
+{{al|Transcendent Condemnation}} - Minor Perk
+* New Minor Perk.
+* While using Transcendence, apply Discord Orb to all enemies within range.
+
+{{al|Duality}} - Major Perk
+* Removed.
+
+{{al|Dual Harmony}} - Major Perk
+* Gain a 2nd Harmony Orb but they both heal for 70% effectiveness.
+}}
+{{PatchTableElement|2025-07-22|
+{{al|Orb of Harmony|text=Harmony Orb}}
+* Healing increased from 30 to 35 health per second.
+
+{{al|Transcendence}}
+* Healing per second increased from 300 to 400.
+}}
+{{PatchTableElement|2025-06-24|
+{{DevComment|Developer Comments: Duality has struggled due to the number of conditions required for activation. Increasing the converted damage improves its effectiveness when those conditions are met.}}
+
+{{al|Duality}} - Major Perk
+* Increased converted damage from 30% to 40%.
+}}
+{{PatchTableElement|2025-04-22|
+{{al|Ascendance}}
+* Jump can now be held down to hover.
+
+{{al|Duality}}
+* Increased converted damage from 20% to 30%.
+}}
+{{PatchTableElement|2025-02-18|
+;Hero Perks
+
+{{al|Zenith Kick}}
+* Snap Kick's knockback distance is increased by 30%.
+
+{{al|Ascendance}}
+* Activate and hold Double Jump to hover for up to 3 seconds.
+
+{{al|Focused Destruction}}
+* Secondary Fire charges 20% faster and can store 1 extra Orb of Destruction.
+
+{{al|Duality}}
+* Zenyatta heals Orb of Harmony targets for 20% of his damage dealt to Orb of Discord targets.
+}}
+{{PatchTableElement|2024-09-17|
+{{DevComment|Developer Comment: With the current addition of more speed boosts in the game, Zenyatta (and generally more poke-oriented team compositions by extension) has fallen off a bit due to how immobile and vulnerable he can be. We've tried increasing his health in the past but it's proven problematic, so instead we're leaning into his glass-cannon nature. We’re improving his damage this time, which should enable new break points in how many shots are required to eliminate an enemy.}}
+
+{{al|Orb of Destruction}}
+* Damage increased from 48 to 50.
+
+{{al|Orb of Discord}}
+* Cooldown per target reduced from 7 to 6 seconds.
+}}
+{{PatchTableElement|2024-07-09|
+{{DevComment|Developer Comments: We're reducing the cost of Transcendence as Zenyatta was impacted more than most by some of the changes in this patch.}}
+{{al|Transcendence}}
+* Ultimate cost decreased 10%.
+}}
+{{PatchTableElement|2024-03-12|
+;General updates
+* Global projectile size modifier for travel time projectiles with a speed greater than 50 meters per second reduced from 0.1 to 0.075 meters.
+}}
+{{PatchTableElement|2024-02-21|
+* Base health decreased from 100 to 75.
+
+{{al|Snap Kick}}
+* Knockback decreased 25%.
+}}
+{{PatchTableElement|2024-02-13|
+;General updates
+Most damage-dealing projectile sizes have been increased by a new global modifier added to their base size.
+
+* +0.05 meters for hitscan projectiles with a high rate of fire or spread (e.g., Tracer's Pulse Pistols or Reaper's Hellfire Shotguns).
+* +0.08 meters for hitscan projectiles that are more precise (e.g., Cassidy's Peacekeeper or Soldier:76's Heavy Pulse Rifle).
+* +0.05 meters for travel time projectiles that are shotguns or have a very high rate of fire (e.g., Roadhog's Scrap Gun or Ramattra's Void Accelerator).
+* +0.10 meters for travel time projectile with a speed greater than 50 meters per second (e.g., Zenyatta's Destruction Orb).
+* +0.15 meters for travel time projectile with a speed less than or equal to 50 meters per second (e.g., Pharah's Rocket Launcher).
+* Very large projectiles with a base size greater than 0.5 meters have been excluded from these increases (e.g., Orisa's Energy Javelin or Reinhardt's Fire Strike).
+
+Hero combined HP (base health/armor/shields) increased by 15-25%.
+
+* 150-175 HP heroes increased by 25 HP.
+* 200-300 HP heroes increased by 50 HP.
+* 300+ HP (Tanks) increased by 75-100 HP.
+* Each hero's precise health increases are listed in their patch notes below.
+
+Ultimate Charge
+
+* All Ultimate ability costs increased by 10%.
+
+Regenerative Passive for All Heroes
+
+* All heroes now regenerate 20 health per second after 5 seconds of not taking damage.
+
+Support Role Passive
+
+* Now reduces the delay before regeneration begins by half (2.5 seconds).
+
+Quick Melee
+
+* Damage increased from 30 to 40.
+
+;Hero updates
+
+* Health increased from 75 to 100.
+* Shields increased from 150 to 175.
+}}
+{{PatchTableElement|2023-10-31|
+{{DevComment|Developer comments: The goal of these changes is to add more counterplay against Discord Orb and encourage Zenyatta players to think more about who to place it on. Now, if the effect ends for any reason, the target is temporarily unable to be targeted again by Discord Orb. A new soft-targeting reticle appears when aiming toward an enemy player that cannot be affected by Discord Orb to display the remaining duration before it can be reapplied. This is a significant change both to how the ability feels to use and how clear it is to understand, so we will be keeping a close eye on player feedback.}}
+
+* Base health increased from 50 to 75 (total 225 HP).
+
+{{al|Orb of Harmony}}
+* Time to wear off when not in line-of-sight increased from 3 to 5 seconds.
+
+{{al|Orb of Discord}}
+* Can no longer be reapplied to the same target for 7 seconds after the effect has been removed.
+* Range increased from 30 to 40 meters.
+}}
+{{PatchTableElement|2023-07-11|
+{{DevComment|Developer Comments: The combination of these changes will make it riskier for Zenyatta to apply Discord and increase counterplay for the affected target.}}
+
+{{al|Orb of Discord}}
+
+* Maximum range reduced from 40 to 30 meters.
+* Time to wear off the target when not in line-of-sight reduced from 2 to 1.5 seconds.
+}}
+{{PatchTableElement|2023-02-07|
+{{DevComment|Developer Comment: We've been discussing options to potentially increase Zenyatta's survivability. We've seen previously in the beta that Zenyatta is on somewhat of a knife's edge for balance. Even just 25 more shield health pushed him into overpowered-must-pick territory at the pro level. To balance his powerful damage output, the lack of mobility is an intentional disadvantage by design, so we'd prefer not to change that too much. Instead, we're adding more ammo to lengthen the times between when Zenyatta is most vulnerable, which is when he is reloading.}}
+{{Al|Orb of Destruction}}
+*Ammo increased from 20 to 25
+}}
+{{PatchTableElement|2022-07-14|
+*Shield health reduced from 175 to 150 (225 to 200 total max HP)
+|beta=1}}
+{{PatchTableElement|2022-05-05|
+{{Al|Orb of Discord}}
+*Time to fall off target when not in line of sight reduced from 3 to 2 seconds
+|beta=1}}
+{{PatchTableElement|2022-05-05|
+<i>Developer Comment: Zenyatta has trouble fighting at close range, so he was at a disadvantage if an enemy flanked or jumped on top of him. His new passive, Snap Kick, will help him create space and put enemies at his fighting range.
+
+We think this new passive will be a fun adjustment to his kit, but we also want this change to acknowledge community concerns. We understand 5v5 has made support heroes feel more vulnerable, and we wanted to give Zenyatta tools to help create space between him and enemies.</i>
+*Base shields increased from 150 to 175
+{{Al|Snap Kick}}
+*New Passive Ability
+*Increases Quick melee damage by 50% and significantly increases its knockback
+|beta=1}}
+
+|owstadium={{#section-h:Zenyatta/Stadium|Balance Change Log}}<!-- this section is transcluded from the /Stadium page and must be edited from there -->
+
+| ow1 =
+{{PatchTableElement|2021-01-28|{{Al|Orb of Harmony}}
+* Projectile speed reduced from 120 to 90
+{{Al|Orb of Discord}}
+* Projectile speed reduced from 120 to 90
+* Damage amplification reduced from 30% to 25%
+
+''Zenyatta has been a bit too effective at enabling team-wide damage output lately so we're taking some power out of the Orb of Discord by reducing both its total damage amplification as well as the speed at which it can be applied over long distances. The new projectile speed now matches that of his primary fire, Orb of Destruction.''
+}}
+{{PatchTableElement|2020-08-13|
+{{Al|Orb of Destruction}}
+
+Secondary Fire
+*Charge rate increased 15% (0.6 down to 0.52 seconds per orb)
+*Rate of fire increased from 8.5 to 9 shots per second
+''Zenyatta has low healing and mobility outside of his ultimate but makes up for it with high potential damage output. With the recently lowered barrier uptime resulting in an overall faster pace of the game, we want to make sure Zenyatta still excels at his strengths. This change will make his charged attack flow a bit better in combat.''
+}}
+{{PatchTableElement|2020-05-19|{{Al|Orb of Discord}}
+*Damage amplification increased from 25% to 30%
+}}
+{{PatchTableElement|2019-03-19|{{Al|Orb of Destruction}}
+*Damage increased from 46 to 48
+{{Al|Orb of Discord}}
+*Effect reduced from 30% to 25%
+
+''Developer Comments: Zenyatta’s Orb of Discord makes him a nearly irreplaceable support hero on your team. We’re reducing its impact for Zenyatta’s team, but increasing the potency of the Orb of Destruction to compensate for its lesser effect.''
+}}
+{{PatchTableElement|2018-04-10|{{Al|Orb of Destruction}}
+*Secondary fire rate of fire reduced by 15%
+
+''Developer Comments: Zenyatta is meant to be able to deal a lot of damage, especially for a support, but his alternate fire burst damage was a bit too high. This change keeps the overall damage the same but lowers the DPS slightly and makes it harder to hit multiple shots at very long ranges.''
+}}
+{{PatchTableElement|2018-01-09|
+* Zenyatta's Orb of Discord and Orb of Harmony will now display its target’s health bar
+}}
+{{PatchTableElement|2017-03-21|{{Al|Orb of Destruction}}
+*Alternate fire cooldown has been reduced from 1 seconds to 0.6 seconds
+*Weapon spread has been removed
+
+''Developer Comments: Zenyatta’s alternate fire often felt too difficult to use due to its long recovery time. This reduction should make it a more viable option. Also, his weapon has always had a very small amount of spread. This wasn’t enough to change the way he was played, but it would occasionally cause shots to miss that would normally hit their target. Removing this small variance should help him feel more consistent.''
+}}
+
+{{PatchTableElement|2016-09-01|
+*When activating the "Needs healing" communication while targeting a teammate, [[Ana]], [[Lúcio]], [[Mercy]], and Zenyatta will now tell allies to group up to receive healing. A marker will also appear above the player's head, allowing teammates to locate the healer more quickly.
+{{Al|Orb of Discord}}
+*The amount of damage amplified by a target with Orb of Discord has been decreased from 50% to 30%
+{{Al|Orb of Destruction}}
+*Damage has been increased from 40 to 46
+''Developer Comments: Zenyatta is in a far better place since the last update, but the strength of Orb of Discord has turned him into an almost mandatory pick. These changes reduce Orb of Discord's effectiveness, but his damage-dealing potential has been increased. The amount of damage that he delivers should feel largely unaffected by the change.''
+}}
+{{PatchTableElement|2016-7-19|
+*Base shields increased by 50 (now 50 [[Health]]/150 [[Shield]])
+{{Al|Orb of Destruction}}
+*Primary fire weapon damage decreased from 45 to 40
+*Alternate fire weapon damage increased from 35 to 40
+{{Al|Orb of Discord}} and {{Al|Orb of Harmony}}
+*Projectile speed has been increased from 30 to 120
+{{Al|Transcendence}}
+*Movement speed is now doubled upon activation
+*Healing amount increased from 200 to 300 health per second
+''Developer Comment: While Zenyatta has never had the healing abilities of Lúcio or Mercy, he made up for it by dealing more damage. However, his lack of mobility and low health has meant he’s struggled to find a place in many games. To increase his effectiveness, we've made several changes, the biggest of which is an increased shield pool. This will allow him to go head-to-head with more enemies. The Orb of Harmony and Discord changes are also a quality of life change, helping Zenyatta move his orbs around and apply their effects more quickly. And lastly, we’ve increased Transcendence’s healing throughput. This ultimate was designed to be the most effective against sustained, high-damage fire and least effective against short, high-damage bursts (like D.Va’s or Junkrat's ultimates). But, due to the amount of healing it provided, there were times when it was possible for even sustained fire to overcome Transcendence’s output. We’ve made the heal powerful and also allowed Zenyatta to move around more quickly while it’s active.''
+}} |ow6v6={{PatchTableElement|2026-04-14|
+{{al|Orb of Discord}}
+* (6v6) Damage amplification reduced from 30% to 25%.
+}}
+{{PatchTableElement|11-11-2025|
+{{al|Orb of Discord}}
+* Now has a cooldown per target.
+}}
+{{PatchTableElement|2025-04-22|
+{{al|Orb of Discord}}
+* In 6v6 game modes, Duration before expiring when target is out of sight reduced from 3 to 1.5 seconds.
+}}
+{{PatchTableElement|2025-03-18|
+{{al|Snap Kick}}
+* Now does 50% more damage. (undocumented)
+* Knockback increased by 20%. (undocumented) 
+
+{{al|Orb of Destruction}}
+* Ammo increased from 20 to 25. (undocumented)
+
+{{al|Orb of Harmony}}
+* Time to wear off when not in line of sight increased from 3 to 5 seconds. (undocumented)
+}}
+{{PatchTableElement|2024-12-17|
+{{al|Orb of Destruction}}
+* Ammo reduced from 25 to 20.
+
+{{al|Orb of Harmony|Harmony Orb}}
+* Time to wear off when not in line of sight reduced from 5 to 3 seconds.
+
+{{al|Orb of Discord}}
+* No longer has a cooldown per target.
+* Time to fall off target when not in line of sight increased from 1.5 to 3 seconds.
+
+{{al|Snap Kick}} (Passive)
+* Knockback reduced 20%.
+* No longer increases quick melee damage.
+}}}}
+
+==References==
+<references/>
+
+==External links==
+* [http://playoverwatch.com/en-us/heroes/zenyatta/ Official Site - Zenyatta]
+* [http://www.icy-veins.com/overwatch/zenyatta-guide-strategy-gameplay Zenyatta Guide on Icy Veins]
+
+{{Heroes}}
+[[Category:Heroes]] [[Category:Zenyatta| ]] [[Category: Shambali members]]

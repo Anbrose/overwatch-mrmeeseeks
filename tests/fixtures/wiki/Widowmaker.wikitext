@@ -1,0 +1,1093 @@
+{{Infobox character
+| name = Widowmaker
+| image = <gallery>
+OW2 Widowmaker.png|Overwatch
+Skins-widow-model-01.png |Overwatch Classic
+</gallery>
+| caption = "I aim to devastate."
+| realname = Amélie Lacroix (née Guillard)<ref>2017-08-10, [https://www.youtube.com/watch?v=4_CBzklel1c Developer Update | Deathmatch | Overwatch]. ''YouTube'', accessed on 2017-08-11</ref>
+| age = 35
+| birth = November 19th
+| nationality = {{flag|fr}} French
+| occupation = Ballet dancer (formerly)<br/> Overwatch agent (formerly) 
+| baseofoperations = Annecy, [[France]]
+| affiliation = [[Talon]] (formerly)
+| relations = [[File:Gérard.png|20px]] [[Gérard Lacroix]] (husband)
+| cosmetics = 1
+| quotes = 1
+| type = 
+| role = [[Damage]]
+| sub-role = [[Sharpshooter]]
+| health = 225
+| minor_perk_xp = 1410
+| major_perk_xp = 3330
+| voice = {{VA stack
+ | eng2 = [[Chloe Hollings]] (English and French)
+ | other = Vera Teltz (German)<br>Francesca Perilli (Italian)<br>Yang Menglu (Mainland Mandarin)<br>Wang Shih-wei (Taiwanese Mandarin)<br>Shizuka Itō (Japanese)<br>Lee Ji-hyeon (Korean)<br>Tatiana Shitova (Russian)<br>Flavia Saddy (Brazilian Portuguese)<br>Erica Edwards (American Spanish)<br>Conchi López (European Spanish)
+ }}
+| video = {{#ev:youtube|fvPp6XbbTb0|325|inline}}
+}}
+{{HeroTabs}}
+'''Widowmaker''' is a [[Sub-Roles#Sharpshooter|Sharpshooter]] [[Roles#Damage|Damage]] [[Heroes|hero]] in ''[[Overwatch 2|Overwatch]]''. She is one of the 21 heroes included in the game's release on 24 May 2016.
+
+==Overview==
+[[File:Widowmaker HS.mp4|left|thumb]] Widowmaker equips herself with whatever it takes to eliminate her targets, including mines that dispense poisonous gas, a visor that grants her squad infra-sight, and a powerful sniper rifle that can fire in fully-automatic mode.
+
+<gallery>
+File:Icon-Widowmaker.png|'''3D portrait'''
+File:Widowmaker Hero.png|'''2D portrait'''
+</gallery>
+==Abilities==
+
+===Passive Abilities===
+{{Sub-Role passive|Sharpshooter}}
+
+===Weapons===
+{{Ability_details
+| ability_name = Widow's Kiss
+| ability_image = Ability-widowmaker1.png
+| ability_video = Ojo3o1WUBuk
+| old_description = Should targets be in close to medium range, the rifle can also be fired in fully-automatic mode.
+| official_description = Automatic assault weapon.
+| ability_type = Weapon;;Hip Fire
+| shot_type = {{proj|hitscan}}
+| damage = 14 - 4.2<!-- 30% min falloff-->
+| damage_falloff_range = 20 - 40 meters
+| headshot = ✓
+| fire_rate = 10 shots/s
+| ammo = 35
+| reload_time = {{tt|1.5 seconds animation|restores ammo after 0.816 seconds}}
+| spread = 3 degrees (max)
+| pradius = 0.07 meters<!-- 0.07 global + 0 -->
+| ability_keywords = critical::hitscan
+| ability_details = * Damage per second: 140 while firing (98 overall w/ reload)
+* Maximum spread is reached after 11 shots.
+| dps = 140 while firing (98 overall w/ reload)
+}}
+
+{{Ability_details
+| ability_name = Widow's Kiss (ADS)
+| ability_image = Ability-widowmaker1.5.png
+| ability_video = Ojo3o1WUBuk
+| old_description = Widowmaker’s versatile sniper rifle is ideal for scope-aimed shots at distant targets.
+| official_description = Hold for long-ranged sniper weapon.
+| ability_type = Weapon;;ADS
+| key = secondary fire
+| shot_type = {{proj|hitscan}}
+| damage = 12 - 6 (at 0% power)<br>120 - 60 (at 100% power)<!-- 50% min falloff -->
+| damage_falloff_range = 50 - 70 meters
+| headshot = ✓
+| headshot_mod = 2.5
+| mspeed_pen = {{tt|-65%|1.925 m/s}}
+| fire_rate = 0.5 second recovery
+| ammo = 35
+| ammo_drain = 5 per shot
+| reload_time = {{tt|1.5 seconds animation|restores ammo after 0.816 seconds}}
+| cast_time = 0.9 seconds charging<br>0.32 seconds zoom in/out
+| spread = None
+| pradius = None<!-- no global + 0 -->
+| ability_keywords = greater critical::hitscan
+| ability_details = * Damage per second: 80 while firing (full charge) (70 overall w/reload)
+* The base damage is 12 and scales linearly to 120. Each percent of power increases the damage by 1.08.
+* The minimum power required to kill a full [[health]] target less than 50 meters away (without [[armor]]) with a single [[headshot]]:
+** 175 HP: 54%
+** 200 HP: 63%
+** 225 HP: 73%
+** 250 HP: 82%
+** 275 HP: 91%
+** 300 HP: 100%
+* If fired with less than 50% power, the shots make a softer sound and leave a smaller trail.
+* Jumping or using an ability interrupts ADS ("Aiming Down Sights" i.e. scoping) and charging, however it can be restarted right after even if still in air.
+| dps = 80 while firing (full charge) (70 overall w/reload)
+}}
+
+===Special Abilities===
+{{Ability_details
+| ability_name = Grappling Hook
+| ability_image = Ability-widowmaker2.png
+| old_description = Widowmaker launches a grappling hook towards the location she’s aiming at – when the hook connects with a scalable surface, she’s quickly drawn towards it, allowing her to expand her view of the battlefield and evade or flank targets.
+| official_description = Launch a hook that pulls you towards a ledge.
+| ability_type = Ability
+| shot_type = {{proj|proj}}<br>{{proj|movement}}
+| key = ability 1
+| cooldown = 10 seconds
+| mspeed = 20 m/s
+| range = 20 meters
+| ability_video = 9jhlW9qDCgM
+| ability_keywords = movement::jump cancel
+| ability_details =
+* Grappling Hook can be cancelled by pressing the jump key.
+* Grappling Hook can attach to Lifeweaver's {{al|Petal Platform}} and {{al|Tree of Life}}.
+* Will attempt to go around fences and other breakables when grappling through them, but can break them if they are in the way.
+}}
+
+{{Ability_details
+| ability_name = Venom Mine
+| ability_image = Ability-widowmaker3.png
+| old_description = Widowmaker adheres a swiftly-arming venom mine to nearly any surface. When a target wanders within range of the mine’s motion trigger, it explodes, delivering poison gas to any enemies in the vicinity.
+| official_description = Launch a poison trap.
+| ability_type = Ability
+| key = ability 2
+| shot_type = {{proj|arc}}
+| cooldown = 15 seconds
+| damage = {{tt|25 per second|Deals 4.8 damage per 0.192 seconds}}<br>125 total
+| headshot = ✕
+| health = 1
+| pspeed = 20 m/s
+| pradius = 0.2 meters
+| radius = 3 meters (trigger)<br>4 meters (explosion)
+| cast_time = {{tt|0 + 0.9 seconds|0s startup + 0.992s recovery}}
+| duration = Until replaced or destroyed (mine)<br>1.4 seconds (arming time)<br>5 seconds (poison)
+| ignores_matrix = partial
+| ignores_deflect = partial
+| ignores_boost = 1
+| ignores_window = 1
+| ability_video = iKTYhDbgNbY
+| ability_keywords = area of effect;;spherical::armor piercing;;deployable effect::cleansable;;deployable::deployable;;strong projectile::fixed;;deployable
+| ability_details =
+* Enemies who trigger the mine can be seen by Widowmaker through walls for a short time.
+* The venom effect is removed immediately upon taking a [[Health Pack]].
+* If the ability is interrupted before cast time ends, the ability's cooldown will not trigger.
+* Does not stick to players, barriers or other [[deployables]].
+* The projectile can be destroyed by {{al|Defense Matrix}}, {{al|Kinetic Grasp}}, {{al|Javelin Spin}}, {{al|Power Matrix}} and {{al|Kekkai Sanctuary}} and reflected by {{al|Deflect}} before it attaches to a surface.
+** The reflected mine is non-functional; it explodes only if someone from Widowmaker's team walks directly on it, and it deals no damage.
+* Projectile is stopped by fences and other breakables, but it will not attach to them unless it has a walkable surface.
+}}
+
+===Ultimate Ability===
+{{Ability_details
+| ability_name = Infra-Sight
+| ability_image = Ability-widowmaker4.png
+| ability_video = HNwtVvOXHj8
+| old_description = Widowmaker’s recon visor allows her to see the heat signatures of her targets through walls and objects for a moderate amount of time. This enhanced vision is shared with her allies.
+| official_description = Provide your team with a view of the enemy's location.
+| ability_type = Ultimate Ability
+| ult_req = 1400 points
+| radius = Global
+| duration = 15 seconds
+| cast_time = 0.64 seconds
+| ability_keywords = health reveal::strong reveal::transformation
+| ability_details =
+* Allows Widowmaker's entire team to see enemies through walls and their health bars.
+* Infra-Sight only ends if Widowmaker is eliminated or once the duration runs out.
+}}
+
+== Perks ==
+=== Minor Perks ===
+A Minor [[Perk]] can be chosen at level 2.
+{{Ability details
+| ability_name = Scoped Efficiency
+| ability_image = Perk_ScopedEfficiency.png
+| ability_type = Minor Perk
+| official_description = Scoped shots cost 3 ammo instead of 5.
+| ammo_drain = 5 → 3 per shot
+| ability_details=
+}}
+{{Ability details
+| ability_name = Sniper's Instinct
+| ability_image = Perk_Sniper's_Instinct.png 
+| ability_type = Minor Perk
+| official_description = Scoped shots charge 100% faster for 2 seconds after using Grappling Hook.
+| duration = 2 seconds
+| ability_details = 
+}}
+
+=== Major perks ===
+A Major [[Perk]] can be chosen at level 3.
+{{Ability details
+| ability_name = Widow’s Bite
+| ability_image = Perk_Widow's_Bite.png
+| ability_type = Major Perk
+| shot_type = {{proj|hitscan}} 
+| official_description = Scoped shots can charge up to 125%, piercing enemies when fully charged.
+| damage = 150 - 75 (at 125% power)
+| headshot = ✓
+| headshot_mod = 2.5
+| duration = 0.9 → 1.125 seconds charging
+| ability_details = 
+}}
+{{Ability details
+| ability_name = Seeker Mine
+| ability_image = Perk_Seeker_Mine.png
+| ability_type = Major Perk
+| shot_type = {{proj|arc}} (mine) <br>{{proj|proj}} (dart) 
+| official_description = Venom Mine now fires poison darts at enemies within 10 meters and remains active after triggered.
+| damage = {{tt|10 per second|1.92 every 0.192 seconds}}<br>75 total
+| duration = 5 seconds (poison)<br>8.2 seconds (rearming time)
+| radius = 10 meters
+| ignores_boost = 1
+| ignores_window = partial
+| ability_details = * One dart is shot towards each enemy hero in radius.
+* Shots ignore heroes that are not their intended target.
+* Cannot target through [[barrier]]s.
+* Poisoned targets are revealed, similar to regular Venom Mine.
+}}
+
+== Hero-specific options ==
+{|class ="listtable"
+! Setting name !! Options !! Description
+|-
+| rowspan="2" | '''Recoil recovery aim compensation'''
+| On (default)
+| Stops the recoil's downward pulling return motion, if the player applies enough vertical crosshair movement after the shot.
+|-
+| Off
+| Recoil's return motion is unaffected by player input, always pulling the crosshair back downwards the same amount as the recoil raised it.
+|-
+| rowspan="2"| '''Toggle zoom'''
+| Off (default)
+| Zoom deactivates when player stops holding the button.
+|-
+| On
+| Zoom deactivates when player presses the button again.
+|-
+| '''Relative aim sensitivity while zoomed'''
+| 0% ... 100% (default: 30%)
+| Multiplier to base aim sensitivity while zoomed.
+|-
+| '''Grappling Hook sensitivity'''
+| 10% ... 100% (default: 100%)
+| Adjusts the targeting sensitivity of Grappling Hook. Setting this to a lower value reduces the maximum view angle for acquiring a target.
+|}
+
+==Strategy==
+;Strengths
+
+Widowmaker is the archetypical sniper of Overwatch. Equipped with a powerful sniper rifle, her ability to eliminate all Damage and Support heroes (except [[Bastion]]) with a single headshot from extreme distances makes her long range damage unmatched. She can hold sightlines like no one else, and if left uncontested by the enemy, can pick them off one by one. Additionally, playing Widowmaker is relatively easy, provided you can hit your shots, as all of her power lies on her sniper and her abilities only support her gameplay and do not require much skill to use. A good Widowmaker that holds a strong position and hits their shots is an incredible threat and can carry games by themselves.
+
+;Weaknesses
+
+Being a powerful ranged hero, Widowmaker's weaknesses primarily lie in her close range capabilities. Having 225 HP and only a measly automatic fire to work with, she will prove to be relatively helpless without support when enemies close the distance on you. Furthermore, being a sniper means you will have to be positioned in the backline, away from your team and the objective which means you may be caught without your team to protect you from enemy flankers. Ironically however, the single biggest threat to a Widowmaker is an enemy Widowmaker. As you will both be playing the same sightlines, if you're not aware of her presence, you may end up getting sniped yourself. Not to mention, if the enemy Widowmaker is more skilled, you may find yourself losing the sniper duel often. Widowmaker is also relatively map dependent, being stronger on maps with long sightlines, lots of high ground and cover such as [[Circuit Royal]] and weaker on maps with less of these. 
+
+===Weapons & Abilities===
+
+*'''{{al|Widow's Kiss}}:''' Widowmaker's primary weapon. Widow's Kiss has two firing modes, which are switched between with the secondary fire button. The standard firing mode is a submachine gun, similar to [[Soldier: 76|Soldier: 76's]] [[Heavy Pulse Rifle]], though with less accuracy and a larger magazine. The secondary firing mode is a sniper rifle that zooms in Widowmaker's vision and reduces the firing rate to single shots. A charge meter is visible while scoped that fills over time, with the damage of the shot increasing the more the meter is filled.
+**The secondary firing mode is Widowmaker's main source of damage. It allows her to deal impressive damage at long range.
+**Critical hits with Widowmaker's secondary fire deal 2.5x critical damage as opposed to the normal 2x. As a result, a fully charged critical hit deals 300 damage.
+**An uncharged shot from the sniper rifle deals miniscule damage. Aim to have your shot at least 60-70% charged before firing.
+**The submachine gun is clearly meant for fighting at close range, and is a valid option for doing so. However, if you are skilled enough to successfully get headshots with the sniper mode at close range, the DPS of the sniper mode is still much higher.
+
+*'''{{al|Grappling Hook}}:''' When activated, Widowmaker shoots out a wrist-mounted grappling hook. If the hook impacts a solid surface, Widowmaker will pull herself to the hook. She maintains some of the pull momentum after arriving at the hook's location. If the hook does not impact a solid surface, it will return to Widowmaker and not be put on cooldown.
+**Grappling Hook allows Widowmaker to get to almost any vertical area that she can see. Use this mobility to get to strong high ground positions or access off angles enemies will not expect you to be.
+**Grappling Hook can be used to escape from enemies who get too close to Widowmaker. Fire it at a distant wall to gain some distance from flankers like [[Genji]].
+**Since Widowmaker still maintains some momentum after arriving at the hook's location, she can use it as a sort of "high jump" to use her sniper rifle on targets normally out of her line of fire while midair. This is very challenging to do, however, and is not normally recommended.
+**Grappling Hook can be interrupted at any time during the pull by jumping. Use this to gain control over Widowmaker faster after grappling.
+
+*'''{{al|Venom Mine}}:''' When activated, Widowmaker fires out a small mine that attaches to the first solid surface it impacts, arming itself after it lands. If an enemy walks near to the mine while it's armed, it will detonate, poisoning them and any nearby enemies with a toxic gas that deals damage over time and revealing their position to you through walls. The mine has a Health pool, and will be destroyed if it takes enough damage, preventing the detonation.
+**Venom Mine's primary purpose is to protect Widowmaker from flankers. Place it around a corner leading to your sniping spot so that you're alerted if an enemy tries to make their way through there. You will see a small alert on your HUD if it is either destroyed or triggered, allowing you to escape with your grappling hook or prepare to fight the weakened enemy.
+
+*'''{{al|Infra-Sight}} (Ultimate):''' Widowmaker's [[Ultimate]] ability. When activated, Widowmaker and her team temporarily gain infravision, showing them the location of all enemies by highlighting their silhouettes with a red glow when they are behind walls or other solid surfaces. Widowmaker can see the remaining duration of Infra-Sight on her UI.
+**While Infra-Sight has little direct combat power in comparison to something like [[Soldier: 76|Soldier: 76's]] [https://overwatch.fandom.com/wiki/Soldier:_76#Tactical_Visor Tactical Visor], it provides a massive amount of information to Widowmaker's entire team.
+**Use Infra-Sight to set up headshots more easily by waiting for enemies to come around corners. The knowledge of their position makes it much easier to get a headshot successfully as you can leave your crosshair at the corner they will appear at and fire before they can react.
+**Infra-Sight is incredibly valuable against stealthy flankers like [[Sombra]], as it will reveal her to your entire team even while she is invisible. This also applies to heroes like [[Reaper]] who may want to sneak up on your team to pull off a powerful Ultimate. Your infra-sight will reveal them and allow your team to react.
+**Use Infra-Sight to gain a tactical advantage over enemy Widowmakers. Being able to see her through walls gives you an advantage during sniper duels and can help you locate her if you're unsure of her position to ensure she doesn't catch you off guard,
+
+===General Strategies===
+*Widowmaker has the potential to be an absolute menace to the enemy team when played well. She is best used on maps with lots of long corridors and open areas with little cover that she can shoot down on, picking off her opponents one by one. She works less well on maps with lots of small rooms and side routes that her enemies can travel through to avoid her. 
+
+*Widowmaker should never stay in one place for very long. Your sniper rifle shots, whether they hit or miss, have long, visible tracers that tell the enemy team where you're firing from. As soon as your enemies know where you are, they'll start to take steps to either avoid you (by traveling a different way) or counter you (such as with a mobile tank like [[Winston]]). Constantly remain on the move to keep your enemies guessing and to get better angles on vulnerable targets like [[Mercy]] or [[Zenyatta]].
+
+*Avoid using your sniper scope when standing in a wide open area, especially if the rest of your team is not surrounding you. A lone Widowmaker standing without cover is an easy target for [[Pharah]] or another Widowmaker.
+
+*Avoid the temptation of only aiming for headshots. While headshots are preferable, they are hard to get on moving targets who are aware of your location, especially if you don't have a good angle of fire. Go for a headshot if you can catch an enemy unaware, or if they are moving in a predictable way. Otherwise, go for bodyshots.
+
+*When fighting enemies up close, use Venom Mine and switch to your submachine gun to fight them. Venom Mine does a surprising amount of damage, as does Widowmaker's submachine gun. While most skilled flankers will be able to kill you if they get that close to you, you can sometimes do enough damage to drive them away, especially if you aren't caught off-guard by them.
+
+*In general, you want to maintain distance from your opponents, as you're vulnerable in close combat. If you're presented the opportunity to safely flank your opponents at closer ranges, do so, as it makes lining up sniper rifle shots and dealing damage with Venom Mine much easier. Be ready to quickly escape with Grappling Hook once the enemy team turns their attention to you.
+*Prioritising certain targets over others is an important aspect of playing Widowmaker. Enemy snipers such as another Widowmaker, [[Hanzo]] or [[Ana]] should be your main priority as they can challenge you from afar and are easy targets for a headshot while scoped/aiming. Next you should prioritise Supports, especially [[Mercy]] due to her Resurrection and [[Zenyatta]] because of his large hitbox and lack of mobility. If you can pick off one or both Supports, your team has an easier job of engaging as the enemy will have no more healing. Additionally, aerial heroes such as [[Pharah]] should be focused as you can one shot her out of the sky. Mostly avoid shooting Tanks unless there aren't any other targets or the enemy Tank is low on health and is being focused by your team.
+
+==Match-Ups and Team Synergy==
+<!--When proving match-up or team synergy advice, please write all advice from the sake of someone playing as this hero, not as someone who wishes to counter this hero. Also, please try to be as objective as possible. Taking personal skill out of the equation, please provide advice that would apply to any player who knows how to play these characters well.-->
+
+===Tank===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero
+! |Match-Up
+! |Team Synergy</small>
+|-
+|<center>[[File:icon-dva.png|75px|link=D.Va]]<br />[[D.Va]]</center>
+|<small>D.Va is a significant threat to Widowmaker due to her ability to dive and disrupt you constantly. Beating her in a 1v1 is near impossible, so focus on keeping your distance and having your grapple available at all times to escape to your teammates when she engages on you. Without her mech, she becomes incredibly vulnerable and you should prioritise eliminating her before she gets another one. Note that she briefly stands still while in the re-meching animation, so if you time it right you can one shot her before she can call it down, removing her from the fight immediately.</small>
+|<small>(To be added)</small>
+|-
+|[[File:Icon-Doomfist.png|center|frameless|75x75px|[[Doomfist]]]][[Doomfist]]
+|<small>Doomfist's high mobility means he will have little trouble closing the distance on you. Try to position yourself on a strong high ground to force him to use both movement cooldowns to reach you, be mindful of his position at all times and keep your grapple available to escape him because you are unlikely to defeat him in a 1v1. However, if he's not going for you, his large hitbox makes him an easy target for your sniper, just be wary of shooting into his power block and charging his rocket punch.</small>
+|
+|-
+|[[File:Icon-Junker Queen.png|center|frameless|75x75px]][[Junker Queen]]
+|<small>Junker Queen's pump shotgun has limited range meaning she is not a threat to you, and her low HP and lack of defensive cooldowns means she can easily be killed with 2 successive headshots even if she uses Commanding shout in response to the first. Despite this, Widowmaker is an easy target for Junker Queen's jagged knife, and if you get hit she can pull you away from your position and into her team, so be prepared to dodge it if she throws one at you.</small>
+|
+|-
+|<center>[[File:icon-orisa.png|75px|link=Orisa]]<br />[[Orisa]]</center>
+|<small>Orisa is not an active threat to Widowmaker provided you keep your distance and dodge any javelins she throws your way. Her large hitbox makes landing headshots very easy and can help your team melt her down fast, however her powerful defensive abilities can nullify them effectively negating most of your damage, and this can be made even more difficult if her Supports are keeping her alive. Unless she is low on HP and your team is focusing her, you're better off trying to pick off her squishy teammates, mainly her Supports to give your team an easier time dealing with her.</small>
+|<small>(To be added)</small>
+|-
+|[[File:Icon-Ramattra.png|center|frameless|75x75px]][[Ramattra]]
+|<small>Ramattra can prove to be a tough opponent in both of his forms. He can protect himself and his team with his void barrier and poke you from afar with his weapon while in Omnic form, and his Nemesis form increases his armour and health pool drastically while giving him the ability to block your shots, making him an undesirable target. His ravenous vortex will also disable your movement heavily if you're caught in it making you an easy target. Mostly try to avoid him unless you catch him without his barrier or nemesis form to protect him.</small>
+|
+|-
+|<center>[[File:icon-reinhardt.png|75px|link=Reinhardt]]<br />[[Reinhardt]]</center>
+|<small>Being a melee fighter, Reinhardt poses little threat to you, only able to send the occasional fire strike towards you, which are easy to avoid. However his shield can provide long lasting cover for his teammates which can become problematic if they have snipers or ranged heroes. Utilise off angles and reposition often to avoid his shield and pick off his teammates.</small> 
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-roadhog.png|75px|link=Roadhog]]<br />[[Roadhog]]</center>
+|<small>Getting hooked by Roadhog is a death sentence, so be mindful of his position at all times and keep a safe distance. His large hitbox makes him an easy target when he's not going for you and can be a solid source of Ultimate charge.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-sigma.png|75px|link=Sigma]]<br />[[Sigma]]</center>
+|<small>Sigma's shield and poke damage can make him dangerous if you try to play against him at mid range, however his slower playstyle means you can adapt and reposition quickly as he advances with his team. You can try to force him to waste his kinetic grasp on you by shooting at him from a safe distance, or position around his shield to pick off his teammates from an off angle.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-wrecking_ball.png|75px|link=Wrecking Ball]]<br />[[Wrecking Ball]]</center>
+|<small>Ball is the most annoying enemy to face as Widowmaker: he can dive you constantly and there's not much you can do in defence. Your survival will depend on your positioning and how close you are to your team: do not try to defend yourself as his massive health pool will be impossible to break through by yourself. Simply grapple away to your team when you hear him rolling towards you, so he's forced to disengage.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-winston.png|75px|link=Winston]]<br />[[Winston]]</center>
+|<small>Like the other high mobility tanks, Winston is one of your biggest threats. The tip is the same here, grapple away when he uses his leap to engage you as you are unlikely to win a 1v1. When he uses Primal Rage, he will likely target you and unfortunately, your grappling hook will not save you if he commits to you while in Primal. Consider waiting out its duration by hiding or ask your supports to keep you alive.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-zarya.png|75px|link=Zarya]]<br />[[Zarya]]</center>
+|<small>Zarya has virtually no ranged damage, making her an easy target to pressure with your sniper and force out self bubbles. You usually don't have to worry about getting caught in her Ultimate either as she will look to use it on a cluster of people rather than a lone Widowmaker. Her self bubbles can make her difficult to kill by yourself as they take multiple shots to destroy, which will also give her energy, so wait until she's used both before going for the kill.</small>
+|<small>(To be added)</small>
+
+|}
+
+===Damage===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero
+! |Match-Up
+! |Team Synergy</small>
+|-
+|<center>[[File:icon-ashe.png|75px|link=Ashe]]<br />[[Ashe]]</center>
+|<small>Widowmaker has superior ranged damage to Ashe, being able to one shot and play outside of her effective range of 30-40 meters. Even if you're duelling her within her optimal distance, the threat of your one shot still gives you the advantage. Despite this, watch out for her Dynamite as it can do some serious damage and enable her to turn the tides on you.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-bastion.png|75px|link=Bastion]]<br />[[Bastion]]</center>
+|<small>If you catch Bastion running around in the open in Recon Configuration, he's easy enough to shoot down at a distance. Even in Assault form, you'll typically be positioned out of his range and don't have to worry about getting melted in seconds. Something to note is that while in Assault form, Bastion can still be headshotted, however the critical hit spot is located on his back, so you can pick him off in two shots if you can get behind him.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-cassidy.png|75px|link=McCree]]<br />[[McCree|Cassidy]]</center>
+|<small>While Cassidy can fire powerful rounds at close to medium range, he's nowhere near as powerful and accurate as you are with your Widow's Kiss at range. Keep an eye out for him and you can take him out with one headshot or a couple of bodyshots before he can close the distance. If you're worried about him sneaking up on you and hitting you with a Flashbang, place your Venom Mine near a flanking location; not only will this deal some damage to him, it will also alert you of his presence so you can unscope and prepare to fight or flee with your Grappling Hook.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-echo.png|75px|link=Echo]]<br />[[Echo]]</center>
+|<small>If Echo is flying in the air, she's easy enough to eliminate with one or two shots, however if she successfully closes the distance on you she can kill you in seconds with her incredible damage. Grapple away if she begins flying towards you to avoid her sticky bombs and listen for the sound of her gliding to avoid getting snuck up on. Interestingly, her Duplication is always able to be one shotted even if she clones a Tank as the maximum HP of the clone is 300. This will instantly cancel her Ultimate and prevent her from getting any value.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-genji.png|75px|link=Genji]]<br />[[Genji]]</center>
+|<small>Due to Genji's extreme levels of mobility, he has little difficulty closing the distance with you to fight at close range where he's much more comfortable. Even if you catch Genji at a distance, he can deflect your shots; ironically, a fully charged shot when deflected may end up killing you instead. However, you can force his Deflect by scoping into his head and not shooting, which will almost always work; he'll either dash out after the deflect or be an easy target for you to headshot. If you spot a Genji at a distance who's just used his Deflect, you can safely attempt to kill him; at long distance and without Deflect, he's easy prey. Placing a Venom Mine near your location can not only help weaken a flanking Genji, it will notify you of his exact location and make it difficult for him to sneak up on you.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-hanzo.png|75px|link=Hanzo]]<br />[[Hanzo]]</center>
+|<small>Duels with Hanzo are likely to end in one shot as both of you are snipers, however Hanzo's arrows being projectiles means they're less effective at long range, so keep the distance as great as you can and never try to fight him in close range where he's more comfortable. If he fires a sonic arrow at you, avoid peeking until it passes as he will be able to read your movement through walls and pre fire an arrow before you can react. Reposition often to keep him on his toes and use your ranged advantage as best you can.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-junkrat.png|75px|link=Junkrat]]<br />[[Junkrat]]</center>
+|<small>Junkrat is not a threat to you at long distances due to the inaccuracy of his grenades, however his high burst damage in close quarters will be the end of you. If you keep your distance however, he is a very large and easy target to pick off. Most importantly, Widowmaker is a strong counter to his Rip-Tire, as you can one shot it from a safe position and prevent him from blowing your team up. When you hear the voice cue, stop what you're doing, listen for it and be prepared to shoot it.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-mei.png|75px|link=Mei]]<br />[[Mei]]</center>
+|<small>At a distance, you have extreme superiority over Mei. While she can stall you off with Cryo-Freeze and block your sights with Ice Wall, so long as you keep your eye on her, it's only a matter of time before you shoot her down. Even if she closes distance on you, you can quickly use your Grappling Hook to escape her Endothermic Blaster's freezing effect, making it drastically lose potency. A few well-aimed Icicles are enough to kill you, though, so don't be too cocky about staying out in the open.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-pharah.png|75px|link=Pharah]]<br />[[Pharah]]</center>
+|<small>Pharah's constant slow movement through the air makes her a prime target for you at a distance. While she'll ignore your Venom Mine and her aerial mobility far exceeds that of your Grappling Hook, you have an extreme advantage at long range. She will often have a Mercy healing her in the air as well; try to kill the Mercy first in this situation if you can, as she's even more helpless in the air than Pharah is. If Pharah closes the gap on you, she has more of an advantage. If you attempt to simply run away, you have no chance against her. Use your Grappling Hook to make some quick distance if you can, then quickly scope in and try to kill her before she can follow you.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-reaper.png|75px|link=Reaper]]<br />[[Reaper]]</center>
+|<small>Widowmaker is one of Reaper's strongest counters, as long as you avoid close range confrontations, of course. You can use your enhanced view of the battle to spot him while he's trying to flank and call it out to your team. His head hitbox is also very pleasant making him easy to one shot from any distance and this will force him to play out of your sightlines and less aggressively. If he ever uses Shrouded Step, you can keep your crosshair over where his head will appear and one shot him before he can move if you time it right. If you anticipate a Death Blossom, his slowed movement during the action makes him a prime target to headshot so attempt to cancel it before he can kill anyone.</small>
+|<small>(To be added)</small>
+|-
+|[[File:Icon-Sojourn.png|center|frameless|75x75px]][[Sojourn]]
+|<small>Sojourn can be troublesome to deal with due to her Disruptor and Charged shots. Try to play to your strengths of long range and don't contest her while her railgun is fully charged, as she can easily one shot you while you're scoped. Force her away from strong high ground positions by shooting at her.</small>
+|
+|-
+|<center>[[File:icon-Soldier 76.png|75px|link=Soldier:_76]]<br />[[Soldier: 76]]</center>
+|<small>Like most Damage heroes, Soldier: 76 excels at close to mid-range combat and deals high damage at the cost of low health. If you spot him at a distance, he's simple to eliminate. However, with his Sprint, he can run past your blind spots and close the distance on you with relative ease. His Helix Rockets can also deal massive damage even at long range, so be careful not to get caught by surprise by them.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-sombra.png|75px|link=Sombra]]<br />[[Sombra]]</center>
+|<small>Sombra is one of your biggest counters, as her Stealth means she can easily sneak up on you without you detecting her. Try to play in a position she cannot reach without throwing her translocator, which will alert you of her presence and allow you to escape with grapple or cancel the Hack attempt. Additionally, a well placed venom mine will reveal her and force her to either engage you while poisoned or flee with Translocator. If she catches you off guard and hacks you, the damage from her virus and machine pistol will shred you and you'll be unable to grapple for a brief duration, so try to go for the scoped headshot to kill her before she can kill you rather than trying to use your automatic fire. If she's not going for you and you see her harassing a teammate, take the opportunity to kill her with a scoped headshot, and remember Infra Sight will reveal her to your entire team while Stealthed, which will force her to play more passively during it.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-symmetra.png|75px|link=Symmetra]]<br />[[Symmetra]]</center>
+|<small>Symmetra's most powerful at close range, which you rarely have to worry about when fighting at a distance. If you spot Sentry Turrets active at a distance, it's simple for you to shoot them down in one or two shots, though she will often place them in corners and on walls out of your view. Be careful of Symmetra placing a Teleporter near your position. Don't try to destroy it, as it will take too long and while doing so the enemy team can move through it and attack you. Instead, it's best to abandon your position and relocate with Grappling Hook before Symmetra's team can ambush you, although a quick Venom Mine on the Teleporter before you flee can provide a nasty surprise for whoever passes through it.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-torbjörn.png|75px|link=Torbjörn]]<br />[[Torbjörn]]</center>
+|<small>Shoot out Torbjörn's turret from afar, which can be done with two shots to allow your team to move forward freely. Outside of that, he is most effective at close range which you don't have to worry about and his large hitbox makes him a free kill.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-tracer.png|75px|link=Tracer]]<br />[[Tracer]]</center>
+|<small>Tracer's lack of vertical mobility means she actually can't contest you if you position on a strong high ground that she is unable to reach. Additionally, a single bodyshot will force her to Recall or Blink to safety every time as it will leave her with only 30HP.  Of course if she does get close somehow she can easily one clip you, so make use of your Venom Mine if there is a way for her to reach your position.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-widowmaker.png|75px|link=Widowmaker]]<br />[[Widowmaker]]</center>
+|<small>The single biggest threat to a Widowmaker is herself, as you suddenly lose your range advantage and will be forced to engage her in a fair duel. The enemy Widowmaker should be your number 1 priority: make sure you know where she is at all times and kill her first before you target her teammates to prevent being headshotted unexpectedly. If the enemy is more skilled than you, you'll find yourself losing the sniper duel often, so try to eliminate her while she's focused on your team, as her slow movement while scoped makes her an easy kill. Use off angles, flank routes, high ground, whatever you can to gain the upper hand against her.</small> 
+|<small>(To be added)</small>
+|}
+
+===Support===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero
+! |Match-Up
+! |Team Synergy
+</small>
+|-
+|<center>[[File:icon-ana.png|75px|link=Ana]]<br />[[Ana]]</center>
+|<small>Like most other sniper opponents, it can be troublesome to fight Ana. You each have advantages. Your charged shots are much more powerful than her nonchargeable shots, meaning one or two can instantly kill her. Meanwhile, she has no need to charge her shots to deal standard damage, and her lower recoil makes it easy for her to land successive shots on you, killing you in three or four shots. Still, so long as you play smart and keep behind cover between shots, you should be able to take her down. At close range you can attack with Assault fire while she's stuck with standard rifle fire, but she can compensate with her Sleep Dart and Biotic Grenade, giving her the advantage in close-quarters combat. You always have superior mobility over her, however, so always be ready to escape if a close-range fight turns sour.</small>
+|<small>Ana can nanoboost you to increase your damage output and you can actually one shot 400 HP tanks but if they're running tanks with higher health pools this gets little value and she is better off using her ultimate on somebody else.</small>
+|-
+|<center>[[File:icon-baptiste.png|75px|link=Baptiste]]<br />[[Baptiste]]</center>
+|<small>Take out the Immortality Field from a distance if it's ever in your view, and take the opportunity to headshot him while he's using his Exo Boots, as his movement is easy to track. NEVER peek his Amplification Matrix, especially if his team is using it, you'll die before you can headshot anyone.</small> 
+|<small>Through the use of Amplification Matrix, Widowmaker can one shot every hero in the game (except D.VA and Wrecking Ball due to their armour) so try to get a Baptiste to place his matrix in your sniper's nest.</small>
+|-
+|<center>[[File:icon-brigitte.png|75px|link=Brigitte]]<br />[[Brigitte]]</center>
+|<small>Brigitte can't do anything against you if you keep your distance as her damage is limited to close range, however she can protect herself with her shield, which can tank 3 shots before breaking.</small> 
+|<small>Use armour from her Rally to essentially gain extra HP, which is always valuable on Widowmaker.</small>
+|-
+|[[File:Icon-Illari.png|center|frameless|75x75px]][[Illari]]
+|<small>If it's ever in your line of sight, destroy Illari's healing pylon for your team.</small>
+|
+|-
+|[[File:Icon-kiriko.png|center|frameless|75x75px]][[Kiriko]]
+|
+|
+|-
+|[[File:Icon-Lifeweaver.png|center|frameless|75x75px]][[Lifeweaver]]
+|
+|
+|-
+|<center>[[File:icon-lúcio.png|75px|link=Lúcio]]<br />[[Lúcio]]</center>
+|<small>Lúcio will often be riding walls to keep away from enemy fire. At a distance, though, it's easier to predict his movements. While landing a headshot on him may be difficult while he's mobile, a fully charged bodyshot or two can make quick work of him. Be careful of Lúcio flanking you, however; while he doesn't provide much of a threat to your life, his Soundwave can push you out of position, making you an easier target for the enemy team.</small>
+|<small>There is no notable team synergy with Lúcio.</small>
+|-
+|<small><center>[[File:icon-mercy.png|75px|link=Mercy]]<br />[[Mercy]]</center>
+|<small>Mercy is a high priority target, because of how vulnerable she is to you, and how important her survival is for the enemy team. She's an easy kill if you catch her unprotected in the open, but smart Mercy players will look to stick near tanks or behind cover. Usually, the best time to headshot her is towards the end of her Guardian Angel as she slows down in a predictable fashion or attempts to resurrect a player, as she'll be stationary while trying to do so and you can deny her from potentially turning the fight around.</small>
+|<small>Obviously, a Mercy can pocket heal you or damage boost you which can give you durability against pesky flankers.</small>
+|-
+|<center>[[File:icon-moira.png|75px|link=Moira]]<br />[[Moira]]</center>
+|<small>There's not anything Moira can do to you as long as you keep your distance, she is a vulnerable target and a top priority to kill. However if she gets close enough she can use her damage orb and biotic grasp to quickly take you out. Don't be afraid to stand still and perfect your aim, as her grasp doesn't require aiming to use properly.</small>
+|<small>There is no notable team synergy with Moira.</small>
+|-
+|<center>[[File:icon-zenyatta.png|75px|link=Zenyatta]]<br />[[Zenyatta]]</center>
+|<small>Zenyatta has decent power at range that he can augment with his Orb of Discord, but he's required to stand in the open when attacking, making him incredibly easy to snipe. Should he hit you with his Orb of Discord, you can duck behind cover to wait for its influence to expire, or you can snipe him down before he can pelt you with orbs. Either way, you'll generally maintain superiority over Zenyatta should he show himself.</small>
+|<small>Zenyatta can pocket heal you with Harmony orb or you can pick off enemies he uses Discord orb on.</small>
+|}
+
+==Map Strategies==
+
+===Control===
+{{MapStrategyTable/Control
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Antarctic_rating = 
+| Antarctic_feature = 
+| Antarctic_strategy = 
+| Antarctic_Labs_strat = 
+| Antarctic_Sublevel_strat = 
+| Antarctic_Icebreaker_strat = 
+
+| Busan_rating = 
+| Busan_feature = 
+| Busan_strategy = 
+| Busan_Downtown_strat = 
+| Busan_Sanctuary_strat = 
+| Busan_MEKA_strat = 
+
+| Ilios_rating = 
+| Ilios_feature = 
+| Ilios_strategy = 
+| Ilios_Lighthouse_strat = 
+| Ilios_Well_strat = 
+| Ilios_Ruins_strat = 
+
+| Lijiang_rating = 
+| Lijiang_feature = 
+| Lijiang_strategy = 
+| Lijiang_ControlCenter_strat = 
+| Lijiang_Garden_strat = 
+| Lijiang_NightMarket_strat = 
+
+| Nepal_rating = 
+| Nepal_feature = 
+| Nepal_strategy = 
+| Nepal_Village_strat = 
+| Nepal_Shrine_strat = 
+| Nepal_Sanctum_strat = 
+
+| Oasis_rating = 
+| Oasis_feature = 
+| Oasis_strategy = 
+| Oasis_CityCenter_strat = 
+| Oasis_Gardens_strat = 
+| Oasis_University_strat = 
+
+| Samoa_rating = 
+| Samoa_feature = 
+| Samoa_strategy = 
+| Samoa_Beach_strat = 
+| Samoa_Downtown_strat = 
+| Samoa_Volcano_strat = 
+}}
+
+===Escort===
+{{MapStrategyTable/Escort
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| CircuitRoyal_rating = 
+| CircuitRoyal_feature = 
+| CircuitRoyal_strategy = 
+| CircuitRoyal_Attack_strat = 
+| CircuitRoyal_Defense_strat = 
+
+| Dorado_rating = 
+| Dorado_feature = 
+| Dorado_strategy = 
+| Dorado_Attack_strat = 
+| Dorado_Defense_strat = 
+
+| Havana_rating = 
+| Havana_feature = 
+| Havana_strategy = 
+| Havana_Attack_strat = 
+| Havana_Defense_strat = 
+
+| Junkertown_rating = 
+| Junkertown_feature = 
+| Junkertown_strategy = 
+| Junkertown_Attack_strat = 
+| Junkertown_Defense_strat = 
+
+| Rialto_rating = 
+| Rialto_feature = 
+| Rialto_strategy = 
+| Rialto_Attack_strat = 
+| Rialto_Defense_strat = 
+
+| Route66_rating = 
+| Route66_feature = 
+| Route66_strategy = 
+| Route66_Attack_strat = 
+| Route66_Defense_strat = 
+
+| Shambali_rating = 
+| Shambali_feature = 
+| Shambali_strategy = 
+| Shambali_Attack_strat = 
+| Shambali_Defense_strat = 
+
+| Gibraltar_rating = 
+| Gibraltar_feature = 
+| Gibraltar_strategy = 
+| Gibraltar_Attack_strat = 
+| Gibraltar_Defense_strat = 
+}}
+
+===Hybrid===
+{{MapStrategyTable/Hybrid
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| BlizzardWorld_rating = 
+| BlizzardWorld_feature = 
+| BlizzardWorld_strategy = 
+| BlizzardWorld_Attack_strat = 
+| BlizzardWorld_Defense_strat = 
+
+| Eichenwalde_rating = 
+| Eichenwalde_feature = 
+| Eichenwalde_strategy = 
+| Eichenwalde_Attack_strat = 
+| Eichenwalde_Defense_strat = 
+
+| Hollywood_rating = 
+| Hollywood_feature = 
+| Hollywood_strategy = 
+| Hollywood_Attack_strat = 
+| Hollywood_Defense_strat = 
+
+| KingsRow_rating = 
+| KingsRow_feature = 
+| KingsRow_strategy = 
+| KingsRow_Attack_strat = 
+| KingsRow_Defense_strat = 
+
+| Midtown_rating = 
+| Midtown_feature = 
+| Midtown_strategy = 
+| Midtown_Attack_strat = 
+| Midtown_Defense_strat = 
+
+| Numbani_rating = 
+| Numbani_feature = 
+| Numbani_strategy = 
+| Numbani_Attack_strat = 
+| Numbani_Defense_strat = 
+
+| Paraiso_rating = 
+| Paraiso_feature = 
+| Paraiso_strategy = 
+| Paraiso_Attack_strat = 
+| Paraiso_Defense_strat = 
+}}
+
+===Push===
+{{MapStrategyTable/Push
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Colosseo_rating = 
+| Colosseo_feature = 
+| Colosseo_strategy = 
+| Colosseo_Pushing_strat = 
+| Colosseo_Defending_strat = 
+
+| Esperanca_rating = 
+| Esperanca_feature = 
+| Esperanca_strategy = 
+| Esperanca_Pushing_strat = 
+| Esperanca_Defending_strat = 
+
+| NewQueenStreet_rating = 
+| NewQueenStreet_feature = 
+| NewQueenStreet_strategy = 
+| NewQueenStreet_Pushing_strat = 
+| NewQueenStreet_Defending_strat = 
+
+| Runasapi_rating = 
+| Runasapi_feature = 
+| Runasapi_strategy = 
+| Runasapi_Pushing_strat = 
+| Runasapi_Defending_strat = 
+}}
+
+===Flashpoint===
+{{MapStrategyTable/Flashpoint
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Aatlis_rating = 
+| Aatlis_feature = 
+| Aatlis_strategy = 
+| Aatlis_Bazaar_strat = 
+| Aatlis_Garden_strat = 
+| Aatlis_Resort_strat = 
+| Aatlis_Station_strat = 
+| Aatlis_TownCentre_strat = 
+
+| NewJunkCity_rating = 
+| NewJunkCity_feature = 
+| NewJunkCity_strategy = 
+| NewJunkCity_Arena_strat = 
+| NewJunkCity_Foundation_strat = 
+| NewJunkCity_Refinery_strat = 
+| NewJunkCity_Scrapyard_strat = 
+| NewJunkCity_Waterworks_strat = 
+
+| Suravasa_rating = 
+| Suravasa_feature = 
+| Suravasa_strategy = 
+| Suravasa_Gardens_strat = 
+| Suravasa_Market_strat = 
+| Suravasa_Palace_strat = 
+| Suravasa_Ruins_strat = 
+| Suravasa_Temple_strat = 
+}}
+
+== Achievements ==
+{{AchievementTable/Start}}
+{{Achievement|Did That Sting?|Ability-widowmaker3.png|Kill 4 enemies using Widowmaker's [[Venom Mine]] during a single Quick or Competitive play game.|Spray Widowmaker Pixel.png|Pixel}}
+{{Achievement|Smooth As Silk|Ability-widowmaker1.png|Kill an enemy with a scoped headshot while airborne as Widowmaker in Quick or Competitive play.|Spray Widowmaker Cute.png|Cute}}
+{{AchievementTable/End}}
+
+==Trivia==
+
+===Etymology===
+*Widowmaker's name and her spider themes are a reference to the [https://en.wikipedia.org/wiki/Latrodectus_mactans black widow spider].
+**"Widowmaker" essentially describes her past, as she made herself a widow by killing her husband.
+*Widowmaker's name is different depending on the game's language: 
+** "Fatale" in French (formerly "Arachnée" pre-release)
+** "Trupia Wdowa" (Dead Widow) in Polish
+** "Rokovaya Vdova" (Fatal Widow) in Russian
+** "Hēi Bǎihé" (Black Lily) in Mandarin Chinese
+** "Duó Mìng Nǚ" (Murderess) in Taiwanese Mandarin.
+*The tattoo on her right forearm reads "araignée du soir, Cauchemar", which is French for "spider in the evening, Nightmare". It's a play on an old French superstition that goes "Araignée du matin, chagrin; araignée du soir, espoir". Directly translated it means, "Spider in the morning, grief; spider in the evening, hope." A more literal translation is "If you see a spider in the morning, it's bad luck. If you see a spider in the evening, it's good luck."
+**This is in fact evident by the fact that Widowmaker seems to have better luck with her missions at nighttime considering her successful assassination attempt on Mondatta and her failed attempts at Volskaya's assassination and Doomfist's gauntlet's retrieval. The other two missions were failures because of rotten luck/unforseen circumstances, such as Sombra's conspiracy and [[Brian]]'s bravery. And, more relevantly, both missions were attempted during the daytime while her hit in King's Row was in the evening.
+
+===Cultural References===
+*Her voiceline "[[Wikipedia:Let them eat cake|let them eat cake]]" is a famous French saying misattributed to Queen Marie Antoinette in response to the peasant's cry in regards to the bread shortage. 
+
+====In Other Games====
+*Widowmaker bears resemblance to the [http://starcraft.wikia.com/wiki/Ghost ghosts] of [[Blizzard Entertainment]]'s ''[[StarCraft]]'' series, in terms of equipment and the use of mental conditioning.
+*One of Nova's skins in ''[[Heroes of the Storm]]'' is Widowmaker and conversely one of Widowmaker's own skins in ''Overwatch'' is Nova. Widowmaker's face can also be found on a color variant of Tychus's armor.<ref>2014-01-19, [http://overwatch.blizzpro.com/2015/01/15/overwatch-easter-egg-in-heroes-of-the-storm/ Overwatch Easter Egg In Heroes Of The Storm]. ''Blizzpro'', accessed on 2015-02-01</ref> The lead hero designer has said that it's unlikely that Widowmaker will be a hero in the game.<ref>2016-10-15, [http://www.escapistmagazine.com/forums/read/7.943625-Heroes-of-The-Storm-Dev-Discusses-ChoGall-Balance-Hero-Design-And-More#&gid=gallery_6568&pid=1 Heroes of The Storm Dev Discusses Cho'Gall Balance, Hero Design, And More!]. ''The Escapist'', accessed on 2016-10-15</ref>
+*Widowmaker bears some resemblance to Valve's ''Team Fortress 2'' character, Sniper. Both have done something to their family (Sniper abandoned his family to be an assassin, Widowmaker killed her husband), both have sniper rifles and sub-machine guns (however, Widowmaker's rifle is both a sniper rifle and a sub-machine gun, while Sniper's SMG is a separate weapon), both fire tracing shots from their rifles (however, Sniper's normal rifle doesn't fire tracing bullets; it's only when he equips The Machina or the Hitman's Heatmaker that his bullets will start to leave tracers behind), and both can charge their shots while scoped to deal more damage.
+
+===Merchandise===
+*A Funko Pop Widowmaker figurine was released on July 18th, 2016.<ref>2016-04-2016, [http://gameidealist.com/geek-corner/release-dates-listed-funko-pop-overwatch-action-figures/ Release dates listed for Funko Pop Overwatch Action Figures]. ''Game Idealist''.</ref>
+* A 13.5" statue of Widowmaker was announced and made available for pre-order on March 28, 2017.
+*A Widowmaker-themed hoodie is available from JINX.<ref>2017-11-22, [http://warcraft.blizzplanet.com/blog/comments/overwatch-hoodies Overwatch Hoodies]. ''Blizzplanet'', accessed on 2017-11-23</ref>
+*Widowmaker's Chinese New Year skin, Black Lily, is a reference to her name in the Chinese version of the game.
+*It is possible that the voice line "One shot, one kill" is based on the book ''One Shot One Kill'' by authors Charles W. Sasser and Craig Roberts.
+*The Tracer vs. Widowmaker [[LEGO Overwatch]] set featuring the [[Satellite Drone XR-9]] was revealed by Target in 2018.<ref>2018-10-22, [https://www.brothers-brick.com/2018/10/22/full-lineup-of-lego-blizzard-overwatch-sets-revealed-news/ Full lineup of LEGO Blizzard Overwatch sets revealed]. ''The Brothers Brick'', accessed on 2018-10-22.</ref>
+
+===Misc. Character Information===
+*Widowmaker has an antagonistic relationship with [[Sombra]].<ref name = "OW2WidowmakerQuotes"/>
+*Widowmaker's Dame Chance rifle was gifted to her by [[Maximilien]].<ref name = "Season15Collab">2025-03-18, [https://overwatch.blizzard.com/en-us/news/24178100/?utm_source=ow2-hero-free-trial-3-20250321&utm Season 15 Midseason: Collab, Crossbow, and Chaos]. ''Blizzard Entertainment'', accessed on 2025-03-22</ref>
+
+===Development===
+[[File:Longshot.jpg|thumb|The Longshot class]]
+[[File:Widowmaker Reference.jpg|thumb|Widowmaker's reference image]]
+Widowmaker has her roots in ''[[Project Titan]]''. She stems in part from the Ranger class. The Ranger had a sniper rifle, an assault rifle, and a rifle that could transform into a turret. Widowmaker got the sniper rifle, while the assault rifle and transforming turret went to [[Soldier: 76]] and [[Bastion]] respectively.<ref>''[[Forging Worlds: Stories Behind the Art of Blizzard Entertainment]]''</ref>
+
+In the original pitch for ''Prometheus'', the class was named '''Longshot''' and wielded a sniper rifle and machine pistol, and had the Grappling Hook and Recon Visor abilities. Longshot would appear in a later pitch for the game with a new design more closely resembling Widowmaker, and was also featured prominently in the ''Prometheus'' "hero lineup" key art.<ref>Blizzcon 2017, Overwatch: Archives</ref>
+The first concept for Widowmaker was to create a ranged sniper character.<ref>2015-12-10, [http://www.pcgamer.com/overwatch-story-chris-metzen-interview/ How Blizzard is making up Overwatch's story as it goes]. ''PC Gamer'', accessed on 2015-12-24</ref> She was one of the easiest characters to animate in the game,<ref>2015-05-27, [http://overwatch.blizzplanet.com/blog/comments/blizzcon-2014-overwatch-origins-panel-transcript/4 BlizzCon 2014 – Overwatch Origins Panel Transcript]. ''Blizzplanet'', accessed on 2015-05-31</ref> and was one of the first three characters designed for ''Overwatch'', alongside Tracer and Reaper.<ref>2016-04-22, [https://www.youtube.com/watch?v=bTMnJ5XJH6Q The Story of Overwatch: Return of the 90s Shooter]. ''YouTube'', accessed on 2016-09-08</ref> Her venom mine ability originally created a much larger and deadlier explosion.<ref>''Game Informer #105: Build 'em Up, Break 'em Down''</ref>
+
+Originally, her assault mode was the only assault hit-scan type that didn't suffer from damage falloff. This was changed with the rework of damage falloff for all hitscan heroes.
+
+====Overwatch 2====
+[[File:Overwatch2Widowmaker.jpeg|thumb|Overwatch 2 Skin Early Concept Art]]
+Widowmaker was redesigned for ''[[Overwatch 2]]''. Concepts included a more insectoid design and a treasure hunter appearance. The redesign shifted to a cyberpunk appearance, making her appear more "upgraded". Her hairstyles were also experimented with, while aiming to keep her signature long ponytail, they ultimately landed on a braid which helped preserve her original silhouette.<ref name = "Overwatch2BehindScenes">2021-02-20, [https://www.youtube.com/watch?v=lRj-GotnNaQ BlizzConline 2021 | Behind the Scenes of Overwatch 2 | Overwatch]. ''YouTube'', accessed on 2021-03-13</ref>
+
+==== Removed abilities ====
+{{Ability details
+| removed = 1
+| ability_name = Focused Aim
+| ability_image = Perk_FocusedAim.png
+| ability_type = Minor Perk
+| official_description = Scoped shots charge 50% faster during Infra-Sight. 
+| ability_details = 
+* ''Removed in Season 18.''
+}}
+{{Ability details
+| removed = 1
+| ability_name = Deadly Deux
+| ability_image = Perk_DeadlyDeux.png
+| ability_type = Major Perk
+| official_description = Venom Mine gains 100% increased damage and a second charge, enabling 2 active mines at a time. 
+| ability_details = 
+* ''Removed in Season 18.''
+}}
+
+{{Ability details
+| removed = 1
+| ability_name = Escape Plan
+| ability_image = Perk_EscapePlan.png
+| ability_type = Major Perk
+| official_description = Scoped shot hits reduce Grappling Hook's cooldown by up to 4 seconds. 
+| ability_details = * ''Removed in Reign of Talon Season 1''
+* Cooldown reduction depends on the charge.
+}}
+
+==Media==
+
+=== Images ===
+
+;Former Portrait
+<gallery>
+File:OW1Icon Widowmaker.png|Overwatch 1 Hero Portrait
+</gallery>
+;Gameplay Screenshots
+<gallery widths="200">
+File:Widowmaker Overwatch 001.jpg
+File:Widowmaker Overwatch 002.jpg
+File:Widowmaker Overwatch 003.jpg
+File:Widowmaker Overwatch 004.jpg
+File:Widowmaker Overwatch 005.jpg
+File:Widowmaker Overwatch 006.jpg
+File:Widowmaker Overwatch 007.jpg
+</gallery>
+;Concept Art
+<gallery>
+File:Ange De La Mort Widowmaker.jpeg|Ange De La Mort Skin Concept Art by David Kang
+File:Concept Art - Widowmaker Medusa.jpg|Medusa Skin Concept Art by Nesskain
+File:Widowmaker Mousquetaire skin concept art.jpg|Mousquetaire Skin Concept Art by Yiming Liu
+File:Pale Serpent skin concept art.jpg|Pale Serpent Skin Concept Art by Tim Guo
+File:Pale Serpent skin weapon concept art.jpg|Pale Serpent Skin Weapon Concept Art by Tim Guo
+File:Dame Chance Concept Art.jpg|Dame Chance Weapon Concept Art by Jaejun Kim
+</gallery>
+
+===Videos===
+{{#ev:youtube|fvPp6XbbTb0|400|inline}}
+{{#ev:youtube|HsNt9PADSCE|400|inline}}
+{{#ev:youtube|U130wnpi-C0|400|inline}}
+
+==Balance Change Logs==
+{{ChangelogsTabber
+| owpvp =
+{{PatchTableElement|2026-04-14|
+Perk Costs
+* Minor Perk cost reduced by 6%.
+* Major Perk cost reduced by 4%.
+}}
+{{PatchTableElement|2026-02-10|
+{{al|Seeker Mine}} – Major Perk
+* Damage increased from 50 to 75 over its duration.
+
+{{al|Escape Plan}} – Major Perk
+* Removed.
+
+{{al|Widow’s Bite}} – Major Perk
+* Scoped shots can charge up to 125%, piercing enemies when fully charged.
+}}
+{{PatchTableElement|2025-10-14|
+{{al|Seeker Mine}} – Major Perk
+* Damage increased from 25 to 50.
+}}
+{{PatchTableElement|2025-09-16|
+{{al|Grappling Hook}}
+* Cooldown reduced from 12 to 10 seconds.
+
+{{al|Venom Mine}}
+* Total damage increased from 75 to 125.
+}}
+{{PatchTableElement|2025-08-26|
+{{al|Focused Aim}} - Minor Perk
+* Removed.
+
+{{al|Sniper's Instinct}} - Minor Perk
+* New Minor Perk.
+* Scoped shots charge 100% faster for 2 seconds after using Grappling Hook.
+
+{{al|Deadly Deux}} - Major Perk
+* Removed.
+
+{{al|Seeker Mine}} - Major Perk
+* New Major Perk.
+* Vemon Mine now fires poison darts at enemies within 10 meters and remains active after triggered.
+}}
+{{PatchTableElement|2025-07-22|
+{{al|Infra-Sight}} - Ultimate Ability
+* Ultimate cost decreased 10%.
+}}
+{{PatchTableElement|2025-05-20|
+{{DevComment|Developer comments: Widowmaker is a more map-dependent hero than most and now with hero bans restricting her usefulness we're looking to make her viable in more situations.}}
+
+{{al|Widow's Kiss}} - Primary Fire
+* Maximum spread reduced from 3 to 2 degrees.<br>(This change never went through but the shots taken to reach max spread increased from 7 to 11 instead)
+* Damage increased from 13 to 14.
+
+{{al|Deadly Deux}}
+* Venom Mine's bonus damage increased from 50% to 100%.
+}}
+{{PatchTableElement|2025-03-25|
+* Base health increased from 200 to 225 HP.
+}}
+{{PatchTableElement|2025-02-18|
+;Hero Perks
+
+{{al|Scoped Efficiency}}
+* Scoped shots cost 3 ammo instead of 5.
+
+{{al|Focused Aim}}
+* Scoped shots charge 50% faster during Infra-sight.
+
+{{al|Escape Plan}}
+* Scoped shot hits reduce Grappling Hook’s cooldown by up to 4 seconds.
+
+{{al|Deadly Deux}}
+* Venom Mine gains 50% increased damage and a second charge, enabling 2 active mines at a time.
+}}
+{{PatchTableElement|2024-12-10|
+{{al|Widow's Kiss}}
+* Scoped shots no longer benefit from global projectile size increases.
+}}
+{{PatchTableElement|2024-12-10|
+; Global Projectile Size Bonus
+* Hitscan radius large reduced from 0.08 to 0.07 meters.
+* Hitscan radius small reduced from 0.05 to 0.04 meters.
+}}
+{{PatchTableElement|2024-02-21|
+{{al|Widow's Kiss}}
+* Now uses the smaller 0.05 meter hitscan projectile size modifier. Total projectile size is now 0.05 meters.
+* Scoped shot damage falloff min-max range increased from 40-60 to 50-70 meters.
+}}
+{{PatchTableElement|2024-02-13|
+;General updates
+Most damage-dealing projectile sizes have been increased by a new global modifier added to their base size.
+
+* +0.05 meters for hitscan projectiles with a high rate of fire or spread (e.g., Tracer's Pulse Pistols or Reaper's Hellfire Shotguns).
+* +0.08 meters for hitscan projectiles that are more precise (e.g., Cassidy's Peacekeeper or Soldier:76's Heavy Pulse Rifle).
+* +0.05 meters for travel time projectiles that are shotguns or have a very high rate of fire (e.g., Roadhog's Scrap Gun or Ramattra's Void Accelerator).
+* +0.10 meters for travel time projectile with a speed greater than 50 meters per second (e.g., Zenyatta's Destruction Orb).
+* +0.15 meters for travel time projectile with a speed less than or equal to 50 meters per second (e.g., Pharah's Rocket Launcher).
+* Very large projectiles with a base size greater than 0.5 meters have been excluded from these increases (e.g., Orisa's Energy Javelin or Reinhardt's Fire Strike).
+
+Hero combined HP (base health/armor/shields) increased by 15-25%.
+
+* 150-175 HP heroes increased by 25 HP.
+* 200-300 HP heroes increased by 50 HP.
+* 300+ HP (Tanks) increased by 75-100 HP.
+* Each hero's precise health increases are listed in their patch notes below.
+
+Ultimate Charge
+
+* All Ultimate ability costs increased by 10%.
+
+Regenerative Passive for All Heroes
+
+* All heroes now regenerate 20 health per second after 5 seconds of not taking damage.
+
+Damage Role Passive
+
+* Reload speed bonus on elimination has been removed.
+* New role passive: Dealing damage reduces enemy healing received by 20% for 2 seconds.
+
+Quick Melee
+
+* Damage increased from 30 to 40.
+
+;Hero updates
+
+* Health increased from 175 to 200.
+}}
+{{PatchTableElement|2023-10-31|
+{{DevComment|Developer comments: Recon Visor is taking a long time to charge on average relative to other ultimate abilities so we're reducing the cost. Widowmaker is also at a more severe disadvantage against Sombra with the recent rework and these changes will add more counterplay.}}
+
+{{al|Widow's Kiss}}
+* Unscoped shots to reach maximum spread increased from 3 to 7.
+
+{{al|Infra-Sight}}
+* Ultimate cost reduced 10%.
+}}
+{{PatchTableElement|2023-06-13|
+{{DevComment|Developer Comment: These changes to Widowmaker's weapon falloff are intended to reduce her one-shot capabilities on maps with extremely long sightlines. The average range to still eliminate a 200 health hero at full charge is around 50 meters. A fully-charged critical shot will still eliminate 150 health targets regardless of range.}}
+
+{{al|Widow's Kiss}}
+* Scoped shot damage falloff min-max range reduced from 70-100 to 40-60 meters.
+* Scoped shot maximum damage falloff scalar increased from 30 to 50%
+}}
+{{PatchTableElement|2023-02-07|
+{{DevComment|Developer Comment: We experimented with Widowmaker at 200 health for a while due to concerns that the increased power of tanks made her too vulnerable to them. Ultimately she gains more advantages from 5v5 than she loses so we're returning her back to 175 HP to better enable more heroes to contest her lethal ranged capabilities.}}
+*Base health reduced from 200 to 175
+}}
+{{PatchTableElement|2022-04-26|
+*Base health increased from 175 to 200
+|beta=1}}
+
+| ow1 =
+{{PatchTableElement|2021-07-01|
+General
+* Hitscan damage now scales to 30% at maximum falloff range, down from 50% for the following heroes:
+* Ashe
+* Baptiste
+* Bastion
+* McCree
+* Soldier: 76
+* Widowmaker
+* Wrecking Ball
+
+{{Al|Widow's Kiss}}
+* Damage falloff range increased from 60-85 to 70-100 meters
+We're adjusting Widowmaker's optimal range to be slightly further out to account for some map locations where counter-sniping was common but just barely outside of the effective range with the damage falloff. For Widowmaker, the sniping damage falloff is mainly in place to restrict the lethality of mid-air grapple shots at the extreme distances possible on some maps.
+}}
+{{PatchTableElement|2020-10-29|
+*Base health reduced from 200 to 175
+}}
+{{PatchTableElement|2020-10-13|
+{{Al|Grappling Hook}}
+* Grapple will now bounce off a surface if the distance between you and the hook is under 2 meters, canceling the hook and not costing any cooldown
+}}
+{{PatchTableElement|2020-08-31|
+{{Al|Widow's Kiss}} 
+
+General
+* Max ammo increased from 30 to 35
+Secondary Fire
+* Scoped ammo cost increased from 3 to 5
+* Scoped shots now have up to 50% damage falloff from 60-85 meters
+}}
+{{PatchTableElement|2020-02-12|
+{{Al|Widow's Kiss}}
+
+* Full charge time for scoped shots increased from 0.75 sec to 0.9 sec
+''Developer Comment: Widowmaker has become stronger over time following changes to other heroes, such as power reductions to barriers. This change is intended to slow down her shots, reducing her overall DPS.''
+}}
+{{PatchTableElement|2019-12-10|
+{{Al|Grappling Hook}}
+*Grappling Hook cooldown increased from 10 to 12 seconds
+Developer Comment: With barriers having less uptime, Widowmaker will be even more effective at locking down long sight lines. This change weakens her mobility so she can still be reasonably countered.
+}}
+{{PatchTableElement|2019-03-19|
+{{Al|Infra-Sight}}
+*Reveals enemy health bars
+*Now canceled on death
+Developer Comments: Infra-Sight had no counter to its effect, so it now ends when Widowmaker dies. To balance out its higher risk of use, Infra-Sight now reveals enemy health bars to Widowmaker’s team.
+}}
+{{PatchTableElement|2018-09-11|
+{{Al|Grappling Hook}}
+*Now retains momentum when used on environments or structures without a ledge (e.g. walls)
+{{Al|Widow's Kiss}}
+*Increased the precision of the Relative Aim Sensitivity While Zoomed slider. This can be found under Options > Controls > Hero > Widowmaker
+}}
+{{PatchTableElement|2018-08-09|
+{{Al|Grappling Hook}}
+*Cooldown increased from 8 seconds to 10 seconds
+Developer Comments: The increased cooldown will slightly reduce the frequency that Widowmaker can reposition herself. This allows her to be threatened more easily by agile enemy heroes such as Winston and Genji.
+}}
+{{PatchTableElement|2018-07-24|
+{{Al|Widow's Kiss}}
+*Now has damage falloff applied on her automatic primary fire (50% at max range)
+}}
+{{PatchTableElement|2017-08-29|
+{{Al|Grappling Hook}}
+*Cooldown has been reduced from 12 seconds to 8
+{{Al|Venom Mine}}
+*Affected targets are now visible through walls (to you as Widowmaker only)
+Developer Comments: Widowmaker is extremely powerful in the right hands, but her abilities often felt a little weak. The Grappling Hook cooldown reduction means she is more likely to have it available when she needs to escape. Venom Mine is intended to be an early warning system, uncovering enemies that are attempting to flank her or her team. With this change, she can see enemies when they trigger the mine, even if they’re on the other side of a wall.
+}}
+{{PatchTableElement|2017-05-23|
+*Recoil Recovery Aim Compensation can now be disabled for Ana, McCree, and Widowmaker. The option can be found under the “Control” tab in the “Options” menu. Simply select the appropriate hero under the dropdown menu and look for the “Hero” section
+}}
+{{PatchTableElement|2017-02-28|
+*New Hero Option: Grappling Hook Sensitivity
+**Allows players to adjust Grappling Hook’s targeting sensitivity
+}}
+{{PatchTableElement|2016-11-15|
+{{Al|Venom Mine}}
+*Explosion no longer damages the player who placed the mine
+{{Al|Widow's Kiss}}
+*Charge rate increased by 20%
+Developer Comments: These changes allow Widowmaker to be more flexible and reactive.
+}}
+{{PatchTableElement|2016-10-11|
+{{Al|Widow's Kiss}}
+*Scoping-in animation time has been reduced from 0.5 to 0.33 seconds
+}}
+{{PatchTableElement|2016-06-14|
+{{Al|Widow's Kiss|Alternate Fire (Scoped Shot)}}
+*Base damage decreased from 15 to 12
+*Headshot damage multiplier increased from 2x to 2.5x
+*Players must now wait for the unscoping animation to completely finish before scoping
+{{Al|Infra-Sight}}
+*Ultimate cost increased by 10%
+}} |ow6v6={{PatchTableElement|2024-12-17|
+*Base health increased from 200 to 225.
+
+Note: This change was later applied to 5v5 too.
+}}}}
+
+==References==
+<references/>
+
+==External links==
+* [http://playoverwatch.com/en-us/heroes/widowmaker/ Official Site - Widowmaker]
+* [http://www.icy-veins.com/overwatch/widowmaker-guide-strategy-gameplay Widowmaker Guide on Icy Veins]
+
+{{Heroes}}
+[[Category:Widowmaker| ]]
+[[Category:Heroes]]
+[[Category:Entertainers]]
+[[Category: French characters]]
