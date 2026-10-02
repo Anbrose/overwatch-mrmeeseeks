@@ -2,7 +2,7 @@
 .env
 
 # 英雄数据缓存（运行时从 Wiki 抓取）
-server/data/
+server/herodata/
 
 # Python
 __pycache__/
@@ -19,5 +19,3 @@ Thumbs.db
 # 服务器端标注数据（本地运行时的默认 STATE_DIR）
 server/state/
 
-# 英雄问答的运行时缓存（默认路径；Docker 部署时在 /state）
-server/data/heroes.json

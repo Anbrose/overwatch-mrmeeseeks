@@ -327,7 +327,7 @@ journalctl -u mrmeeseeks -f      # 查看日志
 | `WS_HOST` | 否 | `0.0.0.0` | WebSocket 监听地址；用反向代理时改为 `127.0.0.1` |
 | `WS_PORT` | 否 | `8765` | WebSocket 端口 |
 | `MIN_SNAPSHOT_INTERVAL` | 否 | `5` | 同一客户端两次分析的最短间隔（秒） |
-| `HERO_DATA_PATH` | 否 | `server/data/heroes.json` | 英雄数据缓存文件。Docker 部署时位于 `herodata` 卷 |
+| `HERO_DATA_PATH` | 否 | `server/herodata/heroes.json` | 英雄数据缓存文件。Docker 部署时位于 `herodata` 卷 |
 | `HERO_REFRESH_HOURS` | 否 | `24` | 每隔多少小时从 Overwatch Wiki 刷新英雄数据 |
 
 ### 客户端参数
