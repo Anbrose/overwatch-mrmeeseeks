@@ -1,0 +1,1315 @@
+{{Infobox character
+| name = Reinhardt
+| image = <gallery>
+OW2_Reinhardt.png|Overwatch
+OW_Reinhardt.png|Overwatch Classic
+</gallery>
+| caption = "Together we will strike them down!"
+| realname = Reinhardt Wilhelm
+| birth = June 26th
+| age = 63 (''[[Overwatch 2]]'')<br/>61 (''[[Overwatch]]'')
+| nationality = {{flag|de}} German
+| occupation = Crusader (formerly)<br/>Overwatch agent (formerly)<br/>Adventurer
+| baseofoperations = [[Stuttgart]], [[Germany]] (formerly)<br/>[[Watchpoint: Gibraltar]] (formerly)<br/>[[Gothenburg]], [[Sweden]]
+| affiliation = [[German Armed Forces]] (formerly)<br/>
+[[Crusaders]] (formerly)<br/>
+[[Overwatch (group)|Overwatch]]
+| relations = [[File:Balderich von Adler.png|30px]] [[Balderich von Adler]] (mentor)<br> [[File:Icon-Brigitte.png|20px]] [[Brigitte|Brigitte Lindholm]] (goddaughter)<ref name = "TorbWife">2018-02-24, [https://playoverwatch.com/en-us/blog/21574699 Story Update: A Letter From Torbjörn to his Wife] ''PlayOverwatch''. Accessed on 2018-02-24.</ref><br>
+| video = {{#ev:youtube|zLFbm6YckoU|325|inline}}
+| voice = {{VA stack
+| english = [[Darin De Paul]]<ref>2015-??-??, [http://www.darindepaul.com/#!resume/c5ks "Darin's Resume"]. ''Darin De Paul Voice Over''. Accessed on 2016-05-18</ref>
+| other = [[Patrice Melennec]] (French)<br/>[[Gerhard Jilka]] (German)<br>Paolo Marchese (Italian, first voice)<br>
+Pietro Ubaldi (Italian, second voice)<br>
+Yuan Guoqing (Mandarin (China))<br>Chen You-wun(Mandarin(Taiwan))<br>Kenji Nomura (Japanese)<br>
+Kwon Hyeok-su (Korean)<br>Gennadii Novikov (Russian) <br>
+Eduardo Borgerth (Brazilian Portuguese)<br/>
+Humberto Solórzano (American Spanish)<br>
+Antonio García Moral (European Spanish)
+}}
+| cosmetics = 1
+| quotes = 1
+| stadium = 1
+| type = 
+| role = [[Tank]]
+| sub-role = [[Stalwart]]
+| health = 250
+| armor = 300
+| health6v6 = 325
+| armor6v6 = 225
+| minor_perk_xp = 1615
+| major_perk_xp = 4040
+}}
+{{HeroTabs}}
+'''Reinhardt''' is a [[Sub-Roles#Stalwart|Stalwart]] [[Roles#Tank|Tank]] [[Heroes|hero]] in ''[[Overwatch 2|Overwatch]]''. He is one of the 21 heroes included in the game's release on 24 May 2016.
+
+==Overview==
+[[File:Reinhardt HS.mp4|left|thumb|Reinhardt Hero Selection]]
+Clad in powered armor and swinging his hammer, Reinhardt leads a rocket-propelled charge across the battleground and defends his squadmates with a massive energy barrier.<gallery>
+File:Rein KA2.webp|[[Overwatch 2]] Key Art
+File:Rein KA1.webp|[[Overwatch|Overwatch 1]] Key Art
+</gallery><gallery>
+File:Icon-Reinhardt.png|3D Portrait
+File:Reinhardt Hero.png|2D Portrait
+</gallery>
+
+==Abilities==
+
+===Passive Abilities===
+{{Role passive|Tank}}
+{{Sub-Role_passive|Stalwart}}
+
+===Weapons===
+{{Ability_details
+| ability_name = Rocket Hammer
+| ability_image = Ability-reinhardt1.png
+| old_description = Reinhardt’s Rocket Hammer is an exemplary melee weapon, able to deal punishing damage in a wide arc with every swing.
+| official_description = Devastating melee weapon.
+| ability_type = Weapon
+| shot_type = {{proj|melee}}
+| damage = 100
+| headshot = ✕<!-- ✓/✕ -->
+| fire_rate = {{tt|1.04 shots/s|1 swing per 0.96 seconds}}
+| cast_time = {{tt|0.4 + 0.5 seconds|0.416s startup + 0.544s recovery}}
+| duration = 0.208 seconds (hitbox active)
+| range = 4 meters
+| ignores_barrier = 1
+| ignores_matrix = 1
+| ignores_window = 1
+| ability_video = Ua8WIr2EiL8
+| ability_keywords = melee
+| ability_details = * Damage per second: ~104 while swinging
+* Reinhard does not have a [[quick melee]] attack. Attempting to use it swings the Rocket Hammer instead. 
+* Rocket Hammer knocks back enemies in the direction of the swing.
+* The direction of consecutive swings alternates, starting counter-clockwise.
+* Activating {{al|Fire Strike}}, {{al|Barrier Field}}, {{al|Charge}} or {{al|Earthshatter}} interrupts the swing animation.
+* The hitbox of the swings lingers slightly longer at the end position of the hammer.
+* Rocket Hammer is not reflected when blocked by {{al|Deflect}}.
+| dps = 104 while swinging
+}}
+
+===Special Abilities===
+{{Ability_details
+| ability_name = Barrier Field
+| ability_image = Ability-reinhardt2.png
+| old_description = Reinhardt projects a broad, forward-facing energy shield, which can absorb substantial damage before it is destroyed. Though Reinhardt can protect himself and his companions behind the shield, he cannot attack while sustaining it.
+| official_description = Hold {{key|secondary fire}} to deploy a frontal energy barrier.
+| ability_type = Ability
+| key = secondary fire
+| barrier_health = 1500
+| mspeed_pen = {{tt|-30%|3.85 m/s}}
+| cast_time = {{tt|0.1 + 0.29 seconds|0.096s startup + 0.288s recovery}}
+| height = 4.25 meters
+| width = 6.8 meters
+| cooldown = 5 seconds;;destroyed
+| ability_video = s6LUaSrHYCA
+| ability_keywords = barrier::channel::deployable
+| ability_details = * Using {{al|Fire Strike}}, {{al|Charge}} or {{Al|Earthshatter}} automatically puts down the barrier to cast the ability. To use Rocket Hammer, the barrier must be first manually released.
+* Barrier health regenerates at a rate of 150 per second after being down for 2 seconds.
+* Barrier Field is a channeled ability, If Reinhardt is hacked, slept, stunned and knocked down, it will be released.
+** Holding secondary fire also raises back the barrier automatically when the cast resolves if Fire Strike or Earthshatter was used.
+* The center of shield relative to Reinhard is shifted ~0.075 m to the left.
+* Changing the direction of the character's gaze (and hence the shield zone) takes time. It takes ~0.14 seconds to be able block something what was exactly behind you.
+* By holding the primary fire key, Reinhardt can look around at his surroundings without turning.
+* The barrier cracks once at 50% and again at 25%. At 20%, Reinhardt will [[Reinhardt/Quotes#Abilities|say]] his barrier is failing.
+| 6v6_details = * Shield health increased from 1500 to 1800.
+}}
+
+{{Ability_details
+| ability_name = Charge
+| ability_image = Ability-reinhardt3.png
+| old_description = Reinhardt charges forth in a straight line, grabbing hold of enemies in his path. If he collides with a wall, foes he’s carrying suffer extreme damage.
+| official_description = Charge forward and smash an enemy against a wall.
+| ability_type = Ability
+| key = ability 1
+| shot_type = {{proj|melee}}<br>{{proj|movement}}
+| cooldown = 7 seconds
+| damage = 300 (pinned to wall)<br>50 (collision w/out pin)
+| cast_time = {{tt|0.6 + 0.5 seconds|0.592s startup + 0.496s recovery}} (wall impact)<br>{{tt|0.6 + 0.1 seconds|0.592s startup + 0.128s recovery}} (canceled)
+| range = 50.2 meters
+| mspeed_buff = {{tt|+200%|16.5 m/s}}
+| kbspeed = 31.6 m/s (indirect hit)<br>11.2 m/s (canceled pin)
+| duration = 3 seconds (charge, max)<br>{{tt|0.3 seconds|0.272s}} (charge, min)<br>{{tt|0.65 seconds|0.656}} (stun on wall hit)
+| ignores_barrier = 1
+| ignores_matrix = 1
+| ignores_deflect = 1
+| ignores_window = 1
+| ignores_speedcap = 1
+| ability_video = maNOkZpzO-w
+| ability_keywords = break::collide::displace::lesser evasive;;self::movement
+| ability_details = 
+* Reinhardt can cancel the charge by pressing the ability button again.
+* Reinhardt can turn while charging but his control is reduced.
+* If Charge directly collides with an enemy, that enemy is "pinned" (stunned), and if they hit a wall, the pinned target takes the wall hit damage. If Charge ends before hitting a wall, no damage is inflicted, but the target will remain stunned for an additional 0.65 seconds. Only 1 enemy can be pinned at a time.
+* If Charge indirectly collides with an enemy, or if there is already a target pinned, the enemy is knocked away and takes 50 damage.
+* Colliding with any immovable entity, such as Orisa during {{al|Fortify}} or {{al|Overrun|text=Overrun}}, is also treated as a wall impact.
+** Colliding with deployables is also treated as a wall impact, but also deals half of Reinhardt's pin damage to the deployable.
+*** Charging into Illari's healing pylon disables it for a short time.
+* Abilities that make the target [[phased out]], like {{al|Protection Suzu}} or {{al|Wraith Form}}, can prevent a target from being pinned, but once hit the effect can only be removed by {{al|Life Grip}}.
+* Abilities that make the target [[invincible]], like {{al|Projected Barrier}} or {{al|Transcendence}}, do not prevent or remove the pinned effect, but can prevent the target from taking damage.
+* If Charge collides with {{al|Rocket Punch}}, {{al|Shield Bash}}, a charging {{al|B.O.B.}}, or another {{al|Charge}}, both participants get [[Crowd Control#Knock Down|knocked down]] for 1.7 seconds. Any pinned targets will be damaged as if they hit a wall.
+* Charge can break tether effects (except {{al|Cage Fight}} because it disables movement abilities).
+* Reinhardt's visible character model is shifted to the right in the Charge animation, causing his left shoulder, rather than the middle of his body, to be the center of his hitbox. Due to this disparity, players should focus on the crosshair position over the character model when aiming.
+** Tl;dr: Left shoulder pins, right shoulder boops
+* Charge's [[movement speed]] buff does not count towards global movement speed buff cap.
+|6v6_details=* Cooldown increased from 7 to 10 seconds.
+}}
+
+{{Ability_details
+| ability_name = Fire Strike
+| ability_image = Ability-reinhardt4.png
+| old_description = By whipping his Rocket Hammer forward, Reinhardt slings a flaming projectile which pierces and damages any enemies it touches.
+| official_description = Launch a fiery projectile.
+| ability_type = Ability
+| shot_type = {{proj|proj}}
+| key = ability 2
+| cooldown = 6 seconds
+| charges = 2
+| damage = 125
+| headshot = ✕<!-- ✓/✕ -->
+| cast_time = {{tt|0.5 + 0.45 seconds|0.512s startup + 0.45s recovery}}
+| pspeed = 33 m/s
+| pradius = 0.85 meters
+| ignores_barrier = 1
+| ability_video = XAap0dyFKNI
+| ability_keywords = barrier piercing::travel time
+| ability_details = * Fire Strike stops if it collides with terrain or a terrain-like [[object]], like {{al|Ice Wall}}.
+** Pierces [[barrier]]s, enemies, and other damageable entities.
+** Collision against walls is checked against the center of the projectile.
+| 6v6_details = * Cooldown increased from 6 to 8 seconds.
+}}
+
+===Ultimate Ability===
+{{Ability_details
+| ability_name = Earthshatter
+| ability_image = Ability-reinhardt5.png
+| ability_video = DrnmH2-T2O4
+| old_description = Reinhardt forcefully slams his rocket hammer into the ground, knocking down and damaging all enemies in front of him.
+| official_description = Knock down all enemies in front of you.
+| ability_type = Ultimate Ability
+| shot_type = {{proj|shockwave}}
+| ult_req = 1960 points
+| damage = 50 (base)<br>200 (critical)
+| cast_time = {{tt|0.4 + 0.5 seconds|0.448s startup + 0.496s recovery}}
+| duration = 3 seconds (knockdown)
+| radius = 1.5 meters (critical)<br>25 meters (max)
+| view_angle = 50 degrees
+| height = 1.8 meters (shockwave)<br>1.8 meters (climb/drop)
+| pspeed = 40 m/s
+| ignores_matrix = 1
+| ignores_deflect = 1
+| ignores_window = 1
+| ability_keywords = ability critical::knockdown::shockwave
+| ability_details = * Requires line of sight.
+** Earthshatter will be stopped by barriers, even if the damage from Earthshatter breaks the barrier.
+* Earthshatter has a small amount of vertical height (1.77 meters), allowing it to affect enemies in the air.
+** This distance is calculated as the difference between the height of the enemy and the height of the surface over them.
+** By jumping off the payload at the right time, you can usually gain enough height to avoid being hit.
+* Earthshatter is a channeled ability and it is interrupted by becoming hacked, stunned or knocked down.
+* Earthshatter deals an additional 150 damage within 1.75m of the impact area. This counts as a [[critical hit]].
+* While casting Earthshatter Reinhardt ingnores collision with other heroes.
+* If Reinhardt is/becomes airborne while casting Earthshatter, the cast will not finish until he hits the ground.
+* Reinhardt is unaffected by {{al|Graviton Surge}} while casting Earthshatter.
+* {{al|Life Grip}} cannot be used on Reinhardt while he is casting Earthshatter. Activating Earthshatter will also interrupt an active pull.
+}}
+
+== Perks ==
+=== Minor Perks ===
+A Minor [[Perk]] can be chosen at level 2.
+{{Ability details
+| ability_name = Crusader's Fire
+| ability_image = Crusader's_Fire.png
+| ability_type = Minor Perk
+| official_description = Refund a charge of Fire Strike When you stun an enemy, overfilling up to 3.
+| ability_details = * The 3rd fire strike charge persists after dying.
+}}
+
+{{Ability details
+| ability_name = Crusader's Resolve
+| ability_image = Perk_CrusadersResolve.png
+| ability_type = Minor Perk
+| official_description = While using Barrier Field, your passive health regeneration triggers 75% sooner.
+| duration = 6 → 1.5 seconds (out-of-combat delay)
+| ability_details = * ''Removed in Season 18, Re-added Reign of Talon Season 1: Conquest''
+* It is the first removed perk to be re-added
+}}
+
+=== Major perks ===
+A Major [[Perk]] can be chosen at level 3.
+{{Ability details
+| ability_name = Shield Slam
+| ability_image = Perk_ShieldSlam.png
+| ability_type = Major Perk
+| shot_type = {{proj|melee}}<br>{{proj|movement}}
+| key = primary fire
+| key_alternative = secondary fire
+| official_description = While Barrier Field is active, use Primary Fire to damage and knockback enemies.
+| cooldown = 6 seconds
+| damage = 50
+| range = 5.52 meters (dash)<br>3.6 meters (hitbox)
+| mspeed = 17.6 m/s
+| kbspeed = {{tt|12.5 m/s|H:11.2, V:5.6}}
+| ignores_matrix = 1
+| ignores_deflect = 1
+| ignores_window = 1
+| ability_details =
+* Can be used while airborne.
+* The hitbox is blocked by enemy barriers, however it is possible to hit "through" them if the origin of the hitbox, i.e. your barrier, travels past theirs.
+* Shield Slam does '''not''' have the stalemate behavior, where colliding with other charging abilities, like {{al|Charge}} and {{al|Shield Bash}}, causes a knockdown. 
+}} 
+{{Ability details
+| ability_name = Ignited Fury
+| ability_image =Ignited_Fury.png 
+| ability_type = Major Perk
+| official_description = For each enemy you hit with Fire Strike, gain 2 seconds of 25% increased attack speed.
+| ability_details =
+* Additional hits from new casts of Fire Strike will stack with the duration from the first cast.
+}}
+
+== Hero-specific options ==
+{|class ="listtable"
+! Setting name !! Options !! Description
+|-
+| rowspan="2"| '''Toggle Barrier Field'''
+| Off (default)
+| Barrier Field deactivates when player stops holding the button.
+|-
+| On
+| Barrier Field deactivates when player presses the button again.
+|-
+| rowspan="2"| '''Hold to use Charge'''
+| Off (default)
+| Charge deactivates when player presses the button again.
+|-
+| On
+| Charge deactivates when player stops holding the button.
+|-
+| rowspan="2" | '''Movement relative to camera during barrier free look'''
+| On (default)
+| Movement during free look (hold Primary Fire during barrier) is relative to the camera's facing direction.
+|-
+| Off
+| Movement is relative to Reinhardt's facing direction.
+|-
+| '''Relative aim sensitivity during Barrier Field'''
+| 0% ... 500% (default: 100%)
+| Multiplier to base aim sensitivity during Barrier Field.
+|-
+| rowspan="4"| '''Charge cancel input'''
+| Ability 1 (default)
+| Charge deactivates when player presses the Ability 1 button only.
+|-
+| All
+| Charge deactivates when player presses Ability 1, Primary Fire or Secondary Fire.
+|-
+| Primary Fire
+| Charge deactivates when player presses Primary Fire only.
+|-
+| Secondary Fire
+| Charge deactivates when player presses Secondary Fire only.
+|-
+| rowspan="2"| '''Hide Charge cancel text'''
+| Off (default)
+| Cancel text UI element is displayed to the left of the crosshair.
+|-
+| On
+| Cancel text UI element is hidden.
+|}
+
+== Stadium ==
+Reinhardt is a playable hero in [[Stadium]] game mode. See [[Reinhardt/Stadium]] for a list of hero-specific Items and Powers.
+
+==Strategy==
+Reinhardt is the sturdiest of the Tanks, boasting high base Health and a massive barrier that allows him to protect himself and his team from harm. While largely defense-oriented, Reinhardt can be a deadly offensive threat as well thanks to the high damage of his Rocket Hammer and ability to crush enemies against a wall with Charge. The price he pays for all of this is that he is almost solely restricted to fighting at short range, having only a single, infrequent ranged attack.
+
+=== Weapons & Abilities===
+
+*'''{{al|Rocket Hammer}}''': Reinhardt's primary weapon. Pressing the primary fire button causes Reinhardt to swing the hammer, dealing damage to all enemies in a cone in front of Reinhardt. 
+**The damage from this hammer is significant, so don't be afraid to start swinging when close to an enemy. Look for opportunities where you can hit more than one enemy with the Rocket Hammer to maximize its effectiveness.
+**Due to the lingering hitbox, Rocket Hammer can be swung in 360 degrees by rotating Reinhardt mid-attack, striking everyone in a 10 meter diameter rather than a 5 meter cone.
+** Although this is a melee weapon, the range is greater than a normal quick melee attack. Reinhardt does not have a normal quick melee attack like other heroes.
+**Rocket Hammer is strong enough to knock enemies back depending on which direction the hammer is being swung, especially when they are airborne. This can be used to cause environmental kills.
+
+*'''{{al|Barrier Field}}''': The Barrier Field is a powerful, rectangular barrier that Reinhardt carries like a shield, blocking most projectiles and bullets that hit it. It can be activated by pressing and holding down the secondary fire button. The barrier has its own separate Health pool, and Barrier Field is disabled if the barrier's Health drops to 0. Reinhardt will regenerate lost barrier Health after a few seconds of not activating Barrier Field. 
+**Use Barrier Field to block incoming attacks from your opponents. This is especially helpful for your team, as you can use Barrier Field to let them move through a contested area without taking damage. Try to always stay at the front to keep your team safe.
+**Try to check if your teammates are behind your cover or not. You can keep an eye all around while holding the barrier.
+**Keep an eye on your barrier Health. If you start to get low, look for a place to take cover so that you can let your barrier Health regenerate.
+**Since Barrier Field only blocks attacks from one direction, be cautious of attacks from above or behind.
+** While dangerous in some situations, you can move faster to where you are needed (or out of danger) with your shield by taking it down for an instant, jumping in any direction and bringing Barrier Field up while you're in the air - Reinhardt's movement is not slowed by Barrier Field if it is activated during the jump.
+
+*'''{{al|Charge}}''': When activated, Reinhardt will use rocket boosters to propel himself forwards. He gains significant speed, but loses much of his ability to turn. Reinhardt will stop his charge after a period of time, when he collides with a solid surface, or if the player cancels the charge, whichever comes first. The first enemy Reinhardt collides with during his charge will become "pinned" to Reinhardt, and will be dealt heavy damage if Reinhardt then impacts a solid surface. All other enemies will be knocked away from him. Stuns, such as those from [[Roadhog]] or [[Cassidy]], will immediately end Charge.
+** Charge can be canceled. This is useful in many situations. It can be used to simply close the distance, bait out key abilities by canceling into Barrier Field, as enemies are likely to use them, because you are vulnerable and moving predictably during Charge, or - most importantly - prevent you from getting out of position when it looks like you won't be hitting an enemy or it is dangerous to keep charging.
+** While it may be tempting to use Charge to leap into battle, Reinhardt cannot turn well while charging, making it easy for enemies to avoid it. It's best to use Charge at short or medium range or around corners, where enemies have less time to respond.
+** Charge has a relatively short cooldown and can be used to get closer to the fight after spawning.
+** Crushing a pinned target against a wall will deal massive damage, enough to kill almost any non-Tank instantly.
+** If Reinhardt has an enemy pinned and cancels his Charge just as he reaches a pit or ledge, his now-released pin target will continue moving forward due to momentum. This can be used to eliminate heroes by effectively throwing them off map.
+*** Remember that [[movement abilities]], such as [[D.Va]]'s Boosters, [[Genji]]'s Swift Strike, and [[Mercy]]'s Guardian Angel, may allow them return to the map.
+** Jumping right at the end of Charge causes Reinhardt to retain momentum, allowing him to close more distance and jump up slightly higher than normal. On certain maps, this allows him jump over gaps and ledges he normally wouldn't be able to.
+
+*'''{{al|Fire Strike}}''': When activated, Reinhardt will hurl a flaming projectile forwards that deals damage to any enemy it hits. This projectile passes through enemies and barriers, meaning that a single projectile can hit multiple opponents. It stops upon impacting a solid surface.
+**Fire Strike is Reinhardt's only ranged attack. It's useful for hurling down choke points to deter enemies from coming through, as well as for hitting distant and slow or stationary targets like [[Bastion]] or [[Torbjörn]]'s Turret.
+**While it's easy to think of this as only being a ranged ability, Fire Strike deals a lot of damage no matter the range it's used at. Don't forget to use it in melee engagements as well.
+**Reinhardt can use Fire Strike to "animation cancel" his Rocket Hammer swing. As soon as the Hammer impacts an enemy, use Fire Strike to deal fast burst damage to a target. This is useful against evasive targets like [[Tracer]], where you may only have a limited opportunity to hit them. This also assists in quickly finishing tanks after charging them, such as Winston. 
+
+*'''{{al|Earthshatter}} (Ultimate)''': Reinhardt's [[Ultimate]] ability. When activated, Reinhardt slams his hammer into the ground, creating a cone of force that damages and stuns enemies who are hit by it. This ability respects line of sight, so anyone Reinhardt can't see is not affected by it.
+** A simple but devastatingly powerful Ultimate when used correctly. An enemy who is stunned cannot perform ''any'' action, leaving them helpless and easy to kill.
+**While hitting many targets is great, often nailing just one target, is enough to win a teamfight. You can easily burst down even low HP tanks, like [[Zarya]], by yourself, following up with Hammer -> Fire Strike -> Charge combo and more durable tanks with your team's help or, if applicable, by pinning them off the map.
+**Try to use Earthshatter in an area without much cover, as enemies can duck out of sight of you and completely avoid Earthshatter otherwise.
+**Earthshatter has a small amount of vertical height. Jumping enemies can still be hit by it.
+**Reinhardt must be on ground to finish casting Earthshatter. Avoid jumping and look out for being knocked into the air when activating Earthshatter, as that will delay the activation, giving enemies time to react or even completely messing up the cast.
+**Be careful when using Earthshatter on tanks, as it will not pass through barriers like that of Zarya, Winston or even other Reinhardts.
+
+=== General Strategies===
+* Reinhardt is incredibly hardy, able to absorb the most damage out of any of the Tanks, but suffers from being mostly restricted to melee attacks. As a result, Reinhardt works best as a team player. Stay at the front of your team and use your Barrier Field to absorb incoming attacks as you approach your opponents, allowing your team to move safely through an area and fire back without taking damage. Try to move between points of cover using Barrier Field instead of walking straight towards your enemies. Reinhardt may be tough, but he's not invincible.
+
+*One of Reinhardt's strengths is that he protects high damage-output teammates. If your team is composed mostly of flankers, Reinhardt might be less effective, as flankers generally do not wish to stand behind Reinhardt's shield.
+
+* Using Charge properly can be a challenge. In general, look for targets that are near corners or walls who are distracted by your team. Tanks like [[Winston]] and [[Roadhog]] are prime targets, as they are easier to hit with Charge due to their larger hitboxes. Charge will only pin enemies who are more-or-less directly in front of Reinhardt, so don't be surprised if you simply sail on by a jumping enemy. Remember, the closer you are to your enemy when you charge, the less time they have to get out of the way.
+
+* Try to avoid charging in a direction that will lead you deep into enemy territory, as that will leave you alone and flanked.
+
+* Reinhardt's shield is a powerful defense, but remember that any enemy can simply walk right through it. When shielding, try to always keep a few meters between you and enemies.
+
+* Reinhardt's defense depends on all enemies being in roughly one direction. Always keep your eyes open for flankers.
+
+*Reinhardt's shield is very effective against certain ultimates such as Graviton Surge, Deadeye, or Self Destruct, while being highly ineffective against others such as [[Mei]]'s Blizzard, [[Genji]]'s Dragonblade or [[Junkrat]]'s Rip Tire.  His shield can protect your team from much of the damage from Barrage, but he will most likely die in the process. 
+
+*Earthshatter is most effective when used as a combo.  A common Earthshatter combo is to use Earthshatter followed up by a Fire Strike, with Rocket Hammer attacks or a Charge to finish off anyone who survives. Remember that Fire Strike can hit multiple enemies when used; aim it so that it hits as many stunned enemies as possible.  Make sure that all of your cooldowns are done when using Earthshatter. 
+
+*Reinhardt works well when paired with [[Bastion]] or marginally [[Torbjörn]], as he can protect their stationary defenses with his shield.
+*Reinhardt works extremely well in any kind of situation, as he can defensively protect his team's assets with Barrier Field and aggressively cause havoc among his enemies using Charge.
+
+==Match-Ups and Team Synergy==
+<!--When proving match-up or team synergy advice, please write all advice from the sake of someone playing as this hero, not as someone who wishes to counter this hero. Also, please try to be as objective as possible. Taking personal skill out of the equation, please provide advice that would apply to any player who knows how to play these characters well.-->
+
+===Tank ===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero
+! |Match-Up
+! |Team Synergy
+|-
+|<center>[[Image:icon-dva.png|75px|link=D.Va]]<br />[[D.Va]]</center>
+|<small>D.Va can put a lot of continuous pressure onto your barrier. Her mobility allows her to run circles around you if the two of you are alone, ram you out of position, and get behind your barrier to start attacking you point blank. However, her large hitbox makes her a prime target for Charge, and a successful pin will weaken her enough that a hammer swing or two will knock her out of her Mech. D.Va in Pilot form is no match for Reinhardt's Hammer, and she won't be able to outrun you, so be sure to quickly kill her before she can retreat to her team. Use your barrier to block her Micro Missiles.
+
+If D.Va uses Self-Destruct, try to quickly take her out and then put your barrier up to block the explosion. While it will most likely end up shattered in the process, you'll protect both yourself and any teammates behind you. A wily D.Va may be prepared for this, though, so be wary of her teammates comboing with her to take you or your barrier down before Self-Destruct detonates. Also, remember that D.Va cannot block your Earthshatter.</small>
+|<small>Your sturdy barrier frees D.Va to be a more aggressive Tank while you play a more defensive role. She also helps cover some of your checks, specifically Pharah. A well-timed Earthshatter combined with D.Va's Self-Destruct can take out a large number of opponents in one fell swoop.</small>
+|-
+|<center>[[File:Icon-Domina.png|75x75px]]<br />[[Domina]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-doomfist.png|75px|link=Doomfist]]<br />[[Doomfist]]</center>
+|<small>Doomfist's high mobility makes him hard to deal with if he avoids you. Swing at him if he gets close however. Charge can be used to counter {{al|Rocket Punch}}, causing you both to get knocked down. This is generally better for you as you are sturdier, however, as the punch can be canceled, good Doomfist players may use this to bait out your charge. Instead, look to use Charge when Doomfist is using his {{al|Power Block}}. It is very easy to hit him, as his movement speed is reduced and he is likely waiting for his other abilities to come off cooldown.
+
+When Doomfist uses {{al|Meteor Strike}}, block the AoE with your barrier to prevent him gaining overhealth and immediately Charge him, as he is briefly unable to move after landing. Alternatively, use Earthshatter immediately after he lands to open him up to your team's attacks.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-hazard.png|75px|link=Hazard]]<br />[[Hazard]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-junker queen.png|75px|link=Junker Queen]]<br />[[Junker Queen]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-mauga.png|75px|link=Mauga]]<br />[[Mauga]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-orisa.png|75px|link=Orisa]]<br />[[Orisa]]</center>
+|<small>Orisa is not a very fun match up for Reinhardt, as all of her abilities deny you in one way or another: {{al|Energy Javelin}} can interrupt your Charge, {{al|Javelin Spin}} blocks your hammer and also knocks you back, {{al|Fortify}} makes her immune to Charge and Earthshatter and lastly her ultimate ignores your shield - while making her Fortified. Try to ignore her the best you can, but if she is focused on you, you'll have to wait for your team to create openings or her to mess up her ability rotations. If she exhausts Fortify, you can look to shatter her and pin her off the map. Remember that while Fortify does make her immune to Earthshatter, it will not block it, so you can also use it to stun everyone behind her and set up easy kills for your team.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-ramattra.png|75px|link=Ramattra]]<br />[[Ramattra]]</center>
+|<small>Ramattra is very similar to Reinhardt and can square off rather well against you in his {{al|Nemesis Form}}. Ramattra's punches, however, have more range than your hammer, so avoid getting stuck at a range where you cannot hit him back, and either go agressively at him or stay out of his way. When he enters Nemesis Form, it is usually good to wait a bit before engaging, as its duration is limited and you may be able to catch Ramattra when he returns to Omnic form, where he is no longer a threat to you. If you are the only hero in Ramattra's {{al|Annihilation}} use your shield to block it to burn down its duration.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-reinhardt.png|75px|link=Reinhardt]]<br />[[Reinhardt]]</center>
+|<small>It is not uncommon to find a Reinhardt on each team, and it's just as likely for said Reinhardts to be staring each other down on the battlefield, protecting their respective teams the other. Killing a Reinhardt as a Reinhardt ultimately comes down to mind games; get your team to focus down the enemy Reinhardt, throw Fire Strikes at him, and if there's a safe opportunity to hit him with a Charge, do it immediately. You will always beat him if he has no support from his team. Try to anticipate the enemy Reinhardt's Charge and either dodge it or Charge into it, cancelling it. Try to keep open areas at your back, as a charging enemy Reinhardt will have to travel farther from their team before they pin you. Reinhardt's Barrier Field is capable of blocking Earthshatter; both you and your enemy will likely be trying to lure the other into wasting their Ultimate with a well-timed block.</small>
+|<small>In No Limits, multiple Reinhardts can create a sturdy, impenetrable wall of defense. Just keep in mind that, in doing so, you are robbing your team of its offensive potential and will most likely have to resort to turtling.</small>
+|-
+|<center>[[Image:icon-roadhog.png|75px|link=Roadhog]]<br />[[Roadhog]]</center>
+|<small>Roadhog cannot throw his hook through Reinhardt's barrier, but if he can somehow flank behind him, he's more than capable of completely throwing Reinhardt out of position and dealing massive damage to him. Roadhog's high damage also allows him to quickly break Reinhardt's barrier, leaving him and his team vulnerable. While you should always keep your barrier active around Roadhog, ensure that your team either kills him or scares him off. When Roadhog uses {{al|Take A Breather}}, try to Charge him to interrupt it. Be careful of your positioning when he has his ultimate {{al|Whole Hog}} as it can easily knock you of the map or push you against a wall, where it will quickly mow you down even with your shield at full health.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-sigma.png|75px|link=Sigma]]<br />[[Sigma]]</center>
+|<small>Sigma is a rather easy matchup for Reinhardt. If you can get up close, you can easily beat him in fist fight. Use your Barrier to block Sigma's {{al|Accretion}}.</small>
+|<small>(To be added)</small>
+|-
+| <center>[[Image:icon-winston.png|75px|link=Winston]]<br />[[Winston]]</center>
+|<small>Winston's weapon is dangerous to you, as it outright ignores your Armor, but its secondary fire cannot go through your shield, so mind your distance when you fight him. Winston will usually rather attempt to ignore you and kill your backline, so be aggressive and take swings at him when you can to soften him up before he engages. When he does, it is often better to try to put pressure on his backline in return rather than peel for your team as you cannot really keep up with Winston's mobility.</small>
+| <small>(To be added)</small>
+|-
+|<center>[[Image:icon-wrecking_ball.png|75px|link=Wrecking Ball]]<br />[[Wrecking Ball]]</center>
+|<small>There isn't much you can do against a good Wrecking Ball as Reinhardt. You can attack him when he gets close, but do not attempt to chase him. It is impossible for Reinhardt to keep up with his mobility, so it is often better to just ignore him and play the objective or try to attack the enemy backline yourself.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-zarya.png|75px|link=Zarya]]<br />[[Zarya]]</center>
+| <small>The most important thing against Zarya is keeping track of her barrier cooldowns. They can nullify the damage from your high-damage abilities, while granting her a spike of energy. Zarya can do a lot of damage if she is allowed to get high charge, so avoid attacking her when she uses them and use your barrier to block her damage. When she is not using her barriers, swing at her to bait them out, and only engage on her or her teammates when she has exhausted her charges.
+
+Zarya's barriers can block Earthshatter. However, because the close range damage is applied before the shockwave, you will be able to stun her and everyone behind her if your crit breaks the barrier. Additionally, if you get caught in Zarya's {{al|Graviton Surge}}, you can escape it by using {{al|Earthshatter}} and potentially surprise the enemy team getting ready to attack you.</small>
+|<small>Zarya works very well with Reinhardt, as she can cover his engages with her barriers, making him very difficult to kill.</small>
+
+|}
+
+===Damage===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero 
+! |Match-Up 
+! |Team Synergy
+|-
+|<center>[[File:Icon-Anran.png|75x75px]]<br />[[Anran]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-ashe.png|75px|link=Ashe]]<br />[[Ashe]]</center>
+|<small>Your barrier can take her Viper's shots well, but lobbing a Dynamite over your shield to take you out is Ashe's go-to tactic when she comes across an enemy Reinhardt. As such, be prepared to face upward while shielding when you fight Ashe, but remember that she can also throw her trusty explosive underneath your shield if you do that. Unless it is very necessary, avoid using Charge against her, as she has a small hitbox and can utilize Coach Gun to blast out of harm's way. On the other hand, if need may be, you can remove her B.O.B from the battlefield with Charge, as he stands still after his initial sprint and has the potential to pummel your team.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-bastion.png|75px|link=Bastion]]<br />[[Bastion]]</center>
+|<small>Bastion's extremely high damage output in {{al|Configuration: Assault}} is more than capable of ripping you to shreds through your barrier, if you get caught in the open. Even if you manage to pin him with {{al|Charge}}, Bastion's high health, Armor and {{al|Ironclad}} passive allow him to survive the impact and often leave him healthy enough even to kill you right after. If Bastion is in Assault mode, get behind cover, and engage him when the ability ends.</small>
+|<small>Guarding a friendly Bastion will be mutually beneficial; you'll be protecting him from oncoming fire, and he'll be able to mow down oncoming opponents. Just keep in mind that you are only able to guard what's in front of you; be wary of enemies trying to flank you from the rear. While you are able to walk off with ease, your Bastion will need a second to convert to Recon Configuration. While you should try to protect your Bastion, you also need to be in a mutual agreement of when you need to hold your ground and when you need to retreat, because if you run off and the Bastion didn't get the memo, he'll be torn apart, and you will be next.</small>
+|-
+|<center>[[Image:icon-cassidy.png|75px|link=Cassidy]]<br />[[Cassidy]]</center>
+|<small>Cassidy can do a lot of damage to you with his {{al|Flashbang}} and Fan the Hammer when up close. When he uses {{al|Deadeye}}, put up your barrier to give your team time to get behind cover. Do not try to block it for an extended amount of time with your barrier, as the first bullet fired at your team will likely break your shield, making it unable to protect anyone else.</small>
+|<small>Since both you and Cassidy love to take close-range engagements, this allows you to follow up on what he does and shield him when needed.</small> <small>In addition,</small> <small>Earthshatter and Deadeye</small> <small>can</small> <small>make a deadly combination:</small> <small>you set up the killshots, Cassidy pulls the trigger.</small>
+|-
+|<center>[[Image:icon-echo.png|75px|link=Echo]]<br />[[Echo]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:Icon-Emre.png|75x75px]]<br />[[Emre]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:Icon-Freja.png|75x75px]]<br />[[Freja]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-genji.png|75px|link=Genji]]<br />[[Genji]]</center>
+|<small>Genji can slip past your barrier and cause trouble for you at extreme ranges, flinging Shurikens to chip away your health and distract you. However, a duel between you two will usually tip in your favor, with your high durability outclassing Genji's mediocre damage. Do take note that Genji is able to block physical attacks with Deflect as well. But like projectiles, he can only block what's in front of him. Even with Dragonblade active, you can usually defeat Genji if you are anywhere near full health and if you time your swings well. This gives Genji a chance to slip away to get to a safe distance. In general, try having an ally deal with Genji so you can focus on the main offense.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-hanzo.png|75px|link=Hanzo]]<br />[[Hanzo]]</center>
+|<small>Hanzo's arrows will be stopped cold by Reinhardt's barrier, but enough pressure from his Storm Arrows could bring your barrier close to breaking, so be careful. His Sonic Arrow will warn his allies about any pushes you and your team may be attempting, as teammates often tend to gather behind Reinhardt for protection. Your barrier will provide no protection from Dragonstrike; if you hear Hanzo activating it, drop your barrier and move out of the way.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-junkrat.png|75px|link=Junkrat]]<br />[[Junkrat]]</center>
+|<small>Junkrat can deal a significant amount of damage to your barrier, and his Concussion Mine can be thrown over your barrier to disrupt you. However, his Steel Trap isn't particularly effective against you, since you can still use your barrier to protect against incoming attacks. The trap can stop you mid-Charge, though, so don't ignore a Steel Trap if you see one. Your barrier can protect you and your team from RIP-Tire, but only if it detonates in front of the barrier, and due to its free-rolling nature, it can roll right up into your face for a massive detonation. Only try protecting your team from it if your teammates have enough firepower to gun it down before it can pass through the barrier, otherwise scatter to avoid getting killed at once.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-mei.png|75px|link=Mei]]<br />[[Mei]]</center>
+|<small>Mei deals little damage to both you and your barrier, and her Ice Wall often just gives you the opportunity to lower your barrier to recharge it. Be careful about being separated from your team by Ice Wall, as it allows you along with your team to be picked off. Also, Mei can stop your Charge by using Cryo-Freeze. If Mei is activating Blizzard, a quick Charge away from her may be your best bet to avoid being frozen.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-pharah.png|75px|link=Pharah]]<br />[[Pharah]]</center>
+|<small>Pharah will try to distract you when you're guarding your team as she is more than capable of getting behind them with her flight. You have little to no way to fight off an airborne Pharah; focus on guarding your team while they fend her off.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-reaper.png|75px|link=Reaper]]<br />[[Reaper]]</center>
+|<small>Reaper can deal high damage to you up close with his shotguns, and can be very difficult to deal with if he is supported. He also has a reliable escape in {{al|Wraith Form}} should the need arise. Unless you catch him off guard, you'll need your team to help keep Reaper at bay.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:Icon-Shion.png|75x75px]]<br />[[Shion]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:Sierra-Icon.png|75x75px]]<br />[[Sierra]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:Icon-Sojourn.png|75x75px]]<br />[[Sojourn]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-Soldier 76.png|75px|link=Soldier:_76]]<br />[[Soldier: 76]]</center>
+|<small>Your barrier will allow you to soak up a lot of damage from Soldier: 76's standard attacks, and it is capable of completely stopping his Tactical Visor cold. However, Soldier: 76 still stands a chance against you in close-long range skirmishes as his damage is far greater than most offense heroes. You have no means with which to attack Soldier: 76 at long-range; stick with your team when he's around, or if necessary try to bait him into a close-quarters fight where you can smash him with your hammer.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-sombra.png|75px|link=Sombra]]<br />[[Sombra]]</center>
+|<small>If an enemy team has a Sombra, you're going to be one of her top targets. Sombra's Hack will  force you to drop your Barrier Field and leave your team open, as well as strip you of your Fire Strike and Charge. Thankfully, Sombra cannot hack through Barrier Field itself. If you know a Sombra is about, always be ready to turn your barrier in her direction to avoid a hack. In addition to protecting yourself, this should be able to protect nearby teammates from being Hacked as well. If you catch a Sombra still on cooldown from using Hack, a quick Charge can finish her off instantly.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-symmetra.png|75px|link=Symmetra]]<br />[[Symmetra]]</center>
+|<small>Your greatest concern when combating an enemy Symmetra is her Photon Projector's beam. Not only does it gain more power the longer she's training it on a stationary target (read: you), damaging shields gives her ammo rather than depleting it, meaning if you're not careful, not only will she run through your shield in seconds, she'll then have a fully-stocked laser ready to shred you and your team to bits. If a Symmetra is being daring by approaching her with her laser, drop your shield and strike back with your hammer. If you're in a larger team fight, you may need to keep your barrier up to protect your team, but ask your teammates to focus on her before she becomes too big of a threat. Her turrets can also cause a lot of problems for you if you're focusing on defending your allies, with one or two being enough to slow you to a crawl and to allow her and her team to dogpile you. You can clear out turrets with a single hammer swipe, but this will be difficult if they're placed in higher places your hammer can't reach, and dropping your barrier leaves you and your team vulnerable. A wily Symmetra may deploy her Photon Barrier just before you use Earthshatter, so if you think she may have it ready, try to either kill her first or catch her off guard with your Ultimate.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-torbjörn.png|75px|link=Torbjörn]]<br />[[Torbjörn]]</center>
+|<small>Torbjörn's turret deals little damage to Reinhardt's barrier, even with supporting damage from Torbjörn's Rivet Gun. The turret's immobility makes it vulnerable to a Fire Strike, which will cut off a whole third of its health. Be more careful when dealing with Torbjörn himself, as he can effectively deal damage at all ranges when Reinhardt's barrier is down. When Overloaded, his gun can quickly output large amounts of damage. When he activates Molten Core, your barrier won't save your feet from melting; if you can swiftly kill him with a hammer strike then do so, otherwise backpedal away with your shield up.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-tracer.png|75px|link=Tracer]]<br />[[Tracer]]</center>
+|<small>Tracer can Blink behind your barrier and rapidly unload her pistols into your large hitbox and Pulse Bomb's immense damage can leave you in critical condition. Two blows from your Rocket Hammer are enough to kill Tracer if she does not have Recall, consider doing so when needed. Otherwise, stick with your team and try to be ready to change direction to block her flanking attacks.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:Icon-Vendetta.png|75x75px]]<br />[[Vendetta]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-venture.png|75px|link=Venture]]<br />[[Venture]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-widowmaker.png|75px|link=Widowmaker]]<br />[[Widowmaker]]</center>
+|<small>A one-on-one matchup at close range with an enemy Widowmaker is very uncommon due to her staying in the backlines waiting for targets to snipe and you sticking close to your team to protect them. There's very little you can do to her at long range other than throwing an easily avoidable projectile or attempting to charge her, which she has time to react to. However, your barrier will prove to her a big nuisance due to it's large size and high endurance. It will make her either wait for you to drop it for whatever reason, wait for her team to destroy it, or try to sneak into a position where she can freely shoot at you and your teammates. Should Widowmaker choose the last option, try to get your team to deal with her instead of you. Because if you decide to deal with Widowmaker yourself, you run the risk of her team taking that moment to attack anyone you were previously protecting.</small>
+|<small>(To be added)</small>
+|}
+
+===Support===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero
+! | Match-Up
+! |Team Synergy
+
+|-
+|<center>[[Image:icon-ana.png|75px|link=Ana]]<br />[[Ana]]</center>
+|<small>All of Ana's attacks are blocked by your barrier: rounds from her Biotic Rifle, her Sleep Dart, the Biotic Grenade, you name it. However, being hit yourself with the Sleep Dart can leave your team in a critical situation. Don't be tempted to drop your barrier and attack Ana with your hammer, as you're just leaving yourself open to a Sleep Dart. Keep the barrier up and leave her to your teammates.</small>
+|<small>As Reinhardt, you are one of the best potential choices for a Nano-Boost. Sturdier and stronger, you can Charge through a crowd of enemies and smash through enemy ranks with your hammer. Aside from Ana's Ultimate, your hitboxes are massive and you move slowly, making yourself an easy target for her continuous healing, and your barrier can help keep her safe.</small>
+|-
+|<center>[[Image:icon-baptiste.png|75px|link=Baptiste]]<br />[[Baptiste]]</center>
+|<small>(To be added)</small>
+|<small>As you tank your way through enemy fire, Baptiste's superb area-of-effect healing will keep you well alive. His secondary fire and Regenerative Burst can save you from the copius amount of damage you take, and an Immortaility Field can keep you from meeting an untimely demise as you move forward to wallop nearby enemies. Amplification Matrix goes very well with Fire Strike, allowing it to one-shot most squishy enemies.</small>
+|-
+|<center>[[Image:icon-brigitte.png|75px|link=Brigitte]]<br />[[Brigitte]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:Icon-Illari.png|75x75px]]<br />[[Illari]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:Icon-Jetpack Cat.png|75x75px]]<br />[[Jetpack Cat]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-juno.png|75px|link=Juno]]<br />[[Juno]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-kiriko.png|75px|link=Kiriko]]<br />[[Kiriko]]</center>
+|<small>While Kiriko's {{al|Protection Suzu}} cannot remove pin from {{al|Charge}}, it can negate its damage or prevent it from hitting. It will also completely negate your {{al|Earthshatter}}, so do not use it before Kiriko has used her Suzu or try to bait her into using it with your Charge.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:Icon-Lifeweaver.png|75x75px]]<br />[[Lifeweaver]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-lúcio.png|75px|link=Lúcio]]<br />[[Lúcio]]</center>
+|<small>Lúcio's weak weapon deals very little damage to your barrier. However his Amp It Up can negate a good portion of any damage you deal. Do not be afraid to keep your shield up, and use Fire Strike to weaken Lúcio so your teammates can finish him off. Be careful when shielding allies near environmental hazards; while Lúcio may have difficulty knocking you back, your teammates may be vulnerable to being sent to their doom.</small>
+|<small>Seeing how you act as an "anchor" for your team to rally behind, Lúcio can reliably stay within your protection and keep your team healthy. His speed boost can also improve your slow walking speed while your barrier is up, helping your team advance upon the enemy team.</small>
+|-
+|<center>[[File:Icon-Mercy.png|75x75px]]<br />[[Mercy]]</center>
+|<small>As Reinhardt, killing Mercy should be a priority for hitscans or teammates more mobile than yourself. However, he does have tools that can force her to retreat when used correctly: landing a Fire Strike will heavily damage her, and in a situation where she's alone, an accurate Charge will guarantee her elimination.</small>
+|<small>Naturally, as a main healer, Mercy will often want to take you in as her pocket due to your high health pool and impressive defensive support. As you charge into the fray, keep your shield up for your teammates, but most especially for Mercy, who is a fragile support hero. With her on your side, you now have the insurance for a bit more recklessness, as the extra healing can allow you to get even closer to enemies and bash their heads in with your Rocket Hammer. Be prepared to be resurrected when you die as well, as you are a main target for it in a good Mercy's eyes.</small>
+|-
+|<center>[[File:Icon-Mizuki.png|75x75px]]<br />[[Mizuki]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-moira.png|75px|link=Moira]]<br />[[Moira]]</center>
+|<small>(To be added)</small>
+|<small>Moira serves as a Support who is, at the same time, an offensive threat. By staying near a friendly Moira's side to protect her, you have not only a healer to bail you out, but a powerful and mobile damager as well. Her ultimate, Coalescence, may not be the most game-changing, but can offer great value when used smartly. Stay in Moira's beam when she uses it, so that you can be healed while foes are being damaged.</small>
+|-
+|<center>[[File:Icon-Wuyang.png|75x75px]]<br />[[Wuyang]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[Image:icon-zenyatta.png|75px|link=Zenyatta]]<br />[[Zenyatta]]</center>
+|<small>While an enemy Zenyatta cannot cast his Orb of Discord through your barrier, anyone already afflicted with the Orb will still suffer its effects. This includes Reinhardt himself, who will find the Discord Orb to be a great hindrance. When your barrier is down, Zenyatta can also use long range attacks and Discord Orb to deal heavy damage to you, though at close range he is defeated easily. If you catch him alone, either keep your barrier up and back off or close the distance to quickly take him out.</small>
+|<small>While Zenyatta is generally best suited to fight on the back lines, your barrier can keep him safe while he heals and hurts from behind it. Just be careful not to Charge off without him if he's depending on you for protection. Enemies marked by Zenyatta's Orb of Discord are also prime targets for your Fire Strike, as it already does a large amount of damage by itself.</small>
+|}
+
+==Map Strategies==
+
+===Control===
+{{MapStrategyTable/Control
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Antarctic_rating = 
+| Antarctic_feature = 
+| Antarctic_strategy = 
+| Antarctic_Labs_strat = 
+| Antarctic_Sublevel_strat = 
+| Antarctic_Icebreaker_strat = 
+
+| Busan_rating = 
+| Busan_feature = 
+| Busan_strategy = 
+| Busan_Downtown_strat = 
+| Busan_Sanctuary_strat = 
+| Busan_MEKA_strat = 
+
+| Ilios_rating = 
+| Ilios_feature = 
+| Ilios_strategy = 
+| Ilios_Lighthouse_strat = 
+| Ilios_Well_strat = 
+| Ilios_Ruins_strat = 
+
+| Lijiang_rating = 
+| Lijiang_feature = 
+| Lijiang_strategy = 
+| Lijiang_ControlCenter_strat = 
+| Lijiang_Garden_strat = 
+| Lijiang_NightMarket_strat = 
+
+| Nepal_rating = 
+| Nepal_feature = 
+| Nepal_strategy = 
+| Nepal_Village_strat = 
+| Nepal_Shrine_strat = 
+| Nepal_Sanctum_strat = 
+
+| Oasis_rating = 
+| Oasis_feature = 
+| Oasis_strategy = 
+| Oasis_CityCenter_strat = 
+| Oasis_Gardens_strat = 
+| Oasis_University_strat = 
+
+| Samoa_rating = 
+| Samoa_feature = 
+| Samoa_strategy = 
+| Samoa_Beach_strat = 
+| Samoa_Downtown_strat = 
+| Samoa_Volcano_strat = 
+}}
+
+===Escort===
+{{MapStrategyTable/Escort
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| CircuitRoyal_rating = 
+| CircuitRoyal_feature = 
+| CircuitRoyal_strategy = 
+| CircuitRoyal_Attack_strat = 
+| CircuitRoyal_Defense_strat = 
+
+| Dorado_rating = 
+| Dorado_feature = 
+| Dorado_strategy = 
+| Dorado_Attack_strat = 
+| Dorado_Defense_strat = 
+
+| Havana_rating = 
+| Havana_feature = 
+| Havana_strategy = 
+| Havana_Attack_strat = 
+| Havana_Defense_strat = 
+
+| Junkertown_rating = 
+| Junkertown_feature = 
+| Junkertown_strategy = 
+| Junkertown_Attack_strat = 
+| Junkertown_Defense_strat = 
+
+| Rialto_rating = 
+| Rialto_feature = 
+| Rialto_strategy = 
+| Rialto_Attack_strat = 
+| Rialto_Defense_strat = 
+
+| Route66_rating = 
+| Route66_feature = 
+| Route66_strategy = 
+| Route66_Attack_strat = 
+| Route66_Defense_strat = 
+
+| Shambali_rating = 
+| Shambali_feature = 
+| Shambali_strategy = 
+| Shambali_Attack_strat = 
+| Shambali_Defense_strat = 
+
+| Gibraltar_rating = 
+| Gibraltar_feature = 
+| Gibraltar_strategy = 
+| Gibraltar_Attack_strat = 
+| Gibraltar_Defense_strat = 
+}}
+
+===Hybrid===
+{{MapStrategyTable/Hybrid
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| BlizzardWorld_rating = 
+| BlizzardWorld_feature = 
+| BlizzardWorld_strategy = 
+| BlizzardWorld_Attack_strat = 
+| BlizzardWorld_Defense_strat = 
+
+| Eichenwalde_rating = 
+| Eichenwalde_feature = 
+| Eichenwalde_strategy = 
+| Eichenwalde_Attack_strat = 
+| Eichenwalde_Defense_strat = 
+
+| Hollywood_rating = 
+| Hollywood_feature = 
+| Hollywood_strategy = 
+| Hollywood_Attack_strat = 
+| Hollywood_Defense_strat = 
+
+| KingsRow_rating = 
+| KingsRow_feature = 
+| KingsRow_strategy = 
+| KingsRow_Attack_strat = 
+| KingsRow_Defense_strat = 
+
+| Midtown_rating = 
+| Midtown_feature = 
+| Midtown_strategy = 
+| Midtown_Attack_strat = 
+| Midtown_Defense_strat = 
+
+| Numbani_rating = 
+| Numbani_feature = 
+| Numbani_strategy = 
+| Numbani_Attack_strat = 
+| Numbani_Defense_strat = 
+
+| Paraiso_rating = 
+| Paraiso_feature = 
+| Paraiso_strategy = 
+| Paraiso_Attack_strat = 
+| Paraiso_Defense_strat = 
+}}
+
+===Push===
+{{MapStrategyTable/Push
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Colosseo_rating = 
+| Colosseo_feature = 
+| Colosseo_strategy = 
+| Colosseo_Pushing_strat = 
+| Colosseo_Defending_strat = 
+
+| Esperanca_rating = 
+| Esperanca_feature = 
+| Esperanca_strategy = 
+| Esperanca_Pushing_strat = 
+| Esperanca_Defending_strat = 
+
+| NewQueenStreet_rating = 
+| NewQueenStreet_feature = 
+| NewQueenStreet_strategy = 
+| NewQueenStreet_Pushing_strat = 
+| NewQueenStreet_Defending_strat = 
+
+| Runasapi_rating = 
+| Runasapi_feature = 
+| Runasapi_strategy = 
+| Runasapi_Pushing_strat = 
+| Runasapi_Defending_strat = 
+}}
+
+===Flashpoint===
+{{MapStrategyTable/Flashpoint
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Aatlis_rating = 
+| Aatlis_feature = 
+| Aatlis_strategy = 
+| Aatlis_Bazaar_strat = 
+| Aatlis_Garden_strat = 
+| Aatlis_Resort_strat = 
+| Aatlis_Station_strat = 
+| Aatlis_TownCentre_strat = 
+
+| NewJunkCity_rating = 
+| NewJunkCity_feature = 
+| NewJunkCity_strategy = 
+| NewJunkCity_Arena_strat = 
+| NewJunkCity_Foundation_strat = 
+| NewJunkCity_Refinery_strat = 
+| NewJunkCity_Scrapyard_strat = 
+| NewJunkCity_Waterworks_strat = 
+
+| Suravasa_rating = 
+| Suravasa_feature = 
+| Suravasa_strategy = 
+| Suravasa_Gardens_strat = 
+| Suravasa_Market_strat = 
+| Suravasa_Palace_strat = 
+| Suravasa_Ruins_strat = 
+| Suravasa_Temple_strat = 
+}}
+
+==Achievements==
+{{AchievementTable/Start}}
+{{Achievement|I Am Your Shield|Achievement I Am Your Shield.png|Block 7500 damage with Reinhardt's [[Barrier Field]] without dying in Quick or Competitive play.|Spray Reinhardt Pixel.png|Pixel}}
+{{Achievement|Storm, Earth and Fire|Ability-reinhardt3.png|Land Reinhardt's [[Fire Strike]] and [[Charge]] after an [[Earthshatter]] stun in Quick or Competitive play.|Spray Reinhardt Cute.png|Cute}}
+{{AchievementTable/End}}
+
+==Trivia==
+[[File:Reinhardt Statue.jpg|thumb|Reinhardt statue]]
+*[[Chris Metzen]] has described Reinhardt as "kinda a [http://en.wikipedia.org/wiki/Don_Quixote Don Quixote]".<ref name="Transcript3">2014-11-24, [http://overwatch.blizzplanet.com/blog/comments/blizzcon-2014-overwatch-unveiled-panel-transcript/3 BlizzCon 2014 – Overwatch Unveiled Panel Transcript]. ''Blizzplanet'', accessed on 2015-03-08</ref>
+* Darin De Paul performs Reinhardt as an exaggerated version of his father's voice.<ref>2016-10-30, [http://www.breakthegame.net/the-voice-of-reinhardt-interview-with-darin-de-paul/ The voice of Reinhardt: Interview with Darin De Paul] ''Break The Game'', accessed on 2016-11-17</ref>
+*Reinhardt is one of only two heroes to not have a "Quick Melee" attack, as his basic attacks are melee attacks. The other being Brigitte.
+*Reinhardt is currently the second oldest character in the hero line-up, with the oldest being Sigma, who is one year older.
+*During the game's late alpha (and possibly before), Barrier Field was called ''Shield''.<ref>[http://www.overpwn.com/news/76-overwatch-pre-beta-livestream-recap "Overwatch Pre-Beta Livestream Recap"], ''Overpwn'', 16 October 2015. Retrieved on 17 October 2015.</ref>
+*Reinhardt appears as a skin for Johanna in ''[[Heroes of the Storm]]''.
+*Reinhardt's Agent ID number is 3945_47.
+*Reinhardt has a rare "Hello!" voice line where he yells "HELLOOOOOO!"
+*Before the release of [[Overwatch 2|Overwatch]] [[Overwatch 2|2]], there was a glitch where if Reinhardt used Earthshatter inside of an airborne [[Zarya|Graviton]] [[Zarya|Surge]], Reinhardt would fall down to the ground.
+*Reinhardt is [[Brigitte|Brigitte's]] godfather.
+
+=== Merchandise ===
+*An inflatable Reinhardt hammer was available in the "goodie bag" of [[BlizzCon 2016]].<ref>2016-07-21, [http://blizzpro.com/2016/07/21/blizzcon-2016-goody-bag/ BLIZZCON 2016 GOODY BAG]. ''Blizzpro'', accessed on 2016-07-22</ref>>
+* A Reinhardt-themed hoodie is available from JINX.<ref>2017-11-22, [http://warcraft.blizzplanet.com/blog/comments/overwatch-hoodies Overwatch Hoodies]. ''Blizzplanet'', accessed on 2017-11-23</ref>
+*A Reinhardt statue will go on sale in November, 2022.<ref>[https://gear.blizzard.com/products/overst0004-overwatch-2-reinhardt-premium-statue?blzcmp=app Overwatch 2 Reinhardt 25in Premium Statue], ''Blizzard Store''. Accessed on 2022-09-07</ref>
+
+===Development===
+[[File:Juggernaut.jpg|thumb|The Juggernaut class]]
+Reinhardt's design stems from the playable Juggernaut class in the cancelled [[Project Titan]]. During the initial pitch for the project that would become ''Overwatch'', the Juggernaut was envisioned as wielding a flamethrower and a flail, and used the Charge ability; a flamethrower was also considered for [[Roadhog]]'s primary weapon early in the development for ''Overwatch''.<ref>Blizzcon 2017, Overwatch: Archives</ref> 
+
+Early ideation for Reinhardt's design in ''Overwatch'' involved several different versions of humanoid robots, eventually progressing into a robotic hero from [[Numbani]]<ref>2017-5-21, [https://www.youtube.com/watch?v=kzbNZCISJVU 6 Secrets about Overwatch's Tank Heroes by Jeff Kaplan]. IGN, ''Youtube''. Accessed 2017-10-28</ref> named [[Wildebeest]].<ref>''[[The Art of Overwatch]]''</ref> When Reinhardt was solidified, the fantasy was of him being a heroic knight; a protector for his team.<ref name="RamattraDirection">2022-11, [https://www.gamerbraves.com/overwatch-2-art-director-dion-rogers-talks-about-the-design-principles-behind-the-dual-modes-for-ramattra-in-interview/ Overwatch 2 Art Director Dion Rogers Talks About The Design Principles Behind The Dual Modes For Ramattra In Interview]. ''Gamerbraves'', accessed on 2022-11-15</ref>
+
+When Reinhardt was prototyped, he was able to throw his hammer against the enemy. However, this was awkward to implement, as he had to pick up his hammer every time he threw it. This ability would later inspire the [[Junker Queen]]'s Jagged Blade ability.<ref name="DesignQueen">2022-06-21, [https://news.blizzard.com/en-us/overwatch/23820711/a-design-fit-for-royalty-an-inside-look-at-her-majesty-the-junker-queen A DESIGN FIT FOR ROYALTY: AN INSIDE LOOK AT HER MAJESTY, THE JUNKER QUEEN]. ''Blizzard Entertainment'', accessed on 2022-07-03</ref>
+
+[[Arnold Tsang]] revealed that Reinhardt's new design for ''[[Overwatch 2]]'' marks the ninth iteration of his armor, progressing from the eighth in the original game. This continues a legacy that dates back to Arnold's concept art for the Juggernaut class in Project Titan, which went through seven iterations before the game was cancelled. Reinhardt's new design incorporates some elements from those scrapped Juggernaut concepts, and features a more technologically advanced appearance to show that Winston helped upgrade it after Reinhardt rejoined the team.<ref>Blizzcon 2019 Overwatch: Evolving the Art Panel</ref>
+
+====Removed Abilities====
+{{Ability_details
+| removed = 1
+| ability_name = Steadfast
+| ability_image = Passive-Reinhardt.png
+| official_description = Resistant to knock back effects.
+| hero_info_description = Resistant to knock back effects.
+| ability_type = Passive Ability
+| kbmod = -30% received
+| ability_details = * Replaced in [[Season/2026|Season 1: Conquest]] with the Stalwart sub-role.
+* Reduces the initial velocity from knock back effects by 30%. For example, {{al|Soundwave}} sends its victims back 17 m/s, but for Reinhardt, it is 11.9 m/s.
+* The distance in which Reinhardt is knocked back is NOT reduced by 30%; it is reduced by more. This is because the velocity has to accelerate back to normal; a higher initial velocity means more time at higher velocities and more time with a velocity in general.
+* Does not affect {{al|Halt!}}, {{al|Chain Hook}}, {{al|Graviton Surge}}, or {{al|Gravitic Flux}} because they are not knock back effects.
+}}
+
+{{Ability details
+| removed = 1
+| ability_name = Fiery Uptake
+| ability_image = Perk_FieryUptake.png
+| ability_type = Minor Perk
+| official_description = Barrier Field is healed for 100% of Fire Strike's damage dealt.
+| ability_details =
+* Replaced by {{al|Crusader's Fire}} in Season 16.
+* If the barrier has been destroyed, Fire Strike damage will still recharge barrier health, however it will not cause the barrier to become available faster.
+}}
+
+{{Ability details
+| removed = 1
+| ability_name = Crushing Victory
+| ability_image = Perk_CrushingVictory.png
+| ability_type = Major Perk
+| official_description = Charge damage grants temporary overhealth for 100% of the damage dealt.
+| overhealth = 100% of Charge damage dealt
+| duration = 5 seconds
+| ability_details =
+* ''Removed in Season 18.''
+* Both bump and pin damage count.
+* Overhealth starts to decay at a rate of 50/s when the duration ends.
+}}
+
+{{Ability details
+| removed = 1
+| ability_name = Barrier Re-charge
+| ability_image = Barrier_Re-Charge.png
+| ability_type = Minor Perk
+| official_description = Distance travelled while using Charge regenerates your Barrier Field by 200 per second.
+| ability_details = * Removed in Reign of Talon Season 1: Conquest
+* If the barrier has been destroyed, this will still recharge barrier health, however it will not cause the barrier to become available faster.
+}}
+
+==Media==
+
+=== Images ===
+
+;Former Portrait
+<gallery>
+File:OW1Icon Reinhardt.png|Overwatch 1 Hero portrait
+</gallery>
+;Gameplay Screenshots
+<gallery widths="200">
+File:Reinhardt Overwatch 002.jpg
+File:Reinhardt Overwatch 003.jpg
+File:Reinhardt Overwatch 004.jpg
+File:Reinhardt Overwatch 005.jpg
+File:Reinhardt Overwatch 006.jpg
+File:Reinhardt Overwatch 007.jpg
+File:Reinhardt Overwatch 008.jpg
+</gallery>
+;Concept Art
+<gallery>
+File:Reinhardt Guan Yu skin concept art.jpg|Guan Yu Skin Concept Art by Lipan Liu
+File:Reinhardt Guan Yu Weapon skin concept art.jpg|Guan Yu Skin Weapon Concept Art by Lipan Liu
+File:Reinhardt Imperius skin concept art.jpg|Imperius Skin Concept Art by Allison Yu
+File:Concept Art - Reinhardt Minotaur (1).jpg|Minotaur Skin Concept Art by Nesskain
+File:Concept Art - Reinhardt Minotaur (2).jpg|Minotaur Skin Weapon Concept Art by Nesskain
+File:Reinhardt Raynhardt skin concept art.jpg|Raynhardt Skin Concept Art by Kejun Wang
+File:Reinhardt-ow2-portrait.png|Overwatch 2 Skin Concept Art
+File:Syrena-li-one-eyed-wilhelm-reinhardt-syrena-01.webp|One Eyed Wilhelm Skin Concept Art
+File:Syrena-li-one-eyed-wilhelm-reinhardt-syrena-02.webp|One Eyed Wilhelm Skin Concept Art
+</gallery>
+
+===Videos ===
+;Official
+{{#ev:youtube|tkFdb1KCTL0|400|inline}}
+{{#ev:youtube|FyfoeMPDKTA|400|inline}}
+{{#ev:youtube|sQfk5HykiEk|400|inline}} 
+
+;Curse
+{{#ev:youtube|WV4ihChrxaw|400|inline}}
+
+;Watchpoint O.A.K
+{{#ev:youtube|lz1wo5YT6uY|400|inline}}
+
+==Balance Change Log==
+{{ChangelogsTabber
+| owpvp =
+{{PatchTableElement|2026-06-16|
+{{DevComment|Reinhardt can struggle against the high mobility of the hero roster. Increasing Firestrike’s projectile speed increases its consistency at range and better rewards accurate use. This also crosses double Firestrike breakpoints against 250 health targets.}}
+
+{{al|Fire Strike}}
+* Damage increased from 120 to 125.
+* Projectile speed increased from 30 to 33.
+}}
+{{PatchTableElement|2026-04-14|
+{{al|Shield Slam}} – Major Perk
+* Added a custom setting allowing Shield Slam to be bound to Quick Melee, enabling free look while the perk is equipped.
+}}
+{{PatchTableElement|2026-02-10|
+{{al|Barrier Re-Charge}} – Minor Perk
+* Removed.
+
+{{al|Crusader's Resolve}} – Minor Perk
+* While using Barrier Field, passive health regeneration triggers 75% sooner.
+}}
+{{PatchTableElement|2025-12-09|
+{{DevComment|Earthshatter has the potential to swing fights and is often generated quickly in close-range engagements. Increasing the ultimate cost better aligns its charge rate with its overall impact.}}
+
+{{al|Earthshatter}}
+* Ultimate cost increased by 9%.
+}}
+{{PatchTableElement|2025-10-14|
+{{al|Barrier Re-Charge}} – Minor Perk
+* Barrier Field regeneration rate increased from 150 to 200.
+}}
+{{PatchTableElement|2025-08-26|
+{{al|Crusader's Resolve}} - Minor Perk
+* Removed.
+
+{{al|Barrier Re-Charge}} - Minor Perk
+* New Minor Perk.
+* Distance travelled while using Charge regenerates your Barrier Field by 150 per second.
+
+{{al|Crushing Victory}} - Major Perk
+* Removed.
+
+{{al|Ignited Fury}} - Major Perk
+* New Major Perk.
+* For each enemy you hit with Fire Strike, gain 2 seconds of 25% increased attack speed.
+}}
+{{PatchTableElement|2025-07-22|
+{{al|Crushing Victory}} - Major Perk
+* Overhealth gain increased from 50% to 100% of Charge damage.
+}}
+{{PatchTableElement|2025-05-20|
+{{DevComment|Developer comments: Reinhardt generally does well across the game but falls off in effectiveness at high ranks. We're increasing the speed and responsiveness of Fire Strike to make it more reliable from range.}}
+
+{{al|Fire Strike}} - Ability 2
+* Projectile speed increased from 25 to 30 meters per second.
+* Recovery time reduced from 0.63 to 0.45 seconds.
+}}
+{{PatchTableElement|2025-04-22|
+{{al|Fiery Uptake}}
+* Removed.
+
+{{al|Crusader's Fire}}
+* New Minor Perk
+* Refund a charge of Fire Strike when you stun an enemy, overfilling up to 3.
+
+{{al|Shield Slam}}
+* Shield Slam distance increased by 50%.
+}}
+{{PatchTableElement|2025-03-18|
+{{DevComment|Developer Comments: We’re making improvements to several of Reinhardt's perks to increase their usability in various situations.}}
+{{al|Crusader's Resolve}}
+* Passive Regeneration trigger rate increased from 50% to 75%.
+
+{{al|Shield Slam}}
+* Cooldown reduced from 8 to 6 seconds.
+}}
+{{PatchTableElement|2025-02-18|
+;Hero Perks
+
+{{al|Crusader's Resolve}}
+* While using Barrier Field, your passive health regeneration triggers 50% sooner.
+
+{{al|Fiery Uptake}}
+* Barrier Field is healed for 100% of Fire Strike's damage dealt.
+
+{{al|Shield Slam}}
+* While Barrier Field is active, use Secondary Fire to damage and knockback enemies.
+
+{{al|Crushing Victory}}
+* Charge damage grants temporary overhealth for 50% of the damage dealt.
+}}
+{{PatchTableElement|2024-10-15|
+{{DevComment|Developer Comments: This is just some fine tuning for the barrier health and regeneration rate as it had become slightly too tough to break through.}}
+
+{{al|Barrier Field}}
+* Barrier Field health reduced from 1600 to 1500.
+}}
+{{PatchTableElement|2024-07-09|
+{{DevComment|Developer Comments: One of the core design goals for Reinhardt is to be the hero that shields his team. In the past we've reduced the barrier health significantly in order to improve other offensive aspects of his kit to better fit the fast-paced gameplay of Overwatch 2, but perhaps it was too much. We still want to avoid barriers feeling mandatory due to how useful they can be and keep tank diversity at a healthy level. However, with this patch looking at the tank role in particular, we're increasing Reinhardt's barrier health again and will evaluate further.}}
+
+{{al|Barrier Field}}
+* Maximum health increased from 1400 to 1600.
+* Barrier regeneration rate increased from 140 to 160 health per second.
+
+{{al|Charge}}
+* Wall impact damage increased from 275 to 300.
+}}
+{{PatchTableElement|2024-06-20|
+;General
+* Knockdown time when two charging abilities collide reduced from 2 to 1.7 seconds.
+
+{{DevComment|Developer Comments: This stun time reduction applies to the knockdown that happens when two charging abilities collide and result in a tie (with Reinhardt, Doomfist, Brigitte, Mauga, Bob). The counterplay and interaction of two charging abilities impacting each other is great, but it took both players out of the fight a little too long.}}
+}}
+{{PatchTableElement|2024-04-16|
+{{Ability link|name=Earthshatter}}
+*Knockdown duration increased from 2.75 to 3 seconds.
+*Shockwave range increased from 20 to 25 meters.
+}}
+{{PatchTableElement|2024-03-12|
+* Armor Increased from 275 to 300.
+{{al|Fire Strike}}
+* Damage increased from 100 to 120.
+}}
+{{PatchTableElement|2024-02-13|
+;General updates
+Most damage-dealing projectile sizes have been increased by a new global modifier added to their base size.
+
+* +0.05 meters for hitscan projectiles with a high rate of fire or spread (e.g., Tracer's Pulse Pistols or Reaper's Hellfire Shotguns).
+* +0.08 meters for hitscan projectiles that are more precise (e.g., Cassidy's Peacekeeper or Soldier:76's Heavy Pulse Rifle).
+* +0.05 meters for travel time projectiles that are shotguns or have a very high rate of fire (e.g., Roadhog's Scrap Gun or Ramattra's Void Accelerator).
+* +0.10 meters for travel time projectile with a speed greater than 50 meters per second (e.g., Zenyatta's Destruction Orb).
+* +0.15 meters for travel time projectile with a speed less than or equal to 50 meters per second (e.g., Pharah's Rocket Launcher).
+* Very large projectiles with a base size greater than 0.5 meters have been excluded from these increases (e.g., Orisa's Energy Javelin or Reinhardt's Fire Strike).
+
+Hero combined HP (base health/armor/shields) increased by 15-25%.
+
+* 150-175 HP heroes increased by 25 HP.
+* 200-300 HP heroes increased by 50 HP.
+* 300+ HP (Tanks) increased by 75-100 HP.
+* Each hero's precise health increases are listed in their patch notes below.
+
+Ultimate Charge
+
+* All Ultimate ability costs increased by 10%.
+
+Regenerative Passive for All Heroes
+
+* All heroes now regenerate 20 health per second after 5 seconds of not taking damage.
+
+;Hero updates
+
+* Health increased from 200 to 250.
+* Armor increased from 250 to 275.
+
+{{al|Rocket Hammer}}
+* Damage increased from 85 to 100.
+
+{{al|Charge}}
+* Wall impact damage increased from 225 to 275.
+
+{{al|Earthshatter}}
+* Close range damage increased from 170 to 200. (undocumented)
+}}
+{{PatchTableElement|2023-07-11|
+{{DevComment|Developer Comments: We are increasing Reinhardt's barrier uptime to help him better protect his allies. We'll be keeping an eye on this, as we want to avoid situations where players feel like they are always shooting at barriers.}}
+
+{{al|Barrier Field}}
+
+* Maximum health increased from 1200 to 1400.
+}}
+{{PatchTableElement|2023-04-11|
+{{DevComment|Developer Comment: Reinhardt has been overperforming after the recent increases to his offensive capabilities. Those changes have been playing well, so to adjust his overall power, we’re reducing his overall health through this armor reduction.}}
+
+* Armor health reduced from 300 to 250
+* Base health increased from 175 to 200
+}}
+{{PatchTableElement|2023-02-07|
+{{DevComment|Developer Comment: In similar fashion to Roadhog's Chain Hook combo changes last season, we'd generally like to avoid heroes in the Tank role from killing enemies in one shot. Earthshatter direct hit damage is being reduced with that goal in mind. In most cases, targets on the receiving end would die anyway during the knockdown stun, but it does open up some potential for their allies to intervene.
+For now, we're fine with Charge pin staying lethal to many characters due to the difficulty and risk involved. The Fire Strike damage increase does mean it could once again one-shot when combined with Baptiste's Amplification Matrix, but that requires an ultimate combo with another hero. We'll see how it plays out and adjust if necessary.
+The Rocket Hammer knockback reduction sounds like a loss of power though it is actually aiming to reduce the number of times Reinhardt accidentally knocks enemies out of his melee range.}}
+*Base health in Role Queue modes remains the same at 325
+*Base health in non-Role Queue modes reduced from 325 to 175
+{{Al|Rocket Hammer}}
+*Knockback impulse reduced from 10 to 6
+{{Al|Charge}}
+*Cooldown reduced from 8 to 7 seconds
+{{Al|Fire Strike}}
+*Damage increased from 90 to 100
+{{Al|Earthshatter}}
+*Direct hit damage reduced from 250 to 170
+*Knockdown duration increased from 2.5 to 2.75 seconds
+*Ultimate cost increased 7%
+}}
+{{PatchTableElement|2022-06-28|
+*Armor reduced from 350 to 300
+*Health increased from 300 to 325
+|beta=1}}
+{{PatchTableElement|2022-04-26|
+*Base armor increased from 200 to 300
+*Base health increased from 300 to 350
+{{Al|Steadfast}}
+*Removed and replaced by Tank passive
+{{Al|Barrier Field}}
+*Health reduced from 1600 to 1200
+*Regeneration rate reduced from 200 to 144 health per second
+{{Al|Charge}}
+*Steering turn rate increased by 50%
+*Can now be manually cancelled
+*Charge Pin wall impact damage reduced from 300 to 225
+*Cooldown from 10 to 8 seconds
+{{Al|Fire Strike}}
+*Now has 2 ability charges
+*Damage reduced from 100 to 90
+|beta=1}}
+
+|owstadium={{#section-h:Reinhardt/Stadium|Balance Change Log}}<!-- this section is transcluded from the /Stadium page and must be edited from there -->
+
+| ow1 =
+{{PatchTableElement|2022-01-06|
+{{Al|Earthshatter}}
+* Now deals an additional 200 damage within 1.75m of the impact area
+}}
+{{PatchTableElement|2021-04-22|
+*Armor reduced from 250 to 200 (Health/armor total reduced from 550 to 500)
+
+Reinhardt has been overperforming since his last round of changes. To help increase tank diversity we are reverting his armor to its previous value while keeping the Rocket Hammer damage increase for now as it helps to balance out the reduced crowd control duration of Earthshatter.
+}}
+{{PatchTableElement|2020-12-10|
+*Base Armor increased from 200 to 250
+{{al|Rocket Hammer}}
+*Damage increased from 75 to 85
+''Developer Comment: The intent of these changes is to slightly bolster Reinhardt's frontline presence once he closes the distance with an enemy. The increased Rocket Hammer damage will reduce the number of swings necessary to eliminate some heroes so we'll be keeping a close eye on the overall impact of this change.''
+}}
+{{PatchTableElement|2020-10-13|{{al|Earthshatter}}
+*Added a voice line stating, "For the Crusaders!", that allies will hear when Reinhardt uses Earthshatter
+}}
+{{PatchTableElement|2020-05-19|
+* Reduced the height of Reinhardt's head hit volume, making it harder to hit him in the head from behind
+}}
+{{PatchTableElement|2020-04-29|{{al|Earthshatter}}
+*Knockdown duration lowered from 3 to 2.5 seconds
+}}
+{{PatchTableElement|2020-04-06|{{al|Steadfast}} 
+*Passive knockback resistance reduced from 50% to 30%
+}}
+{{PatchTableElement|2019-12-10|{{al|Barrier Field}}
+*Health reduced from 2000 to 1600
+*Movement speed penalty reduced from 50% to 30%
+{{Al|Steadfast}}
+*Knockback resistance increased from 30% to 50%
+''Developer Comment: The above changes to armor, Orisa, Sigma, and Reinhardt are aimed at decreasing the overall amount time players spend damaging barriers while improving the individual heroes in other areas. This is a significant change to the pace of the game and we’ll be monitoring these heroes closely to ensure they retain impactful gameplay in the tank role.''
+}}
+{{PatchTableElement|2019-08-13|{{al|Steadfast}} - New passive ability
+*Reduces knock back effects by 30%
+''Developer Comment: As a frontline, melee-range tank Reinhardt was more adversely affected by knock back abilities than most heroes. To reduce some of this frustration and enable Reinhardt to more easily fulfill his role, he is now more resistant to being knocked back.''
+}}
+{{PatchTableElement|2018-09-11|{{al|Earthshatter}}
+*Now consistently hits enemies near walls
+*No longer hits enemies that enter the damage cone after the “wave” has passed that area
+*No longer damages enemies behind barriers blocking it, even if the barrier is later dropped or destroyed
+*Always travels up inclines and around the payload
+''Developer Comments: We’ve given Earthshatter a complete overhaul to combat inconsistencies with its performance. These changes will make Earthshatter’s behavior more predictable and effective.''
+}}
+{{PatchTableElement|2018-08-09|{{al|Barrier Field}}
+*Decorative insignia no longer protrudes from the shield’s surface
+''Developer Comments: By smoothing out Reinhardt’s Barrier Field, he now will be able to consistently block enemy abilities and projectiles that could sometimes unintentionally sneak through (e.g. Junkrat’s grenades).''
+}}
+{{PatchTableElement|2017-09-19|
+*A new “Movement Relative to Camera During Barrier Free Look” option can be found under Settings > Controls. Simply select “Reinhardt” from the dropdown menu. This allows players to change the way Reinhardt moves when Barrier Shield is active and players are controlling the third-person camera movement
+{{al|Barrier Field}}
+*Holding primary fire while your shield is active now allows you to rotate the camera
+''Developer Comment: This change gives Reinhardt more situational awareness while using his shield, allowing him to keep an eye on the battlefield while still protecting his team.''
+}}
+{{PatchTableElement|2017-07-27|{{al|Rocket Hammer}}
+*Swing speed increased by 10%
+''Developer Comment: In the last update, Reinhardt’s Rocket Hammer had an issue that allowed players with higher latency to swing faster. We fixed this bug, which suddenly made the swing speed feel too slow, so we’re compensating by increasing his standard swing speed. During this process, we also found and fixed a few bugs with Rocket Hammer’s hit registration. Overall, the hammer should feel much better.''
+}}
+{{PatchTableElement|2017-05-23|{{al|Earthshatter}}
+*Effective height has been lowered from 3 meters to 2 meters
+*The height threshold of objects that Earthshatter can "climb" has been lowered from 3 meters to 2 meters, making Earthshatter less likely to climb tall objects as it moves along the ground.
+''Developer Comments: Earthshatter tended to climb unexpectedly high, frequently hitting targets that were significantly above the ground. These changes help the ability stay more grounded.''
+}} |ow6v6={{PatchTableElement|2026-02-10|
+{{al|Steadfast}}
+* Removed and replaced with {{al|Sub-Role: Stalwart}}. (undocumented)
+}}
+{{PatchTableElement|11-11-2025|
+;6v6 Hero Changes
+{{al|Barrier Field}}
+* Shield health increased from 1500 to 1800.
+}}
+{{PatchTableElement|2025-03-18|
+{{al|Barrier Field}}
+* Health reduced from 2000 to 1500. (undocumented)
+
+{{al|Charge}}
+* Steering increased by 50%. (undocumented)
+
+{{al|Fire Strike}}
+* Now has 2 charges. (undocumented)
+* Cooldown increased from 6 to 8 seconds. (undocumented)
+
+{{al|Earthshatter}}
+* Distance increased from 20 to 25 meters.
+}}
+{{PatchTableElement|2024-12-17|
+* Base health increased from 250 to 325.
+* Base armor reduced from 300 to 225.
+* Now has the Steadfast passive again, reducing knockback by 30%.
+
+{{al|Barrier Field}}
+* Health increased from 1500 to 2000.
+
+{{al|Charge}}
+* Cooldown increased from 7 to 10 seconds.
+* Steering reduced 50%.
+
+{{al|Fire Strike}}
+* Ability charges reduced from 2 to 1.
+
+{{al|Earthshatter}}
+* Distance reduced from 25 to 20 meters.
+}}}}
+
+==References==
+<references />
+
+==External links==
+*[http://playoverwatch.com/en-us/heroes/reinhardt/ Official Site - Reinhardt]
+*[http://www.icy-veins.com/overwatch/reinhardt-guide-strategy-gameplay Reinhardt Guide on Icy Veins]
+
+{{Heroes}}
+[[Category: Heroes]] 
+[[Category:Reinhardt| ]]
+[[Category:Overwatch members]]
+[[Category: Crusaders]]

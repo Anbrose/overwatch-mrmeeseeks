@@ -2,3 +2,4 @@ discord.py>=2.4
 websockets>=14
 anthropic>=0.40
 python-dotenv>=1.0
+mwparserfromhell>=0.6

@@ -1,0 +1,1054 @@
+{{Infobox character
+| name = Tracer
+| image = <gallery>
+OW2_Tracer.png|Overwatch
+OW_Tracer.png|Overwatch Classic
+</gallery>
+| caption = "Cheers, love! It's time to save the world!"
+| realname = Lena Oxton
+| age = 28 (''[[Overwatch 2]]'', biologically 26)<ref name = "OverwatchDeclassified"/><br/>26 (''[[Overwatch]]'', biologically 24)<ref name = "OverwatchDeclassified"/>
+| birth = February 17th
+| nationality = {{flag|en}} English
+| occupation = Adventurer<br>Pilot<br>Overwatch agent
+| baseofoperations = [[London]], England (formerly)<br/>[[Watchpoint: Gibraltar]](formerly)<br/>[[Gothenburg]], [[Sweden]]
+| affiliation = [[Royal Air Force]] (formerly)<br/> [[Overwatch (group)|Overwatch]] (formerly)<br/>Royal Air Force (temporarily rejoined)<br/>Overwatch (reformed)
+| relations = [[File:Emily Spray.png|20px]] [[Emily]] (partner)
+| voice = {{VA stack
+  | english = [[Cara Theobold]]<ref>2014-11-10, [https://twitter.com/CaraTheobold/status/531722493602852864 "Get ready! "Tracer" mania has started!"]. ''Twitter''. Accessed on 2016-05-18</ref><ref>2016-04-20, [https://www.youtube.com/watch?v=I5bTaMV-1iY?t=862 Credits, listing Cara Theobold in the voice-over cast at 14:25]. ''YouTube''. Accessed on 2016-05-18</ref>
+  | other = [[Dorothée Pousséo]] (French)
+<br>Luisa Wietzorek (German)
+<br>Gea Riva (Italian)
+<br>Emiri Katō (Japanese)
+<br>Park Shin-hui (Korean)
+<br>Hong Haitian (Mainland Mandarin)
+<br>Tao Min-sian (Taiwanese Mandarin)
+<br>Weronika Łukaszewska (Polish)
+<br>Luiza Palomanes (Brazilian Portuguese)
+<br>Natalia Tereshkova (Russian, Overwatch Beta)
+<br>Lena Ivanova (Russian, Release)
+<br>Ana de Castro (European Spanish)
+<br>Analiz Sanchez (Latin American Spanish)
+  }}
+| cosmetics = 1
+| quotes = 1
+| stadium = 1
+| type = 
+| role = [[Damage]]
+| sub-role = [[Flanker]]
+| health = 175
+| minor_perk_xp = 1575
+| major_perk_xp = 3995
+| video = {{#ev:youtube|_SvYmsNCWsw|325|inline}}
+}}{{HeroTabs}}
+'''Tracer''' is a [[Sub-Roles#Flanker|Flanker]] [[Roles#Damage|Damage]] [[Heroes|hero]] in ''[[Overwatch 2|Overwatch]]''. She is one of the 21 heroes included in the game's release on 24 May 2016.
+
+==Overview==
+[[File:Tracer HS.mp4|left|thumb]] Toting twin pulse pistols, energy-based time bombs, and rapid-fire banter, Tracer is able to "blink" through space and rewind her personal timeline as she battles to right wrongs the world over.
+
+<gallery>
+File:Icon-Tracer.png|'''3D portrait'''
+File:Tracer Hero.png|'''2D portrait'''
+</gallery>
+==Abilities==
+
+===Passive Abilities===
+{{Sub-Role passive|Flanker}}
+
+===Weapons===
+{{Ability_details
+| ability_name = Pulse Pistols
+| ability_image = Ability-tracer1.png
+| ability_video = DOXR7rOvGOQ
+| old_description = Tracer rapid-fires both of her pistols.
+| official_description = Short-range automatic weapons.
+| ability_type = Weapon
+| shot_type = {{proj|hitscan}}
+| damage = 5.75 - 1.725 (per bullet)<br>11.5 - 3.45 (per shot)
+| damage_falloff_range = 10 - 20 meters
+| headshot = ✓
+| fire_rate = {{tt|20 shots/s|1 burst per 0.05 seconds}}
+| ammo = 40
+| ammo_drain = 2
+| pellets = 2
+| reload_time = {{tt|1 second|restores ammo after 0.686 seconds}}
+| spread = 3.5 degrees (max)
+| pradius = 0.04 meters
+| ability_keywords = critical::hitscan
+| ability_details = * Damage per second: {{CalcDPS|d=5.75|f=(20*2)}} while firing ({{CalcDPS|d=5.75|f=(20*2)|a=40|r=1}} overall w/reload)
+* {{tt|~0.22 seconds|0.224}} recovery if firing is paused.
+* Maximum spread is reached after 3 shots.
+| coop_details = * Ammo increased from 40 to 60.
+* Damage reduced from 5.5 to 5.
+| dps = 230 while firing (120 overall w/reload)
+}}
+
+===Special Abilities===
+{{Ability_details
+| ability_name = Blink
+| ability_image = Ability-tracer2.png
+| old_description = Tracer zips horizontally through space in the direction she’s moving, and reappears several yards away. She stores up to three charges of the blink ability and generates more every few seconds.
+| official_description = Teleport in the direction you are moving.
+| ability_type = Ability
+| shot_type = {{proj|movement}}
+| key = ability 1
+| cooldown = 3 seconds
+| charges = 3
+| range = 7.5 meters
+| duration = {{tt|0.1 seconds|0.096}} recovery for reuse
+| ability_video = 50d5qnAPrR8
+| ability_keywords = evasive::strong movement
+| ability_details = 
+* Blink instantly moves Tracer to target location.
+** Tracer will not be caught by [[Junkrat|Junkrat's]] [[Steel Trap]] if she attempts to Blink over it, but cannot Blink out of one that she has already triggered.
+* Blink will not remove debuffs.
+* Can also be activated with Secondary Fire.
+}}
+
+{{Ability_details
+| ability_name = Recall
+| ability_image = Ability-tracer3.png
+| old_description = Tracer bounds backward in time, returning her health, ammo and position on the map to precisely where they were a few seconds before.
+| official_description = Travel back in time to your previous location and health.
+| ability_type = Ability
+| shot_type = {{proj|movement}}
+| key = ability 2
+| cooldown = 12 seconds
+| duration = 3 seconds (rewound time)<br>0.9 seconds (invulnerablity)
+| ability_video = eFdC4mW0SMI
+| ability_keywords = lesser cleanse;;stunnable::invulnerable::phased::reloads::strong movement
+| ability_details = *Also fully reloads Tracer's Pulse Pistols.
+*Restores Tracer's health to the highest value in the past 3 seconds.
+*Recall does not restore overhealth, but any overhealth Tracer currently has will persist for its normal duration through Recall.
+*If Recalling to a position on a platform (or the payload) that has moved during the last few seconds, Tracer will not be Recalled to a position in the air, but instead she will be returned to the platform's current location.
+*Recall also records where Tracer was looking three seconds prior.
+*Tracer is [[phased out]] while Recalling, removing most negative [[status effect]]s and making her immune to all damage.
+}}
+
+===Ultimate Ability===
+{{Ability_details
+| ability_name = Pulse Bomb 
+| ability_image = Ability-tracer4.png
+| old_description = Tracer lobs a large bomb that adheres to any surface or unfortunate opponent it lands on. After a brief delay, the bomb explodes, dealing high damage to all enemies within its blast radius.
+| official_description = Throw out a powerful sticky explosive.
+| ability_type = Ultimate Ability
+| shot_type = {{proj|arc}}<br>{{proj|aoe}}
+| ult_req = 1375 points
+| damage = 5 (stick)<br>350 - 70 (explosion, enemy)<br>175 - 35 (explosion, self)
+| headshot = ✕
+| cast_time = 0.144 seconds for throw + 0.192 seconds recovery
+| radius = 2 - 4 meters (falloff start - max)
+| duration = 1 second (explosion delay)
+| pspeed = 15 m/s
+| pradius = 0.22 meters<!-- 0.12m global + 0.1 -->
+| ignores_matrix = partial
+| ignores_deflect = partial
+| ignores_window = partial
+| ability_video = Sf_ku0-PPoc
+| ability_keywords = area of effect;;spherical::sticky::travel time::self-damage
+| ability_details =
+* Tracer's Pulse Bomb does damage when stuck to someone and when it explodes.
+* The projectile can be destroyed while in air by {{al|Defense Matrix}}, {{al|Kinetic Grasp}}, {{al|Javelin Spin}}, {{al|Power Matrix}} and {{al|Kekkai Sanctuary}} and reflected by {{al|Deflect}}, but a stuck bomb and the explosion are unaffected.
+* {{al|Amplification Matrix}} affects all damage dealt, if the projectile passes through it. Splash damage alone going through is not amplified.
+* Stick and explosion are separate damage instances, causing both to get reduced by [[armor]].
+| coop_details =
+* Explosion damage increased from 350 to 550.
+}}
+
+== Perks ==
+=== Minor Perks ===
+A Minor [[Perk]] can be chosen at level 2.
+
+{{Ability details
+| ability_name = Temporal Regen
+| ability_image = Perk_Temporal_Regen.png
+| ability_type = Minor Perk
+| official_description = Passive health regeneration triggers 50% faster.
+| ability_details = 
+}}
+
+{{Ability details
+| ability_name = Kinetic Reload
+| ability_image = Kinetic_Reload.png
+| ability_type = Minor Perk
+| official_description = Melee hits grant 12 ammo.
+| ability_details = * Triggers for each enemy hero hit by the quick melee.
+}}
+
+=== Major perks ===
+A Major [[Perk]] can be chosen at level 3.
+{{Ability details
+| ability_name = Blink Packs
+| ability_image = Perk_BlinkPacks.png
+| ability_type = Major Perk
+| official_description = Health Packs restore 1 Blink charge.
+| ability_details = 
+}}
+{{Ability details
+| ability_name = Quantum Entanglement
+| ability_image = Perk_QuantumEntanglement.png
+| ability_type = Major Perk
+| official_description = Recall grants 50 overhealth and 20 ammo that decays over time.
+| overhealth = 50
+| duration = 6 seconds
+| ability_details = 
+}}
+
+== Hero-specific options ==
+{|class ="listtable"
+! Setting name !! Options !! Description
+|-
+| rowspan="2"| '''Blink UI'''
+| On (default)
+| Blink charge UI element is displayed under the crosshair.
+|-
+| Off
+| Blink charge UI element is hidden.
+|}
+
+==Strategy==
+Tracer is a close-range skirmishing hero who specializes in speed and single-target damage. Her mobility and high single-target damage makes her excellent at picking key targets with very low risk. Tracer can quickly traverse a map with the use of Blink to outflank her enemies, deal damage to them, and then retreat before they have a chance to respond. Her low base Health and lack of regenerating shields means that she must make good use of Blink and Recall to avoid or reverse damage.
+===Weapons & Abilities===
+*'''{{al|Pulse Pistols}}:''' Tracer's primary weapon. Her primary fire rapidly shoots both pistols, dealing heavy damage. These pistols have a large cone of fire and heavy damage falloff, making them ineffective beyond short-range engagements.
+**The shots from Pulse Pistols need to aimed well. The large spreading and very fast fire-rate mean that she has to get close to the enemy as much as possible to track their movement.
+**With the fast fire-rate, it is recommended not to stop in mid-use, even if it will recover the weapons's spreading. Try to land non-stop shots on the enemy.
+**The fast fire-rate means that Tracer has to react quickly if a situation arises that necessitates that she stop firing, such as when Genji activates [[Deflect]] or [[Zarya]] uses either of her Barriers.
+
+*'''{{al|Blink}}:''' Tracer's most important ability. Blink teleports Tracer a short distance in the direction she's currently moving.  She can gather 3 charges as the maximum.
+**This allows Tracer to move unpredictably: she can Blink past an enemy to attack their back, or Blink to the side to dodge an enemy's attacks.
+**Multiple Blinks can be chained back-to-back, allowing Tracer to travel across gaps that normally can't be crossed with just her jump.
+**Blink still has a limit; Tracer needs to wait around 3 seconds to gain 1 charge for it. Use the Blink in combination with Recall and don't waste all its charges without a backup plan.
+
+*'''{{al|Recall}}:''' When activated, Tracer will "rewind" to three seconds in the past, setting her health and position to whatever they were at that time, unless her health value is lower than it was before activating the ability. It will also reload her gun and remove all debuffs from her.
+**Recall is mainly used to restore Health, but it can also be useful for escaping: jump off a ledge, wait for an enemy to follow you, and then Recall back up the ledge.
+**Recall has a short animation that plays when activated, during which time Tracer is invulnerable and invisible.
+
+*'''{{al|Pulse Bomb}} (Ultimate):''' Tracer's [[Ultimate]] ability. When activated, Tracer tosses her bomb forwards a short distance. If it impacts an enemy, it will stick to that enemy. Otherwise, the bomb will stick to the first solid surface it lands on. After a short delay, the bomb explodes, dealing a heavy amount of damage to enemies in a small area around the bomb. Note that this explosion '''will also damage Tracer'''.
+**Pulse Bomb is devastating on clustered groups or static defenses, like [[Bastion]] in Sentry mode.
+**A common ability combination to safely bomb a target is to use Blink to get in close, toss the bomb on them, and then Recall to get back out of danger.
+**Pulse Bomb synergizes very well with abilities such as Zarya's [[Graviton Surge]]. The combination of these ultimates will usually wipe out the majority of an enemy team and severely damage their tanks.
+**Avoid being killed by your own ultimate by activating Recall or Blink to escape from the blast.
+**Tracer's Pulse Bomb can eliminate a target just by being struck if they're at extremely low health, though this is not an effective strategy.
+
+===General strategies===
+*When playing Tracer, do your best to avoid fighting your opponents head-on. Tracer can only deal good damage when close to her enemies, as opposed to other Assault heroes like [[Soldier: 76]], and she lacks durability.
+*Take advantage of Tracer's speed to travel rapidly through side routes so that you can get behind your opponents before attacking.
+*Your top priorities should be support heroes; Tracer's high mobility and powerful gunfire make her a very strong counter to most supports and defense heroes that have low mobility. If you manage to fight the dps-heroes, you have to Blink to their blind spot to fight or flank them from behind when they are unaware that you are coming.
+*Tracer's mobility isn't unlimited; if she doesn't spare her Blink uses, she can put herself in severe danger.
+*Try to find single targets that are separated from their team and take them out. Be wary of diving into large groups to try and kill a target, unless you have Pulse Bomb ready, as a full enemy team can quickly turn and kill you before you can Recall or Blink to safety.
+*If you're starting to lose a fight and are low on Health, don't be afraid to retreat, as Tracer's speed can let her get to Health Packs well before her opponents can. This gives her an advantage in dueling single targets, as she can simply outlast them through good use of Recall and retreating to grab Health Packs before returning to battle.
+*Tracer is considered most effective in King of the Hill maps. Her horizontal mobility is unparalleled, making her ideal to flank enemy lines and to patrol flanks. Her lack of vertical mobility can be problematic on Payload or Control Point maps, where other heroes can give Tracer a difficult time to traverse the map safely.
+*Her Pulse Bomb can also be very effective on heroes that have medium health pools that are in Zenyatta's Transcendence. You cannot kill the Zenyatta during Transcendence, but you can take out heroes with less than 400 health, as Transcendence provides invulnerability only to Zenyatta, not the heroes around him.
+*Due to the slow travel time of her Pulse Bomb, throwing from some further range will likely not stick to any of the enemy and kill no one. Practice your aim and get close to the enemy with Blink as much as possible.
+*Keep in mind that Tracer has lowest base health of all heroes; a single headshot from some heroes can quickly kill her.
+
+==Match-Ups and Team Synergy==
+<!--When proving match-up or team synergy advice, please write all advice from the perspective of someone playing as this hero, not as someone who wishes to counter this hero. Also, please try to be as objective as possible. Taking personal skill out of the equation, please provide advice that would apply to any player who knows how to play these characters well.-->
+
+===Tank===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero
+! |Match-Up
+! |Team Synergy</small>
+|-
+|<center>[[File:icon-dva.png|75px|link=D.Va]]<br />[[D.Va]]</center>
+|<small>D.Va's slow movement while firing makes her a large, easy target to retaliate against, and your mobility can make it difficult for her to land shots on you. while active makes her uncomfortable to use it against most mobile heroes. However, D.Va's Defense Matrix will negate not only your Pulse Pistol attacks but your Pulse Bomb as well, so try to only attack when Defense Matrix is on cooldown. Also, D.Va's lack of needing to reload means that if you're not careful about dodging her attacks, she can snap around and continue firing on you, eventually killing you. If you attempt to flee with Blink while at low health, D.Va can often chase you down with her Boosters. Conversely, if D.Va is weakened she can fly to a higher altitude where you'll struggle to reach her. When she's in her Mech, you can expect a fight to D.Va to either be a lengthy stalemate or quickly one-sided, based on your dodging abilities and her aiming abilities. A Pulse Bomb stuck to her Mech will chew through a good amount of its health, potentially destroying it; additionally, should you destroy her Mech with your Pulse Pistols, you can strap your Pulse Bomb to D.Va right when she ejects, instantly killing her. Even without your Pulse Bomb, D.Va is an incredibly easy target to kill once she's out of her Mech, so long as you stay mobile. Just don't get too cocky, though; a series of quick successive headshots from her Light Gun can finish you off in an instant.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-doomfist.png|75px|link=Doomfist]]<br />[[Doomfist]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-orisa.png|75px|link=Orisa]]<br />[[Orisa]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-reinhardt.png|75px|link=Reinhardt]]<br />[[Reinhardt]]</center>
+|<small>Your mobility can help you easily get Reinhardt's Barrier Field to attack teammates he's protecting. Even if he turns around to try to protect his teammates from you, that will leave him open for your own team to make a move on him. Don't get too cocky around Reinhardt, though, as attacking him means you'll be in his hammer's effective range, and it only takes two strikes to kill you. Pulse Bomb will bring a healthy Reinhardt down to 105 health, which will make him easier for you to finish off. As long as you keep Blinking around Reinhardt and consistently shooting him, he will have difficulty handling you.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-roadhog.png|75px|link=Roadhog]]<br />[[Roadhog]]</center>
+|<small>Roadhog's large model and lack of barriers makes him an easy target to build up Ultimate charge on. Blinking around him from side to side can help you avoid his attacks while landing your own. However, Take a Breather can help him stay alive. More significant, though, is his Chain Hook; one accurate grab with it, and you're dead. Even without his Hook, his Scrap Gun can chew through your health if you try to heckle him at point blank. If you're wounded and are attempting to flee, Roadhog might land a Chain Hook on you while you aren't prepared. Be cautious around Roadhog; unless he's at low health, you're unlikely to kill him alone, meaning you'll need to deem whether it's worth it to deal some damage and build up your Ultimate or to stay back and ensure your survival.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-sigma.png|75px|link=Sigma]]<br />[[Sigma]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-wrecking_ball.png|75px|link=Wrecking Ball]]<br />[[Wrecking Ball]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-winston.png|75px|link=Winston]]<br />[[Winston]]</center>
+|<small>Winston's mobility will let him easily chase you down if you try to flee from him. Although you can use Blink or Recall to temporarily avoid him, if Winston is out to get you, he can just keep using Jump Pack to get to your position. Your effective range is almost the same range as Winston's Tesla Cannon, and he can dance around his Barrier Projector to keep himself safe. However, if you stand your ground and attack back, you can tear through his large health while Blinking into his blind spots and using Recall to heal if you need to. If you think you can't handle Winston on your own, though, try to regroup with your team; while he can handle you on your own if you run, he'll have a harder time handling you with your teammates backing you up.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-zarya.png|75px|link=Zarya]]<br />[[Zarya]]</center>
+|<small>Zarya will need to keep constant aim on you to deal damage, which you can counter by Blinking into her blind spots while attacking her. Be ready to stop firing at a moment's notice when Zarya activates her Particle Barrier, otherwise your quick burst of damage will provide her a supple amount of Energy. This also applies for when you're fighting any other enemies if a Zarya is around to apply a Projected Barrier. Instead of waiting for the Barrier to run out, it's better to gain some distance so your enemy doesn't kill you while you can't retaliate. Pulse Bomb will instantly kill Zarya, so be ready to use it when her Particle Barrier is on cooldown.</small>
+|<small>(To be added)</small>
+
+|}
+
+===Damage===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero
+! |Match-Up
+! |Team Synergy</small>
+|-
+|<center>[[File:icon-ashe.png|75px|link=Ashe]]<br />[[Ashe]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-bastion.png|75px|link=Bastion]]<br />[[Bastion]]</center>
+|<small>While Bastion's high firepower will shred through your shallow health in an instant, your mobility can help you approach Bastion and attack him in his rear weak spot before he can notice you. If you can evade his shots well with Blink, you can shred through Bastion up close before he has the chance to heal or kill you. Try to approach Bastion with as many uses of Blink stored up as possible so you don't run out in a dire situation. Pulse Bomb will instantly kill Bastion even with his Ironclad, unless he's being provided with additional health such as through Brigitte's Armor Pack. Always be mindful of the route you use to target Bastion; in an open area where Bastion can see you coming, he will likely kill you before you can perform Recall.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-Cassidy.png|75px|link=Cassidy]]<br />[[Cassidy]]</center>
+|<small>Cassidy is easily one of your worst nightmares. One good shot from Cassidy is enough to bring you down to extremely low health, and that's before he uses Flashbang and Fan the Hammer to instantly kill you. Try to keep some distance between you and Cassidy; his smaller magazine means that each wasted shot is a point in your favor. Keep Blinking to his blind spots, attacking, then and Blink again when he turns around. If you can bait him into wasting Flashbang and can avoid his shots then you should handle yourself okay. If you're hit by so much as a single headshot, though, swallow your pride and retreat; if you don't, you'll be dead before you know it.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-echo.png|75px|link=Echo]]<br />[[Echo]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-genji.png|75px|link=Genji]]<br />[[Genji]]</center>
+|<small>While you and Genji are both mobile, Genji has the advantage in vertical mobility while you have the advantage in horizontal mobility. Genji's Shuriken will quickly whittle through your health if you're not careful, but well-timed Blinks can keep you safe. Your firepower is strong, but Deflect will send your fast attacks back to yourself if timed poorly. Should you navigate around Deflect, though, you can quickly run through Genji's health if you attack him at point blank range. Genji's Swift Strike has longer cooldown than your Blink, so if you need to disengage, you can easily use Blink to escape. If Genji is perched on the high ground, either find an alternate route to get up to him or focus on other targets.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-hanzo.png|75px|link=Hanzo]]<br />[[Hanzo]]</center>
+|<small>While you lack Hanzo's ability to ascend walls, you can usually reach his position by traveling through flanking side routes. If you get Hanzo into your range, you'll have the upper hand so long as you dodge his arrows with Blink. If Hanzo activates Storm Arrows, consider hiding under cover until his duration wears out; while Blink can help you easily avoid individual arrows, dodging a burst of arrows will prove to be difficult, and it will only take one or two to kill you. Other than that, don't let Hanzo get distance on you, but rather put pressure on him and stay as close as you can.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-junkrat.png|75px|link=Junkrat]]<br />[[Junkrat]]</center>
+|<small>Junkrat will often be positioned on the high ground, which may prove difficult for you to reach. You're also likely to be the first victim who is caught by Junkrat's Steel Trap without warning when running through corridors. If you're careful where you step, though, you should be able to handle Junkrat in a close-quarters fight, so long as you use Blink to avoid his oncoming grenades. If you're low on Blink uses or Recall, though, wait before engaging, as it will only take one or two grenade hits to quickly kill you.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-mei.png|75px|link=Mei]]<br />[[Mei]]</center>
+|<small>Mei has to deal consistent attacks to freeze her targets, which you will have an easy time avoiding with Blink. Since Blink has 3 charges, you can perform Blink time and time again in order to attack Mei from different angles. Mei doesn't have much mobility to chase you or to escape; her only options in a sour situation are to heal up with Cryo-Freeze or try to fight back with her Icicle projectile. However, you don't completely counter Mei; even though you can escape her freezing effect by using Blink effectively, her Icicle is very dangerous should she land her shots, as one headshot will instantly kill you. Using Recall when you're almost frozen or as soon as you take a body shot is key to survival. If your Blink charges are low, it's better to retreat so you don't accidentally end up frozen. Throwing Pulse Bomb at Mei right before Cyro-Freeze expires will instantly kill her.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-pharah.png|75px|link=Pharah]]<br />[[Pharah]]</center>
+|<small>Your lack of vertical mobility means hunting Pharah down will be impossible. Although your weapon is hitscan, the damage falloff from shooting from afar means your damage output will be insufficient against Pharah. On the flipside, one or two rockets will be enough to snuff you out. Try to stay away from Pharah if possible and let your teammates gun her down.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-reaper.png|75px|link=Reaper]]<br />[[Reaper]]</center>
+|<small>You and Reaper both have extreme firepower at point blank range. However, Reaper's higher health, higher damage and self-healing with The Reaping will typically give him the upper hand, potentially eliminating you before you can react with Recall. Use your mobility to your advantage when fighting Reaper, using Blink to enter his blind spots and land successive attacks without letting him retaliate. While he can move around the map with ease using Shadow Step an Wraith Form, if you truly wish to disengage, you should be able to escape from him within a few Blink uses.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-Soldier 76.png|75px|link=Soldier:_76]]<br />[[Soldier: 76]]</center>
+|<small>Soldier: 76's movement while using Sprint is slower than your Blink. Since Blink can be stacked up to 3 times, it's sometimes smart to save them up so you can chase down Soldier: 76 should he attempt to flee from a fight. Your Pulse Pistols have high enough to out-damage the healing rate of Soldier: 76's Biotic Field, byt his Heavy Pulse Rifle deals higher damage per shot, so several headshots can bring your health down quickly. The large spread of your guns will make it hard to land full shots on Soldier: 76, especially if he's being evasive and fighting defensively. Try to catch him by surprise and fight up close where you can quickly run him down, but don't hesitate to flee if you need to. His Tactical Visor can easily track your movement, so try not to expose yourself when Tactical Visor is active./small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-sombra.png|75px|link=Sombra]]<br />[[Sombra]]</center>
+|<small>If you are hacked by Sombra, you will lose Blink and Recall, your two most important abilities. If you do end up Hacked, it will be child's play for Sombra or her team to finish you off. If you hear or see a Hack being placed on you, your options are to shoot the Sombra, quickly Blink away, or use Recall. If Sombra is in your view then it's best to shoot her, but if she isn't, the time it takes to turn around and spot her could give her enough time to finish her Hack; in those instances, try to use multiple Blinks to gain distance from her, or use Recall if you must, If you catch Sombra in the act, she'll be incapable of landing a Hack on you, and you'll generally handle better in a fight than her. If she attempts to use Stealth to escape, a quick spray of your Pulse Pistols will dispel her invisibility. If she uses Translocator to escape, watch the light trail to see where she fled to, and if she's close enough, consider chasing her down and finishing her off.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-symmetra.png|75px|link=Symmetra]]<br />[[Symmetra]]</center>
+|<small>Blink can help you bypass a Sentry Turret nest, so long as you know in advance where they're placed. However, your poor damage falloff means that you'll have few means to destroy Sentry Turrets other than attacking them up close, which will put you at risk of them quickly killing you. Should you approach Symmetra herself, you'll need to be very careful to avoid her attacks with Blink and fire from her blind spots. The longer the fight goes on, especially in a group fight, the stronger Symmetra will become, and the easier it will be for her to mow you down before you can Blink or Recall. If you attempt to flee, Symmetra may try to chase after you with her Teleporter, but it can only get her so far while you can continue using Blink to keep your distance. Be wary when chasing a wounded Symmetra; she'll often try to lure you into a Sentry Turret nest, so if you feel you must chase her down to finish her off, be ready to Blink back or Recall at the nearest sign of Sentry Turrets.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-torbjörn.png|75px|link=Torbjörn]]<br />[[Torbjörn]]</center>
+|<small>Torbjörn's auto-firing Turret serves as excellent area denial to you; it will be a struggle to approach Torbjörn and his Turret, especially with your low health. You will need to find a route with which to flank Torbjörn rather than trying to fight him head-on. Even if you get close to Torbjörn without his Turret, his Rivet Gun is strong enough to fight you off at both close and long ranges, and his Overload will give him a brief bout of survivability. Never try fighting Torbjörn and his Turret together. If the Turret is alone and you're certain Torbjörn and his team aren't nearby, you can quickly approach the Turret to gun it down, but it's often better to let a more durable teammate destroy it. Should you catch Torbjörn without his Turret, you'll stand a better chance, but you'll need to be smart with your Blinks and temporarily retreat while Overload is active. While Pulse Bomb is a great tool for destroying the stationary Turret, Torbjörn will be able to build another Turret again shortly after, so unless the Turret is a major hurdle for your team, it's often not worth using your Ultimate on.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-tracer.png|75px|link=Tracer]]<br />[[Tracer]]</center>
+|<small>If you spot an enemy Tracer in the wild, try to avoid her and let your team handle her. Both of you will play evasively with Blink and Recall, often resulting in neither of you dying and simply wasting time. If you catch a Tracer alone while your team is there to help you, however, you can quickly mow through her minimal health.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-widowmaker.png|75px|link=Widowmaker]]<br />[[Widowmaker]]</center>
+|<small>If Widowmaker has you in her sights at a distance, smart timing on Blink can keep her from picking you off. Her grappling Hook allows her to find high perching spots that will be difficult for you to reach. If you manage to flank around her and catch her by surprise, though, you can quickly kill her before she has the chance to escape. Widowmaker's assault rifle isn't very effective at close range, so don't be intimidated if Widowmaker tries to fight back. While Venom Mine can drop your health to half and will make your position visible to Widowmaker, Recall will instantly nullify the effect. A common Widowmaker tactic is to drop to a lower altitude, wait for you to drop and chase her, then use Grappling Hook to ascend again, leaving you stranded below her. If she should fall to a lower area, either wait where she was until she inevitably returns to her perch, or if you have Recall, chase her down and Recall back to the higher altitude if she flees back to it.</small>
+|<small>(To be added)</small>
+|}
+
+===Support===
+
+{| class="wikitable mw-collapsible mw-collapsed"
+|-
+! style="width:75px" |Hero
+! |Match-Up
+! |Team Synergy
+</small>
+|-
+|<center>[[File:icon-ana.png|75px|link=Ana]]<br />[[Ana]]</center>
+|<small>Ana's lack of mobility makes her an easy target, especially if you flank behind her team and attack her from the rear. With precise aiming, you can shred through Ana's health in one or two clips. Try to be evasive and avoid Ana's rifle shots or Sleep Dart; a few accurate shots from her rifle can quickly deplete your health, while Sleep Dart will instantly spell your doom. If hit by Biotic Grenade, you can use Recall to nullify its effect on you; be quick, though, as a successive rifle shot after being hit with the Grenade can instantly kill you.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-baptiste.png|75px|link=Baptiste]]<br />[[Baptiste]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-brigitte.png|75px|link=Brigitte]]<br />[[Brigitte]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-lúcio.png|75px|link=Lúcio]]<br />[[Lúcio]]</center>
+|<small>Your damage will easily surpass Lúcio's healing. If Lúcio tries to flee from you, you can use Blink to chase him around and keep a beat on him. Even if he knocks you into a pit with Soundwave, a quick Recall will save you. Your only concern against Lúcio is his wall riding, which can help him escape your effective range. Try to get up close and personal with him so you can quickly shoot him down; firing from farther away will cause you to suffer damage falloff and will help him dodge your attacks more easily. Pulse Bomb will kill Lúcio before he can activate Sound Barrier, so don't hesitate to stick it to him to pave the way for your team to make a big push.</small>
+|<small>(To be added)</small>
+|-
+|<small><center>[[File:icon-mercy.png|75px|link=Mercy]]<br />[[Mercy]]</center>
+|<small>Mercy's poor offensive capability will make it incredibly difficult for her to fend you off, and when she attempts to flee with Guardian Angel, you can just use Blink to chase her. If you choose to target her patient, your Pulse Pistols will outdamage her healing so long as you consistently keep attacking; that being said, it's often better to kill Mercy first if you can.</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-moira.png|75px|link=Moira]]<br />[[Moira]]</center>
+|<small>(To be added)</small>
+|<small>(To be added)</small>
+|-
+|<center>[[File:icon-zenyatta.png|75px|link=Zenyatta]]<br />[[Zenyatta]]</center>
+|<small>Zenyatta's lack of mobility will make him an easy target if you choose to hunt him down. Your fast firing rate and slightly larger hitbox can help you kill him quickly in a clip or two. Be careful about fighting him at low health or when he's in a group, though; a cornered Zenyatta can be exceptionally dangerous. After he applies Orb if Discord to you, it will only take a single headshot to take out 120 health, and accurate Zenyattas will be able to keep aim on you under pressure. Once you close the gap on him, confuse him with Blink and keep moving into his blind spots so he can't land his shots. Should he land a strong hit on you, be ready to use Recall and either finish him off or flee based on his health and whether his team is nearby. The burst damage of your Pulse Bomb can kill an ally being healed by Transcendence, meaning you can still take out a crucial target even when Zenyatta is trying to keep his team safe.</small>
+|<small>(To be added)</small>
+|}
+
+==Map Strategies==
+
+===Control===
+{{MapStrategyTable/Control
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Antarctic_rating = 
+| Antarctic_feature = 
+| Antarctic_strategy = 
+| Antarctic_Labs_strat = 
+| Antarctic_Sublevel_strat = 
+| Antarctic_Icebreaker_strat = 
+
+| Busan_rating = 
+| Busan_feature = 
+| Busan_strategy = 
+| Busan_Downtown_strat = 
+| Busan_Sanctuary_strat = 
+| Busan_MEKA_strat = 
+
+| Ilios_rating = 
+| Ilios_feature = 
+| Ilios_strategy = 
+| Ilios_Lighthouse_strat = 
+| Ilios_Well_strat = 
+| Ilios_Ruins_strat = 
+
+| Lijiang_rating = 
+| Lijiang_feature = 
+| Lijiang_strategy = 
+| Lijiang_ControlCenter_strat = 
+| Lijiang_Garden_strat = 
+| Lijiang_NightMarket_strat = 
+
+| Nepal_rating = 
+| Nepal_feature = 
+| Nepal_strategy = 
+| Nepal_Village_strat = 
+| Nepal_Shrine_strat = 
+| Nepal_Sanctum_strat = 
+
+| Oasis_rating = 
+| Oasis_feature = 
+| Oasis_strategy = 
+| Oasis_CityCenter_strat = 
+| Oasis_Gardens_strat = 
+| Oasis_University_strat = 
+
+| Samoa_rating = 
+| Samoa_feature = 
+| Samoa_strategy = 
+| Samoa_Beach_strat = 
+| Samoa_Downtown_strat = 
+| Samoa_Volcano_strat = 
+}}
+
+===Escort===
+{{MapStrategyTable/Escort
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| CircuitRoyal_rating = 
+| CircuitRoyal_feature = 
+| CircuitRoyal_strategy = 
+| CircuitRoyal_Attack_strat = 
+| CircuitRoyal_Defense_strat = 
+
+| Dorado_rating = 
+| Dorado_feature = 
+| Dorado_strategy = 
+| Dorado_Attack_strat = 
+| Dorado_Defense_strat = 
+
+| Havana_rating = 
+| Havana_feature = 
+| Havana_strategy = 
+| Havana_Attack_strat = 
+| Havana_Defense_strat = 
+
+| Junkertown_rating = 
+| Junkertown_feature = 
+| Junkertown_strategy = 
+| Junkertown_Attack_strat = 
+| Junkertown_Defense_strat = 
+
+| Rialto_rating = 
+| Rialto_feature = 
+| Rialto_strategy = 
+| Rialto_Attack_strat = 
+| Rialto_Defense_strat = 
+
+| Route66_rating = 
+| Route66_feature = 
+| Route66_strategy = 
+| Route66_Attack_strat = 
+| Route66_Defense_strat = 
+
+| Shambali_rating = 
+| Shambali_feature = 
+| Shambali_strategy = 
+| Shambali_Attack_strat = 
+| Shambali_Defense_strat = 
+
+| Gibraltar_rating = 
+| Gibraltar_feature = 
+| Gibraltar_strategy = 
+| Gibraltar_Attack_strat = 
+| Gibraltar_Defense_strat = 
+}}
+
+===Hybrid===
+{{MapStrategyTable/Hybrid
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| BlizzardWorld_rating = 
+| BlizzardWorld_feature = 
+| BlizzardWorld_strategy = 
+| BlizzardWorld_Attack_strat = 
+| BlizzardWorld_Defense_strat = 
+
+| Eichenwalde_rating = 
+| Eichenwalde_feature = 
+| Eichenwalde_strategy = 
+| Eichenwalde_Attack_strat = 
+| Eichenwalde_Defense_strat = 
+
+| Hollywood_rating = 
+| Hollywood_feature = 
+| Hollywood_strategy = 
+| Hollywood_Attack_strat = 
+| Hollywood_Defense_strat = 
+
+| KingsRow_rating = 
+| KingsRow_feature = 
+| KingsRow_strategy = 
+| KingsRow_Attack_strat = 
+| KingsRow_Defense_strat = 
+
+| Midtown_rating = 
+| Midtown_feature = 
+| Midtown_strategy = 
+| Midtown_Attack_strat = 
+| Midtown_Defense_strat = 
+
+| NeonJunction_rating = 
+| NeonJunction_feature = 
+| NeonJunction_strategy = 
+| NeonJunction_Attack_strat = 
+| NeonJunction_Defense_strat = 
+
+| Numbani_rating = 
+| Numbani_feature = 
+| Numbani_strategy = 
+| Numbani_Attack_strat = 
+| Numbani_Defense_strat = 
+
+| Paraiso_rating = 
+| Paraiso_feature = 
+| Paraiso_strategy = 
+| Paraiso_Attack_strat = 
+| Paraiso_Defense_strat = 
+}}
+
+===Push===
+{{MapStrategyTable/Push
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Colosseo_rating = 
+| Colosseo_feature = 
+| Colosseo_strategy = 
+| Colosseo_Pushing_strat = 
+| Colosseo_Defending_strat = 
+
+| Esperanca_rating = 
+| Esperanca_feature = 
+| Esperanca_strategy = 
+| Esperanca_Pushing_strat = 
+| Esperanca_Defending_strat = 
+
+| NewQueenStreet_rating = 
+| NewQueenStreet_feature = 
+| NewQueenStreet_strategy = 
+| NewQueenStreet_Pushing_strat = 
+| NewQueenStreet_Defending_strat = 
+
+| Runasapi_rating = 
+| Runasapi_feature = 
+| Runasapi_strategy = 
+| Runasapi_Pushing_strat = 
+| Runasapi_Defending_strat = 
+}}
+
+===Flashpoint===
+{{MapStrategyTable/Flashpoint
+| Overall_rating = 
+| Overall_feature = 
+| Overall_strategy = 
+
+| Aatlis_rating = 
+| Aatlis_feature = 
+| Aatlis_strategy = 
+| Aatlis_Bazaar_strat = 
+| Aatlis_Garden_strat = 
+| Aatlis_Resort_strat = 
+| Aatlis_Station_strat = 
+| Aatlis_TownCentre_strat = 
+
+| NewJunkCity_rating = 
+| NewJunkCity_feature = 
+| NewJunkCity_strategy = 
+| NewJunkCity_Arena_strat = 
+| NewJunkCity_Foundation_strat = 
+| NewJunkCity_Refinery_strat = 
+| NewJunkCity_Scrapyard_strat = 
+| NewJunkCity_Waterworks_strat = 
+
+| Suravasa_rating = 
+| Suravasa_feature = 
+| Suravasa_strategy = 
+| Suravasa_Gardens_strat = 
+| Suravasa_Market_strat = 
+| Suravasa_Palace_strat = 
+| Suravasa_Ruins_strat = 
+| Suravasa_Temple_strat = 
+}}
+
+== Achievements ==
+{{AchievementTable/Start}}
+{{Achievement|Total Recall|Ability-tracer3.png|Recover 400 health using Tracer's [[Recall]] without dying in Quick or Competitive play.|Spray Tracer Pixel.png|Pixel}}
+{{Achievement|Special Delivery|Ability-tracer4.png|Stick 4 of Tracer's [[Pulse Bomb]]s onto enemies in a single Quick or Competitive play game.|Spray Tracer Cute.png|Cute}}
+{{AchievementTable/End}}
+
+==Trivia== 
+[[File:Tracer Skin Constable.png|thumb|The Constable Tracer skin]]
+*In November, 2022, the Constable Tracer skin was released. This led to an article being written by Alyssa Mercante of Kotaku, who criticized the skin, and stated that Kotaku had reached for a comment from Blizzard behind "the ideology behind this latest cop skin."<ref>2022-11-23, [https://kotaku.com/overwatch-2-skins-shop-tracer-brigitte-dva-cop-1849817409 Overwatch 2 Continues Franchise Tradition Of Putting Characters In Cop Skins]. ''Kotaku'', accessed on 2022-11-29</ref> In response, Eric Kain of ''Forbes'' wrote a counter-article, citing the outrage as "silly," pointing out "over there in ''Call Of Duty'' we have soldiers blasting each other to smithereens. Soldiers who, in the game's campaign, illegally travel to third-world countries to stop terrorists. But a Constable Tracer skin somehow ranks higher on the outrage totem pole?"<ref>2022-11-27, [https://www.forbes.com/sites/erikkain/2022/11/27/overwatch-2-is-a-game-about-cops-so-maybe-stop-freaking-out-about-police-skins/?sh=47ebf8bf137c ‘Overwatch 2’ Constable Tracer Skin Spawns Silly Outrage Over Police In Video Games]. ''Forbes'', accessed on 2022-11-29</ref>
+
+===Appearances in Other Media===
+[[File:Tracer-RP1.jpg|thumb|Tracer as she appears in ''Ready Player One'']]
+*Tracer is a playable character in ''[[Heroes of the Storm]]''. Her visage can also be found on a color variant of [https://heroesofthestorm.gamepedia.com/Tychus Tychus]'s armor in the game. She was playable before the release of ''Overwatch'' itself.
+**In one of Tracer's poke lines, she says she had strange dreams about the past, including being a kitchen maid at a large house in the country. This is a possible reference to her voice actress' role on [http://downtonabbey.wikia.com/wiki/Ivy_Stuart Downton Abbey].<ref name = "HotS"/>
+*A Tracer portrait is available in ''[http://starcraft.wikia.com/wiki/StarCraft_II StarCraft II]'' for those who purchase the ''[[Origins Edition]]''.<ref>2015-11-06, [http://overwatch.blizzplanet.com/blog/comments/overwatch-origins-edition-pre-orders-have-begun Overwatch: Origins Edition (PC) Pre-Orders have Begun]. ''Blizzplanet'', accessed on 2015-11-07</ref>
+*A life-sized statue of Tracer is present on Blizzard's campus.<ref>[http://www.gamespot.com/videos/the-story-of-overwatch-the-fall-of-titan/2300-6431806/ The Story of Overwatch: The Fall of Titan], ''GameSpot''. Accessed on 2016-04-24</ref>
+*A giant action figure of Tracer was displayed on the Hollywood Boulevard as part of the leadup to ''Overwatch'''s release.<ref>2016-05-20, [http://blizzardwatch.com/2016/05/20/giant-overwatch-action-figures-appear-around-globe/ Giant Overwatch action figures appear in Hollywood, Paris, Busan]. ''Blizzard Watch'', accessed on 2016-05-21</ref>
+*Tracer appears in the 2018 film ''[https://en.wikipedia.org/wiki/Ready_Player_One_(film) Ready Player One]'', based on the novel [https://en.wikipedia.org/wiki/Ready_Player_One of the same name] by Ernest Cline.<ref name=Hussain2017>{{cite web|last=Hussain|first=Tamoor|url=https://www.gamespot.com/articles/new-ready-player-one-trailer-features-overwatch-an/1100-6455540/|title=New Ready Player One Trailer Features Overwatch And Street Fighter Cameos|work=[[GameSpot]]|date=December 10, 2017|accessdate=December 10, 2017}}</ref>
+*Tracer was added as a Skin along with Mercy, D.Va and Genji  (and as an interactive NPC with them for a limited time) during Fortnite Chapter 7: Season 2
+
+===Merchandise===
+[[File:Tracer-statue.jpg|thumb|Tracer statue]]
+*A Tracer statue was on sale at some point.<ref>2015-07-10, [http://heroes.blizzplanet.com/blog/comments/sdcc-2015-blizzard-booth-photos SDCC 2015 – Blizzard Booth Photos]. ''Blizzplanet'', accessed on 2015-07-26</ref>
+*A Funko Pop Tracer figurine was released in June, 2016.<ref>2016-02-26, [http://overwatch.blizzplanet.com/blog/comments/pre-order-funko-overwatch-pop-vinyl-figures Pre-Order FUNKO Overwatch POP Vinyl Figures]. ''Blizzplanet'', accessed on 2016-03-11</ref>
+*A Tracer figure will be available in ''[[LEGO Overwatch]]''.<ref>2018-10-03, [https://www.kotaku.com.au/2018/10/theres-official-overwatch-lego/ There's Official Overwatch LEGO]. ''Kotaku'', accessed on 2018-10-04</ref>
+*The Tracer vs. Widowmaker [[LEGO Overwatch]] set featuring the [[Satellite Drone XR-9]] was revealed by Target in 2018.<ref>2018-10-22, [https://www.brothers-brick.com/2018/10/22/full-lineup-of-lego-blizzard-overwatch-sets-revealed-news/ Full lineup of LEGO Blizzard Overwatch sets revealed]. ''The Brothers Brick'', accessed on 2018-10-22.</ref>
+*A Nerf replica of Tracer's pulse pistol went on sale in late 2018.<ref>2018-11-02, [http://blizzpro.com/2018/11/03/blizzard-gear-past-present-future-panel-unveils-lots-gear/ BLIZZARD GEAR: PAST, PRESENT & FUTURE PANEL UNVEILS LOTS OF NEW GEAR]. ''Blizzpro'', accessed on 2018-11-16</ref>
+*A Figma Tracer statue is available.<ref>2020-02-24, [https://overwatch.blizzplanet.com/blog/comments/toy-fair-ny-2020-figma-overwatch-action-figures Toy Fair NY 2020: Figma Overwatch Action Figures]. ''Blizzplanet'', accessed on 2020-04-10</ref>
+*A Tracer pin is available from the Blizzard store.<ref>[https://gear.blizzard.com/products/blizhp0001-blizzard-series-8-blind-packs-5-pack-set Blizzard Series 8 Blind Packs- 5 Pack Set], ''Blizzard Gear''. Accessed on 2022-05-13</ref>
+*A Tracer Hot Wheels car was available at some point.<ref>2024-02-10, [https://www.reddit.com/r/Overwatch/comments/1amxurp/found_this_tracer_hotwheels_which_i_had_no_idea/ Found this Tracer Hotwheels, which I had no idea even existed]. ''Reddit'', accessed on 2024-02-11</ref>
+
+===Misc. Character Information===
+*Tracer is the first character in the setting to be confirmed as LGBT. Specifically, she is a lesbian.<ref>2016-12-22, [https://twitter.com/westofhouse/status/812110259737137152?ref_src=twsrc%5Etfw Michael Chu on Twitter]. ''Twitter'', accessed on 2016-12-25</ref>
+*Tracer's favorite football team is Chelsea.<ref>2019-04-23, [https://twitter.com/westofhouse/status/1120552734875369473 Michael Chu's Twitter]. ''Twitter'', accessed on 2019-04-23</ref>
+*Tracer's favorite animal is the falcon, though other candidates include the cheetah, lion, and gorilla.<ref name = "TracerOW2Quotes"/>
+*Winston is Tracer's best friend.<ref name = "Together"/> She used to send [[Winston]] bananas.<ref name = "TracerOW2Quotes"/>
+*Tracer dislikes horror movies.<ref name = "Together"/>
+*Tracer seems to have been wounded in the new era fight against Vendetta. She now has scars on her face and arms.
+
+===Development===
+{{Quote|People may know Tracer as the poster girl, but she’s not just a character we use on covers and posters; she also encompasses the values of the game, the universe, and the Overwatch development team. The hopeful optimism that she brings, her style, everything about that character was very instrumental to us finding the identity of the game.|[[Arnold Tsang]]}}
+
+====Early Development====
+[[File:Jumper.jpg|thumb|The Jumper class]]
+Tracer originated from the playable Jumper class from ''[[Project Titan]]''. During the initial pitch for the project that would become ''Overwatch'', the Jumper was invisioned as wielding machine pistols and time bombs, and had the Blink and Recall abilities.<ref>Blizzcon 2017, Overwatch: Archives</ref> From a lore standpoint, multiple Jumpers existed, and were tasked with using their tech to travel back in time to save the world. The Jumper aesthetic was influenced by old aviator jackets and goggles.<ref name = "ForgingWorlds">''[[Forging Worlds: Stories Behind the Art of Blizzard Entertainment]]''</ref>
+
+Most of the concept work on the Jumper was male. This signaled a shift in game design, as while the classes of ''Titan'' were player characters, the characters of ''Overwatch'' were intended to be distinct individuals. The Jumper was thus made female and given a backstory.<ref>''Game Informer #81: Designing Overwatch: From Titan to Torbjörn''</ref>
+
+Tracer conceptually began with the idea of a hero that blinked across the map.<ref>2015-08-08, [http://overwatch.blizzpro.com/2015/08/08/gamescom-livestream-panel-w-the-devs/ GAMESCOM LIVESTREAM PANEL W/ THE DEVS]. ''Blizzpro'', accessed on 2015-08-22</ref> She was the first hero developed for the game;<ref name = "ComicBookTracer">2020-09-18, [https://playoverwatch.com/en-us/news/23524010/comic-book-tracer-cheers-love-the-artist-s-here/ COMIC BOOK TRACER: CHEERS, LOVE! THE ARTIST’S HERE]. ''Blizzard Entertainment'', accessed on 2021-01-23</ref> the first to be made, concepted, modeled, and put in the game.<ref name = "ForgingWorlds"/>
+
+Tracer's visual design allowed the development team to home in on the visual style for ''Overwatch''. The classes from ''Titan'' had a toy-like feel to them, whereas it was decided that for ''Overwatch'', things would be more grounded. This became manifest in Tracer's jacket, as one could see stitching and weathering on the leather. Her legs were shortened during development, as the developers worried it would look too awkward in the game animation.<ref name = "ForgingWorlds"/>
+
+At some point during early development, Tracer shot lasers from her eyes.<ref name = "NewLeadership">2021-04-20, [https://news.blizzard.com/en-us/overwatch/23665015/new-leadership-for-overwatch New Leadership for Overwatch]. ''Blizzard Official Website'', accessed on 2021-04-20</ref> Her design used to include a jacket.<ref name = "Transcript4">2015-05-27, [http://overwatch.blizzplanet.com/blog/comments/blizzcon-2014-overwatch-origins-panel-transcript/4 BlizzCon 2014 – Overwatch Origins Panel Transcript]. ''Blizzplanet'', accessed on 2015-05-31</ref>
+
+====Character Development====
+{{Quote|The question came up of who's the main character in Overwatch? And at first I said, "There is no main character," but I started to think about it differently. Tracer happened to be the first hero we made, concepted, modeled, and put into the game. But the reason why we chose her to be the first is because she is so cool. She embodies so much about the game&mdash;not only in design and aesthetic and color but also in her positive outlook and heroism. It all fit into place.|[[Arnold Tsang]]}}
+
+Tracer is the 'mascot character' of ''Overwatch'',<ref>2015-03-13, [http://overwatch.blizzplanet.com/blog/comments/pax-east-2015-overwatch-hands-on-review PAX East 2015 Overwatch Hands-On Preview]. ''Blizzplanet'', accessed on 2015-03-2015</ref> and its centerpiece hero. She has been called the "[http://en.wikipedia.org/wiki/Rosetta_Stone Rosetta Stone]" of the game.<ref name = "Transcript4"/> However, her status as the game's "marquee character" was not necessarily planned. During development, the question of who the main character of ''Overwatch'' was came up. At the time, [[Arnold Tsang]] stated that there was no main character, but later reconsidered his stance, as Tracer was the first hero made for the game.<ref name = "ForgingWorlds"/> According to [[Chris Metzen]], Tracer "was one of the first characters we really got to know." While not created for a starring role, the development team warmed up to her. Metzen has likened her to [https://en.wikipedia.org/wiki/Spider-Man Spider-Man].<ref>2015-12-10, [http://www.pcgamer.com/overwatch-story-chris-metzen-interview/#page-2 How Blizzard is making up Overwatch's story as it goes]. ''PC Gamer'', accessed on 2015-12-24</ref> Tsang has stated that Tracer was ultimately chosen to be the main character was because she embodied it with her design, aesthetic, color, and her positive outlook and heroism.<ref name = "ForgingWorlds"/>
+
+After Tracer was given a name and backstory, the game had a clear creative direction; making the shift from classes to heroes.<ref name = "ComicBookTracer"/>
+
+Jeff Kaplan stated that the decision to announce Tracer as a lesbian in the [[Tracer: Reflections|holiday comic]] was considered carefully by the Blizzard team. Kaplan stated that the team wanted to portray Tracer's sexuality in a realistic and non-pandering way that was respectful of the character and tied into her story; not just "checking a checkbox on a list." Kaplan also stated that the team was aware of the negative backlash that the announcement was bound to receive owing to Overwatch's global popularity, that the subject was difficult to talk about, and that it could bring up legal troubles in some countries. Russia banned the comic from appearing on Overwatch's Russian website in accordance with federal law.<ref>2017-4-5, [http://www.polygon.com/2017/4/5/15192058/overwatch-tracer-gay-backlash Making Tracer more than her sexuality was important for the Overwatch team] ''Polygon.com'', accessed on 2017-4-5</ref>
+
+====Overwatch 2====
+[[File:Ow2-tracer-concept.jpg|thumb|Overwatch 2 Skin Concept Art by Arnold Tsang]]
+Tracer was redesigned for ''[[Overwatch 2]]'' by [[Arnold Tsang]]. The team sought to preserve Tracer's core design elements&mdash;her color palette, silhouette, and sense of motion&mdash;while simultaneously evolving and updating her model and style. This led to a departure from her "retro" goggles, bomber jacket, and leggings and a move toward a sleeker, more tech-y design that befits a freshly recalled Overwatch agent.<ref>2019-11-05, [https://playoverwatch.com/en-us/news/23189038/revving-up-the-engine-overwatch-2-evolving-the-art-panel-recap REVVING UP THE ENGINE—OVERWATCH 2 “EVOLVING THE ART” PANEL RECAP]. ''Blizzard Entertainment'', accessed on 2020-05-16</ref>
+
+==== Removed abilities ====
+
+===== Removed Perks =====
+{{Ability details
+| removed = 1
+| ability_name = Blast from the Past
+| ability_image = Perk_Blast-from-the-Past.png
+| ability_type = Minor Perk
+| official_description = Pulse Bomb's radius is increased by 50%. 
+| ability_details = 
+* ''Removed in Season 18.''
+}}
+
+{{Ability details
+| removed = 1
+| ability_name = Flashback
+| ability_image = Perk_Flashback.png
+| ability_type = Major Perk
+| official_description = Recall increases Blink recovery rate by 150% for 3 seconds.
+| ability_details =* ''Removed in Reign of Talon Season 1''
+}}
+
+{{Ability details
+| removed = 1
+| ability_name = Chronal Dash
+| ability_image = Perk_Chronal_Dash.png
+| ability_type = Minor Perk
+| official_description = Blink distance increased by 20%.
+| range = 7.5 → 9 meters
+| ability_details = * ''Removed in Season 4: Heroes of Busan.''
+}}
+
+==Media==
+
+=== Images ===
+;Former Portrait
+<gallery>
+File:OW1Icon Tracer.png|Overwatch 1 Hero Portrait
+</gallery>
+;Promotional
+<gallery widths="200">
+File:Tracer Promo 001.jpg|Promotional image that was used for Overwatch 1's cover art
+File:Tracer Beauty Shot 001.jpg
+File:Tracer cinematic.jpg
+File:Tracer cinematic 2.jpg
+</gallery>
+;Gameplay Screenshots
+<gallery widths="200">
+File:Tracer Overwatch 001.jpg 
+File:Tracer Overwatch 002.jpg
+File:Tracer Overwatch 003.jpg
+File:Tracer Overwatch 004.jpg
+File:Tracer Overwatch 005.jpg
+File:Tracer Overwatch 006.jpg
+File:Tracer Overwatch 008.jpg
+File:Tracer Overwatch 009.jpg
+File:Tracer Overwatch 010.jpg
+File:Tracer Overwatch 011.jpg
+</gallery>
+;Concept Art
+<gallery>
+File:Kai-chang-0405-render-final.jpg|Adventurer Skin Blue Concept Art by Kai Chang
+File:Kai-chang-trcr-d-back.jpg|Adventurer Skin Blue Concept Art by Kai Chang
+File:Kai-chang-trcr-color02.jpg|Adventurer Skin Red Concept Art by Kai Chang
+File:Kai-chang-trcr-color03.jpg|Adventurer Skin Green Concept Art by Kai Chang
+File:Kai-chang-0405weapon-render.jpg|Adventurer Skin Weapon Concept Art by Kai Chang
+File:Tracer Cadet Oxton skin concept art.jpg|Cadet Oxton Skin Concept Art by Anh Dang
+File:Tracer Cavalry skin concept art.jpg|Cavalry Skin Concept Art by Yuzuke Kozaki
+File:Tracer Wooltide skin concept art.jpg|Wooltide Skin Concept Art by Armando Gonzalez-Dorta
+File:Tracer Wooltide skin weapon concept art.jpg|Wooltide Skin Weapon Concept Art by Armando Gonzalez-Dorta
+File:Tracer ow2 portrait.png|Overwatch 2 Skin Concept Art by Arnold Tsang
+</gallery>
+
+===Videos===
+{{#ev:youtube|_SvYmsNCWsw|400|inline}}
+{{#ev:youtube|zNq4nTA3eMg|400|inline}}
+{{#ev:youtube|U130wnpi-C0|400|inline}}
+{{#ev:youtube|B5wDV8x6w7s|400|inline}}
+
+==Balance Change Log==
+{{ChangelogsTabber
+| owpvp =
+{{PatchTableElement|2026-08-11|
+{{DevComment|While Tracer's damage has landed in an effective spot following recent adjustments, reducing Recall's cooldown allows her to disengage more frequently.}}
+
+{{al|Chronal Dash}} – Minor Perk
+*Removed.
+
+{{al|Temporal Regen}} – Minor Perk
+*New
+*Passive health regeneration triggers 50% faster.
+
+{{al|Recall}}
+*Cooldown reduced from 13 to 12 seconds.
+}}
+{{PatchTableElement|2026-06-16|
+{{al|Kinetic Reload}} – Minor Perk
+*Ammo gain reduced from 20 to 12.
+}}
+{{PatchTableElement|2026-04-14|
+Perk Costs
+* Minor Perk cost reduced by 10%.
+* Major Perk cost reduced by 7%.
+}}
+{{PatchTableElement|2026-02-10|
+{{DevComment|Tracer’s smaller projectile size has reduced her consistency against mobile targets. Restoring the global projectile size and slightly lowering damage improves reliability while keeping her overall lethality in check.}}
+
+{{al|Pulse Pistols}}
+* Damage reduced from 6 to 5.75.
+* Gains the increased global projectile size (0.04 meters).
+
+{{al|Chronal Dash}} – Minor Perk
+* Blink distance increased by 20%.
+
+{{al|Flashback}} – Major Perk
+* Removed.
+
+{{al|Blink Packs}} – Major Perk
+* Moved from Minor to Major.
+}}
+{{PatchTableElement|2025-11-11|
+{{al|Pulse Pistols}}
+* No longer gain the increased global projectile size (0.04 meters)
+}}
+{{PatchTableElement|2025-10-14|
+{{DevComment|Developer Comments: Flashback no longer grants 2 Blink charges instantly after Recall. This change creates a short delay before additional Blinks are available. This helps limit rapid Blink chaining while maintaining Flashback’s effectiveness.}}
+{{al|Flashback}} – Major Perk
+* No longer grants 2 Blink charges.
+* Now increases Blink cooldown recovery rate by 150% for 3 seconds after Recall.
+}}
+{{PatchTableElement|2025-09-16|
+* Perk cost increased by 25%.
+}}
+{{PatchTableElement|2025-08-26|
+{{DevComment|Developer Comment: Tracer’s weapon improvements have increased her overall effectiveness. Extending Recall’s cooldown reduces her uptime, especially when paired with Major perks.}}
+
+{{al|Recall}} - Ability 2
+* Cooldown increased from 12 to 13 seconds.
+
+{{al|Blast From The Past}} - Minor Perk
+* Removed.
+
+{{al|Kinetic Reload}} - Minor Perk
+* New Minor Perk.
+* Melee hits grant 20 ammo.
+}}
+{{PatchTableElement|2025-07-22|
+{{al|Pulse Pistols}}
+* Spread increased from 3.0 to 3.5 degrees.
+}}
+{{PatchTableElement|2025-06-24|
+{{DevComment|Developer Comments: Similar to Reaper, Tracer is getting back some of the damage she lost due to past format and map concerns. Looks like she's recalled back to stronger bullets—again.}}
+
+{{al|Pulse Pistols|text=Pulse Pistol}} - Primary Fire
+* Damage increased from 5.5 to 6.
+}}
+{{PatchTableElement|2025-03-18|
+{{al|Flashback}}
+* Blinks restored reduced from 3 to 2.
+
+{{al|Quantum Entanglement}}
+* Quantum Entanglement now additionally grants 20 over ammo.
+}}
+{{PatchTableElement|2025-03-18|
+{{DevComment|Developer Comments: Increasing duration gives players additional time to take advantage of the overhealth after recalling.}}
+{{al|Quantum Entanglement}}
+* Overhealth duration increased from 3.5 to 6 seconds.
+}}
+{{PatchTableElement|2025-02-18|
+;Hero Perks
+
+{{al|Blink Packs}}
+* Health Packs restore 1 Blink charge.
+
+{{al|Blast from the Past}}
+* Pulse Bomb's radius is increased by 50%.
+
+{{al|Flashback}}
+* Recall restores all Blink charges.
+
+{{al|Quantum Entanglement}}
+* Recall grants 50 overhealth that decays over time.
+}}
+{{PatchTableElement|2025-01-21|
+{{DevComment|Developer Comment: Tracer has remained less threatening since the damage reduction to her Pulse Pistols. Reducing their spread will make her damage more consistent at slightly longer ranges.}}
+
+{{al|Pulse Pistols}}
+* Spread decreased by 15%
+}}
+{{PatchTableElement|2024-12-10|
+; Global Projectile Size Bonus
+* Hitscan radius small reduced from 0.05 to 0.04 meters.
+* Projectile radius large reduced from 0.15 to 0.12 meters.
+}}
+{{PatchTableElement|2024-11-12|
+{{DevComment|Developer Comments: This is a revert to a previous nerf now that Tracer is less threatening due to Pulse Pistol damage coming down recently.}}
+
+{{al|Recall}}
+* Cooldown reduced from 13 to 12 seconds.}}
+{{PatchTableElement|2024-08-23|
+{{Al|name=Pulse Pistols}}
+* Damage reduced from 6 to 5.5.}}
+{{PatchTableElement|2024-04-16|
+{{DevComment|Developer Comments: There is now more downtime before Tracer can safely reengage after driving her away and Pulse Bomb will require more precision.}}
+
+{{Al|Recall}}
+
+*Cooldown increased from 12 to 13 seconds.
+
+{{Ability link|name=Pulse Bomb}}
+
+* Base projectile size decreased from 0.2 to 0.1 meters. The total projectile size is now 0.25 meters.
+}}
+{{PatchTableElement|2024-02-21|
+{{al|Pulse Pistols}}
+* Minimum falloff range reduced from 12 to 10.
+}}
+{{PatchTableElement|2024-02-13|
+;General updates
+Most damage-dealing projectile sizes have been increased by a new global modifier added to their base size.
+
+* +0.05 meters for hitscan projectiles with a high rate of fire or spread (e.g., Tracer's Pulse Pistols or Reaper's Hellfire Shotguns).
+* +0.08 meters for hitscan projectiles that are more precise (e.g., Cassidy's Peacekeeper or Soldier:76's Heavy Pulse Rifle).
+* +0.05 meters for travel time projectiles that are shotguns or have a very high rate of fire (e.g., Roadhog's Scrap Gun or Ramattra's Void Accelerator).
+* +0.10 meters for travel time projectile with a speed greater than 50 meters per second (e.g., Zenyatta's Destruction Orb).
+* +0.15 meters for travel time projectile with a speed less than or equal to 50 meters per second (e.g., Pharah's Rocket Launcher).
+* Very large projectiles with a base size greater than 0.5 meters have been excluded from these increases (e.g., Orisa's Energy Javelin or Reinhardt's Fire Strike).
+
+Hero combined HP (base health/armor/shields) increased by 15-25%.
+
+* 150-175 HP heroes increased by 25 HP.
+* 200-300 HP heroes increased by 50 HP.
+* 300+ HP (Tanks) increased by 75-100 HP.
+* Each hero's precise health increases are listed in their patch notes below.
+
+Ultimate Charge
+
+* All Ultimate ability costs increased by 10%.
+
+Regenerative Passive for All Heroes
+
+* All heroes now regenerate 20 health per second after 5 seconds of not taking damage.
+
+Damage Role Passive
+
+* Reload speed bonus on elimination has been removed.
+* New role passive: Dealing damage reduces enemy healing received by 20% for 2 seconds.
+
+Quick Melee
+
+* Damage increased from 30 to 40.
+
+;Hero updates
+
+* Health increased from 150 to 175.
+}}
+{{PatchTableElement|2023-12-05|
+{{DevComment|Developer Comments: This damage value has been changed a few times over the course of Overwatch 2 and is now back to Tracer's original damage. It was previously adjusted due to a couple of bugs with the Pulse Pistol falloff range and spread being much better than they should have.}}
+
+{{al|Pulse Pistols}}
+* Damage increased from 5.5 to 6.
+}}
+{{PatchTableElement|2023-06-13|
+{{DevComment|Developer Comment: We uncovered a bug that was setting Tracer's maximum weapon spread smaller than intended. We'll be monitoring the results of this one closely, as fixing it may have a significant impact on her overall effectiveness.}}
+
+{{al|Pulse Pistols}}
+* Spread increased by 15%.
+}}
+{{PatchTableElement|2022-12-15|
+{{Al|Pulse Pistols}}
+* Damage reduced from 6 to 5.5
+}}
+{{PatchTableElement|2022-12-06|
+{{DevComment|We balanced Tracer’s damage in a previous patch due to an undiscovered bug regarding her Pulse Pistol’s falloff damage. The bug is resolved, so we are reverting the damage.}}
+{{Al|Pulse Pistols}}
+*Damage increased from 5 to 6
+}}
+{{PatchTableElement|2022-04-26|
+{{Al|Pulse Pistols}}
+*Damage reduced from 6 to 5
+|beta=1}}
+
+| owcoop =
+{{PatchTableElement|2023-08-10|
+{{al|Pulse Pistols}}
+* Ammo increased from 40 to 60.
+* Damage reduced from 5.5 to 5.
+
+{{al|Pulse Bomb}}
+* Explosion damage increased from 350 to 550.
+}}
+
+|owstadium={{#section-h:Tracer/Stadium|Balance Change Log}}<!-- this section is transcluded from the /Stadium page and must be edited from there -->
+
+| ow1 =
+{{PatchTableElement|2021-01-28|
+{{al|Pulse Pistols}}
+* Min-Max damage falloff rescaled from 13-23 meters down to 12-20 meters
+
+''This new falloff range causes the damage to scale down faster when targets are outside of Tracer's optimal distance, making her less threatening at mid-range.''
+}}
+{{PatchTableElement|2020-04-14|
+{{Al|Blink}}
+*Improved the accuracy of Tracer's blink movement such that Tracer will more likely end up where the crosshair is pointing
+
+''Developer Comments:
+* Tracer will now blink around and over obstacles more easily to move towards the crosshair location. For example, if you aim alongside the corner of a wall, Tracer will blink past the corner
+* Tracer cannot blink through a space where she otherwise cannot fit normally
+* Tracer cannot blink over an obstacle which she otherwise cannot jump over normally, with the jump originating from Tracer's height at the start of the blink movement
+
+We hope that these changes to Tracer's blink will feel more responsive than before.''
+}}
+{{PatchTableElement|2019-10-15|
+{{Al|Pulse Pistols}}
+*Damage falloff now starts at 13 meters, up from 10 meters
+
+''Developer Comment: This change will allow Tracer to play from slightly further away from her targets, allowing her to stay safer while still keeping pressure on her enemies.''
+}}
+{{PatchTableElement|2019-08-13|
+{{Al|Pulse Bomb}}
+*Damage increased from 300 to 350
+
+''Developer Comment: Pulse Bomb was reduced in power some time ago to make sure it was not overly punishing to Tanks, which are much easier to stick the bomb to. While this is still a goal, we’re restoring some of this lost power to help deal with other hefty targets such as Bastion, or enemies with bonus armor from Brigitte.''
+}}
+{{PatchTableElement|2018-05-03|
+{{Al|Pulse Bomb}}
+*Max damage decreased from 400 to 300
+
+''Developer Comments: Pulse Bomb was too good at killing tanks, who can be easy to stick due to their size. This damage reduction makes it less powerful as a tank-destroyer, while keeping it lethal against most other heroes.''
+}} |ow6v6={{PatchTableElement|2025-03-18|
+{{al|Pulse Pistols}}
+* Damage falloff range reduced from 12-20 to 10-20 meters. (undocumented)
+}}
+{{PatchTableElement|2024-12-17|
+{{al|Pulse Pistols}}
+* Falloff range increased from 10 to 12 meters.
+}}}}
+
+==References==
+<references/>
+
+==External links==
+* [http://playoverwatch.com/en-us/heroes/tracer/ Official Site - Tracer]
+* [http://www.icy-veins.com/overwatch/tracer-guide-strategy-gameplay Tracer Guide on Icy Veins]
+{{Heroes}}
+[[es:Tracer]]
+[[Category:Heroes]]
+[[Category:Tracer| ]]
+[[Category:Overwatch members]]
+[[Category:LGBTQ+ characters]]
+[[Category: British characters]]
