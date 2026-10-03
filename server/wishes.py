@@ -1,4 +1,4 @@
-"""功能许愿频道：用户只能通过按钮弹出的表单提交，每人每天 WISH_DAILY_LIMIT 次。
+"""功能许愿频道：用户只能通过按钮弹出的表单提交，每人每天限 WISH_DAILY_LIMIT 次（可用同名环境变量覆盖）。
 
 频道权限要关掉 @everyone 的「发送消息」「创建子区」，只留 bot 能发言；
 bot 启动时在频道里发一条带按钮的置顶入口消息（已有就复用），表单提交后 bot 把内容
@@ -24,7 +24,7 @@ import discord
 
 log = logging.getLogger("mrmeeseeks.wishes")
 
-WISH_DAILY_LIMIT = 2
+WISH_DAILY_LIMIT = 2                       # 默认值；服务器用 .env 的 WISH_DAILY_LIMIT 调整
 WISH_TZ = ZoneInfo("Australia/Sydney")    # 每天 0 点（悉尼时间）重置次数
 SUBMIT_ID = "wishes:submit"                # 持久化按钮的 custom_id，bot 重启后旧按钮仍然有效
 VOTE_EMOJI = "👍"
@@ -60,12 +60,18 @@ PICK_TIMEOUT = 600                         # 选了 OTHER 后填游戏名的按�
 PICK_TEXT = ("You picked **Other** ｜ 你选了其他游戏。\n"
              "Press the button and type the game's name ｜ 请点下面的按钮填写游戏名。\n"
              f"If you don't within {PICK_TIMEOUT // 60} minutes, your wish will be posted as **{OTHER}**.")
-ENTRY_TEXT = (
-    "💡 **Feature wishes**\n"
-    "Want mrmeeseeks to do something new? Press the button below and fill in the form.\n"
-    f"Everyone gets **{WISH_DAILY_LIMIT} wishes per day** (resets at midnight Sydney time). "
-    f"Vote with {VOTE_EMOJI} and discuss in each wish's thread."
-)
+
+
+def entry_text(limit: int) -> str:
+    """置顶入口消息的文字。改了每日次数后，bot 启动时会原地编辑已有的入口消息。"""
+    return ("💡 **Feature wishes**\n"
+            "Want mrmeeseeks to do something new? Press the button below and fill in the form.\n"
+            f"Everyone gets **{limit} wishes per day** (resets at midnight Sydney time). "
+            f"Vote with {VOTE_EMOJI} and discuss in each wish's thread.")
+
+
+def used_up(limit: int) -> str:
+    return f"You've used all {limit} wishes for today. Come back tomorrow!"
 
 
 class WishQuota:
@@ -311,7 +317,7 @@ class WishModal(discord.ui.Modal, title="Make a feature wish"):
         user, quota = interaction.user, self.desk.quota
         if not quota.take(user.id):
             await interaction.response.send_message(
-                f"You've used all {WISH_DAILY_LIMIT} wishes for today. Come back tomorrow!", ephemeral=True)
+                used_up(quota.limit), ephemeral=True)
             return
         wish = Wish(user, self.game.values[0], self.wish_title.value.strip(), self.problem.value.strip(),
                     self.how.value.strip(), self.notes.value.strip())
@@ -340,7 +346,7 @@ class WishEntryView(discord.ui.View):
     async def submit(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if self.desk.quota.remaining(interaction.user.id) <= 0:
             await interaction.response.send_message(
-                f"You've used all {WISH_DAILY_LIMIT} wishes for today. Come back tomorrow!", ephemeral=True)
+                used_up(self.desk.quota.limit), ephemeral=True)
             return
         await interaction.response.send_modal(WishModal(self.desk))
 
@@ -350,12 +356,12 @@ async def ensure_entry(channel: discord.TextChannel, quota: WishQuota, view: Wis
     if quota.entry_message_id:
         try:
             msg = await channel.fetch_message(quota.entry_message_id)
-            if msg.content != ENTRY_TEXT:
-                await msg.edit(content=ENTRY_TEXT, view=view)
+            if msg.content != entry_text(quota.limit):
+                await msg.edit(content=entry_text(quota.limit), view=view)
             return
         except discord.NotFound:
             log.info("Wish entry message is gone; posting a new one")
-    msg = await channel.send(ENTRY_TEXT, view=view)
+    msg = await channel.send(entry_text(quota.limit), view=view)
     quota.entry_message_id = msg.id
     try:
         await msg.pin()

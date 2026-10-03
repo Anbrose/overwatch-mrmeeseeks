@@ -20,9 +20,9 @@ import bot  # noqa: E402
 import wishes  # noqa: E402
 import wish_plan  # noqa: E402
 from wish_plan import MAX_REVISIONS, WishPlanner, WishPlans, plan_message, server_layout  # noqa: E402
-from wishes import (DEFAULT_GAMES, ENTRY_TEXT, OTHER, PICK_TEXT, WISH_TZ,  # noqa: E402
+from wishes import (DEFAULT_GAMES, OTHER, PICK_TEXT, WISH_TZ,  # noqa: E402
                     GameNameModal, GamePickView, WishDesk, WishEntryView, WishLog, WishModal, WishQuota,
-                    ensure_entry, export_csv, parse_export_args, parse_games, select_wishes, vote_count)
+                    ensure_entry, entry_text, export_csv, parse_export_args, parse_games, select_wishes, vote_count)
 
 results = []
 NS = types.SimpleNamespace
@@ -48,6 +48,8 @@ def test_quota():
     check("quota: second take ok", q.take(1, day))
     check("quota: third take refused", not q.take(1, day))
     check("quota: other user unaffected", q.remaining(2, day) == 2)
+    q5 = WishQuota(TMP / "q5.json", limit=5)
+    check("quota: configurable limit", all(q5.take(1, day) for _ in range(5)) and not q5.take(1, day))
 
     q.refund(1, day)
     check("quota: refund gives one back", q.remaining(1, day) == 1)
@@ -317,14 +319,23 @@ async def test_entry():
     check("entry: posted with button and pinned", ch.posts[0][2] is view and msg.pinned)
     check("entry: id remembered", q.entry_message_id == msg.id)
 
-    ch2 = FakeChannel(existing={msg.id: FakeMessage(msg.id, ENTRY_TEXT)})
+    ch2 = FakeChannel(existing={msg.id: FakeMessage(msg.id, entry_text(2))})
     await ensure_entry(ch2, q, view)
     check("entry: reused when it still exists", not ch2.posts)
 
     old = FakeMessage(msg.id, "old text")
     ch3 = FakeChannel(existing={msg.id: old})
     await ensure_entry(ch3, q, view)
-    check("entry: outdated text is updated in place", not ch3.posts and old.content == ENTRY_TEXT)
+    check("entry: outdated text is updated in place", not ch3.posts and old.content == entry_text(2))
+
+    q5 = WishQuota(TMP / "e5.json", limit=5)
+    q5.entry_message_id = 900
+    pinned = FakeMessage(900, entry_text(2))
+    pinned.pinned = True
+    ch5 = FakeChannel(existing={900: pinned})
+    await ensure_entry(ch5, q5, view)
+    check("entry: raised limit edits the pinned message in place",
+          not ch5.posts and "**5 wishes per day**" in pinned.content and pinned.pinned)
 
     ch4 = FakeChannel()
     await ensure_entry(ch4, q, view)

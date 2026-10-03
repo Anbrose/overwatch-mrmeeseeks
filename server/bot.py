@@ -43,7 +43,7 @@ from vision.heroes import HeroMatcher
 from vision.recognize import Recognizer, to_facts
 from vision.text import load_maps
 from wish_plan import WishPlanner, WishPlans
-from wishes import (WishDesk, WishEntryView, WishLog, WishQuota, ensure_entry, export_csv, parse_export_args,
+from wishes import (WISH_DAILY_LIMIT, WishDesk, WishEntryView, WishLog, WishQuota, ensure_entry, export_csv, parse_export_args,
                     parse_games, select_wishes, vote_count)
 from ws_server import WSServer
 
@@ -532,7 +532,8 @@ async def main() -> None:
     wish_channel = os.environ.get("WISH_CHANNEL_ID", "").strip()
     wish_desk = wish_plans = None
     if wish_channel:
-        wish_desk = WishDesk(WishQuota(state_dir / "wishes.json"), WishLog(state_dir / "wishes"),
+        wish_desk = WishDesk(WishQuota(state_dir / "wishes.json",
+                                       int(os.environ.get("WISH_DAILY_LIMIT", "").strip() or WISH_DAILY_LIMIT)), WishLog(state_dir / "wishes"),
                              parse_games(os.environ.get("WISH_GAMES", "")))
         reviewer = os.environ.get("WISH_REVIEWER_ID", "").strip()
         if api_key:
