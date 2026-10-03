@@ -362,6 +362,7 @@ python client\client.py --help
 | `@mrmeeseeks disconnect` | 解绑本频道的客户端 |
 | `@mrmeeseeks help` | 显示帮助 |
 | `@mrmeeseeks <问题>` | 英雄问答：数值（血量、子弹体积）、最近的补丁、N 米处几枪击杀。例如 `@mrmeeseeks 卡西迪最近被削了吗`、`@mrmeeseeks 卡西迪 30 米爆头几枪杀毛加`、`@mrmeeseeks 查莉娅怕谁`。克制关系来自 [counterwatch.gg](https://www.counterwatch.gg) 的对位评分（对决和团战结果，全段位，不是整局胜率）。需要 `ANTHROPIC_API_KEY` |
+| `@mrmeeseeks esports here` / `esports off` / `esports status` | 赛事推送频道：在当前频道推送 OWCS 和世界杯的每日赛程预告（悉尼时间 10:00）、开赛前 15 分钟提醒、赛果（比分用剧透遮罩）和官方新闻。`here`/`off` 需要"管理频道"权限。比赛数据来自 [Liquipedia](https://liquipedia.net/overwatch)（CC-BY-SA） |
 
 ### 配对规则
 
@@ -386,6 +387,9 @@ python tests/test_herodata.py  # 英雄数据缓存、刷新、名字解析
 python tests/test_hero_qa.py   # 英雄问答工具与对话循环、bot 路由
 python tests/test_matchups.py  # counterwatch 对位数据解析、缓存、查询
 python tests/test_counter_advice.py # 换英雄建议里的对位评分和换人候选
+python tests/test_esports.py   # Liquipedia 赛程、官方新闻解析
+python tests/test_esports_feed.py # 赛事推送调度：预告、提醒、赛果、新闻、夏令时
+python tests/test_esports_bot.py  # esports 指令和权限
 ```
 
 每个脚本最后一行显示 `N/N passed`，全部通过时退出码为 0。
