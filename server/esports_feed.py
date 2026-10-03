@@ -217,7 +217,7 @@ class EsportsFeed:
                     await send(state["channel_id"], post.text)
                 except Exception:
                     log.exception("Could not post to esports channel %s; will retry", state["channel_id"])
-                    continue   # 不记账，下一轮重试
+                    break   # 停止本 tick，下一轮重试剩余消息
             apply_marks(state, post.marks)
             changed = True
         if changed:

@@ -209,6 +209,100 @@ def test_feed_tick():
         check("状态写不进去时不抛异常、内存里照常生效", unwritable.channel_id == 1)
 
 
+def test_feed_tick_send_failure_stops_tick():
+    """Send failure should stop tick, not retry in same tick."""
+    # 3 matches all in reminder window
+    now = datetime.now(UTC)
+    m1 = match("m1", now + timedelta(minutes=5))
+    m2 = match("m2", now + timedelta(minutes=6))
+    m3 = match("m3", now + timedelta(minutes=7))
+
+    # Track send attempts
+    send_attempts = []
+
+    async def send_fail_on_second(channel_id, text):
+        send_attempts.append((channel_id, text))
+        if len(send_attempts) == 2:
+            raise RuntimeError("broken channel")
+
+    async def fetch_matches():
+        return [m1, m2, m3]
+
+    async def fetch_news():
+        return []
+
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, "esports_state.json")
+        feed = ef.EsportsFeed(path, fetch_matches, fetch_news)
+
+        # Initialize state
+        state = ef.new_state()
+        state["initialized"] = True
+        state["news_initialized"] = True
+        state["digest_date"] = now.astimezone(ef.TZ).date().isoformat()
+        state["channel_id"] = 42
+        feed.state = state
+        feed.save()
+
+        # Tick 1: second send fails, should not attempt third
+        asyncio.run(feed.tick(now, send_fail_on_second, mono=0))
+        check("第一次发送失败后停止该 tick", len(send_attempts) == 2)
+        check("只有第一个比赛被记账", list(feed.state["reminded"].keys()) == ["m1"])
+
+        # Tick 2: all sends succeed, should send m2 and m3, not re-send m1
+        send_attempts.clear()
+
+        async def send_ok(channel_id, text):
+            send_attempts.append((channel_id, text))
+
+        asyncio.run(feed.tick(now, send_ok, mono=60))
+        check("重试时按顺序发送剩余的消息（m2, m3）", len(send_attempts) == 2)
+        check("第一次失败的消息不重新发送", all("m1" not in text for _, text in send_attempts))
+        check("三个比赛都被最终记账", set(feed.state["reminded"].keys()) == {"m1", "m2", "m3"})
+
+
+def test_feed_tick_split_digest_send_failure():
+    """Split digest: first chunk fails, others not attempted."""
+    now = datetime.now(UTC)
+    # Create many matches to force split
+    many = [match(f"m{i}", now + timedelta(hours=1, minutes=i), t1="X" * 60, t2="Y" * 60)
+            for i in range(40)]
+
+    send_attempts = []
+
+    async def send_fail_first(channel_id, text):
+        send_attempts.append((channel_id, text))
+        if len(send_attempts) == 1:
+            raise RuntimeError("broken channel")
+
+    async def fetch_matches():
+        return many
+
+    async def fetch_news():
+        return []
+
+    with tempfile.TemporaryDirectory() as d:
+        path = os.path.join(d, "esports_state.json")
+        feed = ef.EsportsFeed(path, fetch_matches, fetch_news)
+
+        # Initialize state without digest sent today
+        state = ef.new_state()
+        state["initialized"] = True
+        state["news_initialized"] = True
+        state["channel_id"] = 42
+        feed.state = state
+        feed.save()
+
+        # Set time to 10:00 Sydney time to trigger digest
+        sydney = now.astimezone(ef.TZ)
+        utc_10am_syd = sydney.replace(hour=10, minute=0, second=0, microsecond=0).astimezone(UTC)
+
+        # Tick: first send fails
+        asyncio.run(feed.tick(utc_10am_syd, send_fail_first, mono=0))
+        check("分割预告首行失败后停止", len(send_attempts) == 1)
+        check("digest_date 未被记录（只在最后一行发出时记）", feed.state["digest_date"] is None)
+
+
 if __name__ == "__main__":
     test_digest()
     test_digest_dst()
@@ -218,6 +312,8 @@ if __name__ == "__main__":
     test_first_run_and_news()
     test_prune()
     test_feed_tick()
+    test_feed_tick_send_failure_stops_tick()
+    test_feed_tick_split_digest_send_failure()
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")
     sys.exit(0 if passed == len(results) else 1)
