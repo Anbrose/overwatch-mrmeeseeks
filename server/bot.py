@@ -218,7 +218,14 @@ class MeeseeksBot(discord.Client):
 
     # ---------- 指令 ----------
     async def on_message(self, message: discord.Message) -> None:
-        if message.author.bot or self.user is None or self.user not in message.mentions:
+        if message.author.bot or self.user is None:
+            return
+        # 许愿子区里 @ 审核人（没 @ bot）= 请求最终审核，把开发者备注私信给审核人
+        if (self.wish_plans and self._in_wish_thread(message.channel) and self.user not in message.mentions
+                and self.wish_plans.requests_review(message)):
+            await self.wish_plans.review_requested(message)
+            return
+        if self.user not in message.mentions:
             return
         if message.channel.id == self.wish_channel_id:
             return      # 许愿频道只走表单，不响应 @ 指令
