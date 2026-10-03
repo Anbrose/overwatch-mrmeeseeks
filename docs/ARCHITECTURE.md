@@ -15,6 +15,8 @@
 | `server/damage.py` | 伤害衰减、护甲/护盾、爆头倍率、几枪击杀（纯函数） |
 | `server/hero_qa.py` | 英雄问答：Claude tool use 循环，数字只来自上面两个模块和 `matchups.py` |
 | `server/matchups.py` | 英雄对位（克制）数据：从 counterwatch.gg 抓取、缓存、每日刷新 |
+| `server/esports.py` | 赛事数据：解析 Liquipedia:Matches（比赛）和 esports.overwatch.com 首页（新闻） |
+| `server/esports_feed.py` | 赛事推送：`plan()` 纯函数决定发什么，`EsportsFeed` 负责抓取、状态持久化和发送 |
 | `client/client.py` | 本地客户端：连接/重连、配对码输入、Tab 监听、两段截图、上传 |
 
 ## 客户端状态
@@ -87,6 +89,16 @@
 4. **约束**：系统提示要求所有数字来自工具结果、引用补丁原文和日期、写出假设（弹丸全中、Role Queue 等）。
 
 本期不支持：TTK、技能伤害、perk 加成。
+
+## 赛事推送
+
+用 `@mrmeeseeks esports here` 指定一个频道后，`EsportsFeed.run` 每分钟执行一次：
+
+1. **抓取**：比赛每 10 分钟通过 Liquipedia MediaWiki API 解析一次 `Liquipedia:Matches`（条款要求 gzip、带联系方式的 User-Agent、parse 每 30 秒最多 1 次，并注明 CC-BY-SA 来源），只保留赛事路径以 `Overwatch Champions Series/`、`Overwatch World Cup/` 开头的比赛。新闻每 3 小时抓一次官方首页。抓取失败时保留上一次的数据。
+2. **计划**：`esports_feed.plan(now, matches, news, state)` 返回要发的消息，每条附带发出后要记的账：悉尼时间 10:00 发未来 24 小时的预告，开赛前 15 分钟发提醒（开赛超过 5 分钟不补发），比赛结束 24 小时内发赛果（剧透遮罩），以及新出现的新闻。首次启用时只记账、不发送。
+3. **发送**：发送成功后才记账，失败的下一轮重试。没有设置频道时照常记账、不发送。状态保存在英雄数据缓存同一目录的 `esports_state.json`。
+
+已知限制：Liquipedia 汇总页只有最近约 50 场即将进行和 50 场已结束的比赛；官方首页只放 1–2 条精选新闻。
 
 ## 扩展点
 

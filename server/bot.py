@@ -28,6 +28,7 @@ from dotenv import load_dotenv
 
 import overfast
 import matchups
+from esports_feed import EsportsFeed
 from analyzer import Analyzer, format_facts, roles_from_roster
 from hero_qa import Cooldown, HeroQA
 from herodata import HeroStore, load_aliases, refresh_loop
@@ -54,12 +55,14 @@ HELP_TEXT = (
     "`@mrmeeseeks analyze` Re-run advice on the latest recognized situation in this channel\n"
     "`@mrmeeseeks label` Label portraits I couldn't recognize\n"
     "`@mrmeeseeks disconnect` Unpair the client bound to this channel\n"
+    "`@mrmeeseeks esports here` / `esports off` Post OWCS schedule, reminders, results and news in this channel "
+    "(needs Manage Channels); `esports status` shows the current setup\n"
     "`@mrmeeseeks help` Show this help\n"
     "`@mrmeeseeks <question>` Ask about heroes, e.g. `was Cassidy nerfed recently?`, "
     "`Tracer HP`, `how many Cassidy headshots kill Mauga at 30m?`"
 )
 COMMANDS = ("connect", "status", "disconnect", "help", "analyze", "label")
-ARG_COMMANDS = ("player",)     # 带参数的指令；参数保留大小写（BattleTag 大小写敏感）
+ARG_COMMANDS = ("player", "esports")     # 带参数的指令；参数保留大小写（BattleTag 大小写敏感）
 ASK_COOLDOWN_SECONDS = 5
 
 
@@ -155,7 +158,8 @@ class ClientSelectView(discord.ui.View):
 class MeeseeksBot(discord.Client):
     def __init__(self, registry: Registry, analyzer: Analyzer | None, recognizer: Recognizer,
                  labels: LabelStore, roster: Roster,
-                 store: HeroStore | None = None, hero_qa: HeroQA | None = None):
+                 store: HeroStore | None = None, hero_qa: HeroQA | None = None,
+                 esports_feed: EsportsFeed | None = None):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents, allowed_mentions=discord.AllowedMentions(everyone=False, roles=False))
@@ -170,6 +174,7 @@ class MeeseeksBot(discord.Client):
         self.store = store
         self.hero_qa = hero_qa
         self.ask_cooldown = Cooldown(ASK_COOLDOWN_SECONDS)
+        self.esports_feed = esports_feed
 
     def hero_name(self, key: str) -> str:
         return self.names.get(key) or overfast.hero_name(key)
@@ -205,6 +210,8 @@ class MeeseeksBot(discord.Client):
             await self._disconnect(message)
         elif cmd == "player":
             await self._player(message, arg)
+        elif cmd == "esports":
+            await self._esports(message, arg)
         elif cmd == "analyze":
             await self._reanalyze(message)
         elif cmd == "label":
@@ -213,6 +220,35 @@ class MeeseeksBot(discord.Client):
             await message.reply(HELP_TEXT)
         else:
             await self._ask(message, arg)
+
+    async def _esports(self, message: discord.Message, arg: str) -> None:
+        feed = self.esports_feed
+        if feed is None:
+            await message.reply("The esports feed is not enabled on this server.")
+            return
+        action = arg.strip().lower()
+        if action in ("here", "off"):
+            perms = message.channel.permissions_for(message.author) if message.guild else None
+            if perms is None or not perms.manage_channels:
+                await message.reply("You need Manage Channels permission to change the esports channel.")
+                return
+            feed.set_channel(message.channel.id if action == "here" else None)
+            await message.reply("✅ OWCS schedule, reminders, results and news will be posted in this channel."
+                                if action == "here" else "Esports posts are turned off.")
+        elif action == "status":
+            where = f"<#{feed.channel_id}>" if feed.channel_id else "not set (use `@mrmeeseeks esports here`)"
+            lines = [f"Esports channel: {where}"]
+            for m in feed.upcoming():
+                lines.append(f"• <t:{m['start']}:f> {m['team1']} vs {m['team2']} · {m['label']}")
+            await message.reply("\n".join(lines)[:1990])
+        else:
+            await message.reply("Usage: `@mrmeeseeks esports here`, `esports off` or `esports status`.")
+
+    async def post_esports(self, channel_id: int, text: str) -> None:
+        """推送任务用的发送函数：等 bot 登录完成再发，不 ping 任何人。"""
+        await self.wait_until_ready()
+        channel = await self._channel(channel_id)
+        await channel.send(text, allowed_mentions=discord.AllowedMentions.none())
 
     async def _ask(self, message: discord.Message, question: str) -> None:
         if self.hero_qa is None:
@@ -410,8 +446,12 @@ async def main() -> None:
         log.info("Advice model: %s (effort %s)", model, effort or "default")
     refresh_hours = float(os.environ.get("HERO_REFRESH_HOURS", "24"))
 
+    # 赛事推送状态和英雄数据放在同一个目录（Docker 里是 herodata 卷）
+    esports_feed = EsportsFeed(os.path.join(os.path.dirname(os.path.abspath(store.path)), "esports_state.json"))
+    esports_feed.load()
+
     registry = Registry()
-    bot = MeeseeksBot(registry, analyzer, recognizer, labels, roster, store, hero_qa)
+    bot = MeeseeksBot(registry, analyzer, recognizer, labels, roster, store, hero_qa, esports_feed)
     ws = WSServer(
         registry, bot,
         host=os.environ.get("WS_HOST", "0.0.0.0"),
@@ -422,7 +462,8 @@ async def main() -> None:
     async with bot:
         await ws.start()
         refreshers = [asyncio.create_task(refresh_loop(store, refresh_hours)),
-                      asyncio.create_task(refresh_loop(matchup_store, refresh_hours, fetch=matchups.fetch_all))]
+                      asyncio.create_task(refresh_loop(matchup_store, refresh_hours, fetch=matchups.fetch_all)),
+                      asyncio.create_task(esports_feed.run(bot.post_esports))]
         try:
             await bot.start(token)
         except discord.LoginFailure:
