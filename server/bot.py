@@ -8,7 +8,10 @@
   @mrmeeseeks label      拿出待标注的未知头像
   @mrmeeseeks disconnect 解绑当前频道里的客户端
   @mrmeeseeks help       显示帮助
+  @mrmeeseeks wishes [游戏] [7d]  管理员导出许愿 CSV（私信发送）
   @mrmeeseeks <问题>     英雄问答（数值、补丁、几枪击杀），见 hero_qa.py
+
+功能许愿频道（WISH_CHANNEL_ID）只接受表单提交，见 wishes.py；许愿子区里的 @ 用来改方案，见 wish_plan.py。
 """
 from __future__ import annotations
 
@@ -39,6 +42,9 @@ from situation import Situation
 from vision.heroes import HeroMatcher
 from vision.recognize import Recognizer, to_facts
 from vision.text import load_maps
+from wish_plan import WishPlanner, WishPlans
+from wishes import (WishDesk, WishEntryView, WishLog, WishQuota, ensure_entry, export_csv, parse_export_args,
+                    parse_games, select_wishes, vote_count)
 from ws_server import WSServer
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
@@ -58,11 +64,12 @@ HELP_TEXT = (
     "`@mrmeeseeks esports here` / `esports off` Post OWCS schedule, reminders, results and news in this channel "
     "(needs Manage Channels); `esports status` shows the current setup\n"
     "`@mrmeeseeks help` Show this help\n"
+    "`@mrmeeseeks wishes [game] [7d]` (admins) Get feature wishes with their votes as a CSV by DM\n"
     "`@mrmeeseeks <question>` Ask about heroes, e.g. `was Cassidy nerfed recently?`, "
     "`Tracer HP`, `how many Cassidy headshots kill Mauga at 30m?`"
 )
 COMMANDS = ("connect", "status", "disconnect", "help", "analyze", "label")
-ARG_COMMANDS = ("player", "esports")     # 带参数的指令；参数保留大小写（BattleTag 大小写敏感）
+ARG_COMMANDS = ("player", "esports", "wishes")     # 带参数的指令；参数保留大小写（BattleTag 大小写敏感）
 ASK_COOLDOWN_SECONDS = 5
 
 
@@ -159,7 +166,9 @@ class MeeseeksBot(discord.Client):
     def __init__(self, registry: Registry, analyzer: Analyzer | None, recognizer: Recognizer,
                  labels: LabelStore, roster: Roster,
                  store: HeroStore | None = None, hero_qa: HeroQA | None = None,
-                 esports_feed: EsportsFeed | None = None):
+                 esports_feed: EsportsFeed | None = None,
+                 wish_channel_id: int | None = None, wish_desk: WishDesk | None = None,
+                 wish_plans: WishPlans | None = None):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents, allowed_mentions=discord.AllowedMentions(everyone=False, roles=False))
@@ -175,6 +184,11 @@ class MeeseeksBot(discord.Client):
         self.hero_qa = hero_qa
         self.ask_cooldown = Cooldown(ASK_COOLDOWN_SECONDS)
         self.esports_feed = esports_feed
+        self.wish_channel_id = wish_channel_id
+        self.wish_desk = wish_desk
+        self.wish_plans = wish_plans
+        self.wish_view = WishEntryView(wish_desk) if wish_desk else None
+        self._wish_entry_ready = False
 
     def hero_name(self, key: str) -> str:
         return self.names.get(key) or overfast.hero_name(key)
@@ -182,8 +196,19 @@ class MeeseeksBot(discord.Client):
     def _owners(self, channel_id: int) -> set[int]:
         return {c.user_id for c in self.registry.in_channel(channel_id) if c.user_id}
 
+    async def setup_hook(self) -> None:
+        if self.wish_view:
+            self.add_view(self.wish_view)     # 持久化按钮：重启前发的入口消息照样能点
+
     async def on_ready(self) -> None:
         log.info("Logged in to Discord as %s", self.user)
+        # on_ready 断线重连后会再次触发，入口消息只检查一次
+        if self.wish_view and self.wish_channel_id and not self._wish_entry_ready:
+            self._wish_entry_ready = True
+            try:
+                await ensure_entry(await self._channel(self.wish_channel_id), self.wish_desk.quota, self.wish_view)
+            except discord.HTTPException:
+                log.exception("Could not set up the wish channel %s", self.wish_channel_id)
 
     async def _channel(self, channel_id: int):
         channel = self.get_channel(channel_id)
@@ -195,11 +220,17 @@ class MeeseeksBot(discord.Client):
     async def on_message(self, message: discord.Message) -> None:
         if message.author.bot or self.user is None or self.user not in message.mentions:
             return
+        if message.channel.id == self.wish_channel_id:
+            return      # 许愿频道只走表单，不响应 @ 指令
         text = message.content
         tokens = (f"<@{self.user.id}>", f"<@!{self.user.id}>")
         explicit = any(t in text for t in tokens)
         for token in tokens:
             text = text.replace(token, "")
+        if self._in_wish_thread(message.channel):
+            if explicit:
+                await self._wish_thread(message, text)
+            return
         cmd, arg = parse_command(text, explicit)
 
         if cmd == "connect":
@@ -216,6 +247,8 @@ class MeeseeksBot(discord.Client):
             await self._reanalyze(message)
         elif cmd == "label":
             await self._label(message)
+        elif cmd == "wishes":
+            await self._export_wishes(message, arg)
         elif cmd == "help":
             await message.reply(HELP_TEXT)
         else:
@@ -252,6 +285,49 @@ class MeeseeksBot(discord.Client):
         await self.wait_until_ready()
         channel = await self._channel(channel_id)
         await channel.send(text, allowed_mentions=discord.AllowedMentions.none())
+
+    # ---------- 功能许愿 ----------
+    def _in_wish_thread(self, channel) -> bool:
+        # 只有子区有 parent_id
+        return self.wish_channel_id is not None and getattr(channel, "parent_id", None) == self.wish_channel_id
+
+    async def _wish_thread(self, message: discord.Message, text: str) -> None:
+        if self.wish_plans is None:
+            await message.reply("Drafting plans needs ANTHROPIC_API_KEY to be set.")
+            return
+        request = text.strip()
+        await self.wish_plans.handle(message, "" if request.lower() == "plan" else request)
+
+    async def _export_wishes(self, message: discord.Message, arg: str) -> None:
+        if self.wish_desk is None:
+            await message.reply("The wish channel isn't set up (WISH_CHANNEL_ID).")
+            return
+        perms = getattr(message.author, "guild_permissions", None)
+        reviewer = self.wish_plans.reviewer_id if self.wish_plans else None
+        if not (perms and perms.manage_guild) and message.author.id != reviewer:
+            await message.reply("Only admins (Manage Server) can export wishes.")
+            return
+        game, days = parse_export_args(arg)
+        records = select_wishes(self.wish_desk.log.all(), game, days)
+        if not records:
+            await message.reply("No wishes match.")
+            return
+        votes: dict[int, int | None] = {}
+        async with message.channel.typing():
+            channel = await self._channel(self.wish_channel_id)
+            for r in records:
+                try:
+                    votes[r["id"]] = vote_count(await channel.fetch_message(r["id"]))
+                except discord.NotFound:
+                    votes[r["id"]] = None     # 卡片被删了，存档还在
+        name = f"wishes-{time.strftime('%Y%m%d')}.csv"
+        try:
+            await message.author.send(f"{len(records)} wish(es), most votes first.",
+                                      file=discord.File(io.BytesIO(export_csv(records, votes)), name))
+        except discord.Forbidden:
+            await message.reply("I can't DM you. Allow DMs from server members and try again.")
+            return
+        await message.reply(f"📬 Sent you {len(records)} wish(es) as a CSV by DM.")
 
     async def _ask(self, message: discord.Message, question: str) -> None:
         if self.hero_qa is None:
@@ -453,8 +529,24 @@ async def main() -> None:
     esports_feed = EsportsFeed(os.path.join(os.path.dirname(os.path.abspath(store.path)), "esports_state.json"))
     esports_feed.load()
 
+    wish_channel = os.environ.get("WISH_CHANNEL_ID", "").strip()
+    wish_desk = wish_plans = None
+    if wish_channel:
+        wish_desk = WishDesk(WishQuota(state_dir / "wishes.json"), WishLog(state_dir / "wishes"),
+                             parse_games(os.environ.get("WISH_GAMES", "")))
+        reviewer = os.environ.get("WISH_REVIEWER_ID", "").strip()
+        if api_key:
+            features = (HELP_TEXT + "\nAll of the above is for Overwatch only; mrmeeseeks has no features for "
+                        "other games yet.")
+            wish_plans = WishPlans(WishPlanner(AsyncAnthropic(api_key=api_key), model, effort), wish_desk.log,
+                                   features, int(reviewer) if reviewer else None)
+            wish_desk.on_posted = wish_plans.draft
+        else:
+            log.warning("ANTHROPIC_API_KEY not set; wishes will be posted without a plan")
+
     registry = Registry()
-    bot = MeeseeksBot(registry, analyzer, recognizer, labels, roster, store, hero_qa, esports_feed)
+    bot = MeeseeksBot(registry, analyzer, recognizer, labels, roster, store, hero_qa, esports_feed,
+                      int(wish_channel) if wish_channel else None, wish_desk, wish_plans)
     ws = WSServer(
         registry, bot,
         host=os.environ.get("WS_HOST", "0.0.0.0"),
