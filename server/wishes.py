@@ -160,12 +160,14 @@ class WishLog:
                 log.warning("Skipping unreadable wish %s", path)
         return sorted(records, key=lambda r: r["created_at"])
 
-    def add_plan(self, wish_id: int, request: str, text: str) -> dict[str, Any] | None:
+    def add_plan(self, wish_id: int, request: str, text: str, dev: str = "") -> dict[str, Any] | None:
+        """text 是发给许愿人的部分，dev 是只给审核人看的开发者备注。"""
         record = self.get(wish_id)
         if record is None:
             return None
         record.setdefault("plans", []).append(
-            {"at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "request": request, "text": text})
+            {"at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "request": request, "text": text,
+             "dev": dev})
         self.save(record)
         return record
 
@@ -371,7 +373,7 @@ async def ensure_entry(channel: discord.TextChannel, quota: WishQuota, view: Wis
 
 # ---------------- 导出 ----------------
 EXPORT_FIELDS = ("created_at", "game", "title", "votes", "user_name", "problem", "how", "notes",
-                 "plan_revisions", "latest_plan", "url")
+                 "plan_revisions", "latest_plan", "latest_dev_notes", "url")
 
 
 def parse_export_args(arg: str) -> tuple[str | None, int | None]:
@@ -404,7 +406,8 @@ def export_csv(records: list[dict[str, Any]], votes: dict[int, int | None]) -> b
         writer.writerow({**{k: r.get(k, "") for k in EXPORT_FIELDS},
                          "votes": "" if votes.get(r["id"]) is None else votes[r["id"]],
                          "plan_revisions": max(0, len(plans) - 1),
-                         "latest_plan": plans[-1]["text"] if plans else ""})
+                         "latest_plan": plans[-1]["text"] if plans else "",
+                         "latest_dev_notes": plans[-1].get("dev", "") if plans else ""})
     return ("\ufeff" + buf.getvalue()).encode("utf-8")
 
 

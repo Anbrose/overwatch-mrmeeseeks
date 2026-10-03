@@ -19,7 +19,8 @@ import discord  # noqa: E402
 import bot  # noqa: E402
 import wishes  # noqa: E402
 import wish_plan  # noqa: E402
-from wish_plan import MAX_REVISIONS, WishPlanner, WishPlans, plan_message, server_layout  # noqa: E402
+from wish_plan import (MAX_REVISIONS, WishPlanner, WishPlans, plan_message, review_dm,  # noqa: E402
+                       server_layout, split_plan)
 from wishes import (DEFAULT_GAMES, OTHER, PICK_TEXT, WISH_TZ,  # noqa: E402
                     GameNameModal, GamePickView, WishDesk, WishEntryView, WishLog, WishModal, WishQuota,
                     ensure_entry, entry_text, export_csv, parse_export_args, parse_games, select_wishes, vote_count)
@@ -145,6 +146,7 @@ class FakeChannel:
 class FakeThread:
     def __init__(self, id_, parent_id=555, guild=None):
         self.id, self.parent_id, self.guild = id_, parent_id, guild or fake_guild()
+        self.jump_url = f"https://discord.com/channels/1/{id_}"
         self.sent = []
 
     async def send(self, content, allowed_mentions=None):
@@ -210,10 +212,10 @@ def test_log_and_export():
     check("log: get by id", wl.get(2)["title"] == "Wish 2" and wl.get(99) is None)
     check("log: all sorted by time", [r["id"] for r in wl.all()] == [1, 2])
     wl.add_plan(2, "", "plan A")
-    wl.add_plan(2, "use #general", "plan B")
+    wl.add_plan(2, "use #general", "plan B", "dev B")
     plans = wl.get(2)["plans"]
-    check("log: plans appended with request", [(p["request"], p["text"]) for p in plans]
-          == [("", "plan A"), ("use #general", "plan B")])
+    check("log: plans appended with request and dev notes", [(p["request"], p["text"], p["dev"]) for p in plans]
+          == [("", "plan A", ""), ("use #general", "plan B", "dev B")])
     (TMP / "log" / "junk.json").write_text("{oops")
     check("log: unreadable file skipped", len(wl.all()) == 2)
 
@@ -231,7 +233,8 @@ def test_log_and_export():
     lines = data.strip().splitlines()
     check("export: header", lines[0].startswith("created_at,game,title,votes"))
     check("export: most votes first, deleted last", [l.split(",")[2] for l in lines[1:]] == ["Wish 2", "Wish 1", "Wish 3"])
-    check("export: latest plan + revision count", "plan B" in lines[1] and ",1,plan B," in lines[1])
+    check("export: latest plan, dev notes + revision count", ",1,plan B,dev B," in lines[1]
+          and "latest_dev_notes" in lines[0])
     check("export: BOM for Excel", export_csv(records, {}).startswith("\ufeff".encode("utf-8")))
 
     msg = NS(reactions=[NS(emoji="🔥", count=3, me=False), NS(emoji="👍", count=5, me=True)])
@@ -410,6 +413,10 @@ class FakeClaude:
         return NS(stop_reason="end_turn", content=[NS(type="thinking", thinking="…"), NS(type="text", text=reply)])
 
 
+def tagged(member_part, dev_part):
+    return f"<member>\n{member_part}\n</member>\n<developer>\n{dev_part}\n</developer>"
+
+
 def member(uid, manage=False):
     return NS(id=uid, bot=False, guild_permissions=NS(manage_guild=manage))
 
@@ -428,6 +435,12 @@ def test_plan_text():
     check("layout: categories and channels listed",
           "Category: Overwatch" in layout and "#ow-chat [text] (Talk OW)" in layout and "No category:" in layout)
 
+    check("split: member and developer parts", split_plan(tagged("Hi", "Steps")) == ("Hi", "Steps"))
+    check("split: unclosed developer tag still split", split_plan("<member>Hi</member><developer>Steps") == ("Hi", "Steps"))
+    check("split: missing member tag keeps text before developer",
+          split_plan("Summary\n<developer>Steps</developer>") == ("Summary", "Steps"))
+    check("split: untagged output posted as is", split_plan("Just a plan") == ("Just a plan", ""))
+
     msg = plan_message(7, "PLAN", 0, 42)
     check("plan msg: pings wisher, names reviewer, explains how to steer",
           msg.startswith("<@7>") and "<@42>" in msg and "`@mrmeeseeks <what to change>`" in msg)
@@ -440,7 +453,7 @@ def test_plan_text():
 async def test_plans():
     wl = WishLog(TMP / "plans")
     wl.save(wish_record(300, game="Marvel Rivals"))
-    claude = FakeClaude(["PLAN v1", "PLAN v2", "PLAN v3"])
+    claude = FakeClaude([tagged("PLAN v1", "DEV v1"), tagged("PLAN v2", "DEV v2"), tagged("PLAN v3", "DEV v3")])
     plans = WishPlans(WishPlanner(claude, "m", "low"), wl, "FEATURES", reviewer_id=42)
     thread = FakeThread(300)
 
@@ -453,21 +466,24 @@ async def test_plans():
     content, mentions = thread.sent[0]
     check("draft: posted in thread, pings only the wisher",
           "PLAN v1" in content and [u.id for u in mentions.users] == [7] and "<@42>" in content)
-    check("draft: archived", [p["text"] for p in wl.get(300)["plans"]] == ["PLAN v1"])
+    check("draft: dev notes never posted in thread", "DEV v1" not in content and "<member>" not in content)
+    check("draft: archived with dev notes", [(p["text"], p["dev"]) for p in wl.get(300)["plans"]] == [("PLAN v1", "DEV v1")])
+    check("draft: prompt keeps tech out of the member part",
+          "Never mention data sources" in first["system"] and "<developer>" in first["system"])
 
     msg, replies = thread_message(thread, member(7))
     await plans.handle(msg, "put it in #general")
     convo = claude.calls[1]["messages"]
     check("revise: conversation is wish -> plan -> change",
           [m["role"] for m in convo] == ["user", "assistant", "user"]
-          and convo[1]["content"] == "PLAN v1" and "put it in #general" in convo[2]["content"])
+          and convo[1]["content"] == tagged("PLAN v1", "DEV v1") and "put it in #general" in convo[2]["content"])
     check("revise: posted as revision 1", "revision 1/" in thread.sent[1][0] and "PLAN v2" in thread.sent[1][0])
 
     msg, _ = thread_message(thread, member(42))
     await plans.handle(msg, "split into two channels")
     convo = claude.calls[2]["messages"]
     check("revise: earlier changes replayed in order",
-          [m["content"] for m in convo if m["role"] == "assistant"] == ["PLAN v1", "PLAN v2"]
+          [m["content"] for m in convo if m["role"] == "assistant"] == [tagged("PLAN v1", "DEV v1"), tagged("PLAN v2", "DEV v2")]
           and "put it in #general" in convo[2]["content"] and "split into two" in convo[4]["content"])
 
     msg, replies = thread_message(thread, member(99))
@@ -496,10 +512,64 @@ async def test_plans():
           "couldn't draft" in t2.sent[0][0] and wl.get(301)["plans"] == [])
     check("draft: busy flag cleared after failure", 301 not in failing.busy)
 
-    retry = WishPlans(WishPlanner(FakeClaude(["PLAN ok"]), "m"), wl, "F")
+    retry = WishPlans(WishPlanner(FakeClaude([tagged("PLAN ok", "DEV ok")]), "m"), wl, "F")
     msg, _ = thread_message(t2, member(7))
     await retry.handle(msg, "")
     check("retry: @ with no plan yet drafts one", "PLAN ok" in t2.sent[-1][0] and "first plan" in t2.sent[-1][0])
+
+
+async def test_review():
+    wl = WishLog(TMP / "review")
+    rec = wish_record(600, game="Hearthstone ｜ 炉石传说")
+    rec["title"] = "New card previews"
+    wl.save(rec)
+    wl.add_plan(600, "", "PLAN v1", "DEV v1")
+    dms = []
+
+    async def send(text):
+        dms.append(text)
+
+    reviewer = NS(id=42, send=send)
+    guild = NS(by_category=lambda: [], get_member=lambda uid: reviewer if uid == 42 else None)
+    plans = WishPlans(WishPlanner(FakeClaude([tagged("PLAN v2", "DEV v2")]), "m"), wl, "F", reviewer_id=42)
+    thread = FakeThread(600, guild=guild)
+
+    def ask_review(author_id=7):
+        reactions = []
+
+        async def add_reaction(e):
+            reactions.append(e)
+        msg = NS(channel=thread, guild=guild, author=NS(id=author_id, display_name="Ana"), raw_mentions=[42],
+                 mentions=[NS(id=42)], add_reaction=add_reaction)
+        return msg, reactions
+
+    msg, reactions = ask_review()
+    check("review: detected when reviewer is mentioned", plans.requests_review(msg))
+    check("review: not detected without reviewer mention", not plans.requests_review(NS(raw_mentions=[99])))
+    await plans.review_requested(msg)
+    check("review: dev notes DMed to reviewer only", len(dms) == 1 and "DEV v1" in dms[0]
+          and "New card previews" in dms[0] and thread.jump_url in dms[0] and "Ana" in dms[0])
+    check("review: thread message marked 📨", reactions == ["📨"])
+    check("review: nothing posted in the thread", thread.sent == [])
+    msg, _ = ask_review()
+    await plans.review_requested(msg)
+    check("review: same revision only DMed once", len(dms) == 1)
+
+    await plans.draft(wl.get(600), thread, "show it daily")
+    msg, _ = ask_review()
+    await plans.review_requested(msg)
+    check("review: new revision DMed again with latest notes", len(dms) == 2 and "DEV v2" in dms[1]
+          and "revision 1" in dms[1])
+
+    wl.save(wish_record(601))
+    t3 = FakeThread(601, guild=guild)
+    msg, _ = ask_review()
+    msg.channel = t3
+    await plans.review_requested(msg)
+    check("review: no plan yet -> no DM", len(dms) == 2)
+
+    dm = review_dm({**wish_record(1), "plans": [{"text": "p", "dev": "x" * 5000}]}, "url", "Ana")
+    check("review dm: fits Discord limit", len(dm) <= 2000)
 
 
 # ---------------- bot 路由 ----------------
@@ -537,6 +607,12 @@ async def test_bot_routing():
         async def handle(self, message, request):
             handled.append(request)
 
+        def requests_review(self, message):
+            return 42 in message.raw_mentions
+
+        async def review_requested(self, message):
+            handled.append("review")
+
     b = make_bot(wish_plans=Plans())
     msg, replies = channel_message(FakeThread(300), "<@1> move it to #lfg")
     await b.on_message(msg)
@@ -549,6 +625,14 @@ async def test_bot_routing():
     msg, replies = channel_message(FakeThread(300, parent_id=777), "<@1> help")
     await b.on_message(msg)
     check("bot: other threads unaffected", replies and "commands" in replies[0])
+    msg, replies = channel_message(FakeThread(300), "<@42> looks good")
+    msg.mentions, msg.raw_mentions = [NS(id=42)], [42]
+    await b.on_message(msg)
+    check("bot: @ reviewer in wish thread requests review", handled[-1] == "review" and not replies)
+    msg, _ = channel_message(FakeThread(300, parent_id=777), "<@42> hi")
+    msg.mentions, msg.raw_mentions = [NS(id=42)], [42]
+    await b.on_message(msg)
+    check("bot: @ reviewer elsewhere ignored", handled.count("review") == 1)
 
     b = make_bot()
     msg, replies = channel_message(FakeThread(300), "<@1> change it")
@@ -603,6 +687,7 @@ async def run_async():
     await test_entry()
     await test_other_game()
     await test_plans()
+    await test_review()
     await test_bot_routing()
     await test_export_command()
 
