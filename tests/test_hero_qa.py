@@ -117,6 +117,9 @@ def test_abilities_prompt():
     check("工具列表里有 get_hero_abilities", any(t["name"] == "get_hero_abilities" for t in TOOLS))
     check("只发英雄名时给技能概览", "only a hero name" in SYSTEM and "get_hero_abilities" in SYSTEM)
     check("不再声称技能信息不支持", "ability damage (non-weapon)" not in SYSTEM)
+    check("概览总是列出天赋", "Mention perks only if asked" not in SYSTEM and "perks" in SYSTEM.split("10.")[1].lower())
+    check("只发中文英雄名也用中文回答", "Chinese characters" in SYSTEM and "even if it is only a hero name" in SYSTEM)
+    check("技能/天赋名保留英文官方名，不自己翻译", "never invent" in SYSTEM.lower() and "translation" in SYSTEM.lower())
 
 
 def test_default_weapon():
