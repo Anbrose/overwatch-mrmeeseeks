@@ -20,6 +20,13 @@ VIEW_TIMEOUT = 24 * 3600     # bot 重启后菜单失效，用 @mrmeeseeks label
 Roster = dict[str, list[tuple[str, str]]]    # role -> [(key, name)]
 
 
+def merge_heroes(live: Iterable[dict], bundled: Iterable[dict]) -> list[dict]:
+    """OverFast 名单为准，再补上它还没有的英雄（新英雄刚上线时 OverFast 会滞后几天）。"""
+    merged = list(live)
+    known = {h["key"] for h in merged}
+    return merged + [h for h in bundled if h["key"] not in known]
+
+
 def build_roster(heroes: Iterable[dict]) -> Roster:
     roster: Roster = {role: [] for role, _ in ROLES}
     for h in heroes:

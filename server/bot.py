@@ -35,7 +35,7 @@ from esports_feed import EsportsFeed
 from analyzer import Analyzer, format_facts, roles_from_roster
 from hero_qa import Cooldown, HeroQA
 from herodata import HeroStore, load_aliases, refresh_loop
-from label_ui import Roster, build_roster, send_prompts
+from label_ui import Roster, build_roster, merge_heroes, send_prompts
 from labeling import LabelStore
 from registry import CODE_TTL_SECONDS, ClientConn, PairingError, Registry
 from situation import Situation
@@ -508,11 +508,12 @@ async def main() -> None:
     await asyncio.to_thread(recognizer.ocr, np.zeros((32, 32, 3), np.uint8))   # 预加载 OCR 模型
     log.info("Loaded %d hero templates (%d labels); %d portraits waiting to be labeled",
              len(matcher.templates), len(matcher.labels), len(labels.pending()))
+    bundled = json.loads((DATA_DIR / "roster.json").read_text(encoding="utf-8"))
     try:
-        heroes = await overfast.OverFast().heroes()
+        heroes = merge_heroes(await overfast.OverFast().heroes(), bundled)
     except (overfast.OverFastUnavailable, overfast.PlayerNotFound) as e:
         log.warning("Could not fetch hero list from OverFast (%s); using bundled list", e)
-        heroes = json.loads((DATA_DIR / "roster.json").read_text(encoding="utf-8"))
+        heroes = bundled
     roster = build_roster(heroes)
 
     server_dir = os.path.dirname(os.path.abspath(__file__))

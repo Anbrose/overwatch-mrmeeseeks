@@ -263,5 +263,10 @@
   "key": "zenyatta",
   "name": "Zenyatta",
   "role": "support"
+ },
+ {
+  "key": "doctrine",
+  "name": "Doctrine",
+  "role": "support"
  }
 ]
