@@ -25,10 +25,11 @@ Rules:
 3. For damage or "how many shots to kill" questions, call shots_to_kill. If a weapon has several damage variants (e.g. charge levels), pick the one the user means via `variant` and say which one you used.
 4. State the assumptions returned by the tools (e.g. all pellets hit, Role Queue health).
 5. Pass hero and weapon names to tools exactly as the user wrote them; never translate them yourself, the tools resolve names in any language. If a tool returns candidates for an unclear hero name, ask the user which hero they meant. Do not guess. When naming a weapon in your answer, use the name from the tool result.
-6. If a tool returns "unsupported", explain why. Time-to-kill, healing numbers, ability damage (non-weapon) and perk damage bonuses are not supported yet.
-7. Answer in the same language as the question, in at most about 150 words.
+6. If a tool returns "unsupported", explain why. Time-to-kill and perk damage bonuses are not supported yet, and shots_to_kill only simulates weapons; for other abilities quote the numbers from get_hero_abilities instead.
+7. Answer in the language the user wrote in: if the message contains Chinese characters, answer in Chinese, even if it is only a hero name (e.g. "血律"). Use at most about 150 words (an ability overview may use up to about 300 words).
 8. End with one line: "Source: Overwatch Wiki, data fetched <fetched_at date>"; for matchup answers use "Source: counterwatch.gg, updated <source_updated>" instead.
-9. For counter or matchup questions ("who counters X", "how does X do against Y"), call get_matchups and quote its numbers. Explain that they measure duel and teamfight outcomes, not match win rate. Never state a counter relationship that get_matchups did not return."""
+9. For counter or matchup questions ("who counters X", "how does X do against Y"), call get_matchups and quote its numbers. Explain that they measure duel and teamfight outcomes, not match win rate. Never state a counter relationship that get_matchups did not return.
+10. If the message is only a hero name (e.g. "Doctrine", "血律"), or asks what a hero's abilities, ultimate, passive or perks do, call get_hero_abilities. For only a hero name, give an overview: one header line with role, sub-role and health, then one line per weapon/ability/ultimate/passive as "- Name (key): what it does — key numbers (cooldown, damage/heal, duration)", then a "Perks" section with one short line per current minor and major perk. Keep ability and perk names exactly as the tools return them (official English names) and never invent a Chinese translation for them; hero names may use the Chinese name the user wrote."""
 
 _HERO = {"type": "string", "description": "Hero name exactly as the user wrote it, in any language "
                                           "(e.g. Cassidy, 卡西迪, McCree). Do not translate it."}
@@ -37,6 +38,13 @@ TOOLS = [
         "name": "get_hero_stats",
         "description": "Base stats of a hero: role, sub-role, health/armor/shield per mode, and weapon data "
                        "(damage variants, falloff range in meters, headshot, pellets, projectile radius in meters).",
+        "input_schema": {"type": "object", "properties": {"hero": _HERO}, "required": ["hero"]},
+    },
+    {
+        "name": "get_hero_abilities",
+        "description": "A hero's current kit: role, sub-role, Role Queue health, and every weapon, ability, "
+                       "ultimate and passive (key binding, official description, stats such as cooldown, "
+                       "damage, healing, duration), plus current minor/major perks. Removed abilities are excluded.",
         "input_schema": {"type": "object", "properties": {"hero": _HERO}, "required": ["hero"]},
     },
     {
@@ -120,10 +128,20 @@ class HeroQA:
             hero = self._hero(args["hero"])
             if "error" in hero:
                 return hero
-            stats = {k: v for k, v in hero.items() if k != "patches"}
+            stats = {k: v for k, v in hero.items() if k not in ("patches", "abilities", "perks")}
             stats["weapons"] = [{"index": i, **{k: v for k, v in w.items() if k != "raw"}}
                                 for i, w in enumerate(hero["weapons"])]
             return {**stats, "fetched_at": self.store.fetched_at}
+        if name == "get_hero_abilities":
+            hero = self._hero(args["hero"])
+            if "error" in hero:
+                return hero
+            if "abilities" not in hero:   # 部署后、Wiki 刷新前的旧缓存
+                return {"error": "no_ability_data", "hero": hero["name"],
+                        "message": "Ability data is not loaded yet; it arrives with the next hero data refresh."}
+            return {"hero": hero["name"], "role": hero["role"], "subrole": hero.get("subrole"),
+                    "hp": hero["hp"]["role_queue"], "abilities": hero["abilities"], "perks": hero.get("perks", []),
+                    "source_url": hero["source_url"], "fetched_at": self.store.fetched_at}
         if name == "get_patch_history":
             hero = self._hero(args["hero"])
             if "error" in hero:

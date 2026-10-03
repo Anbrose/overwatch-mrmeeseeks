@@ -94,8 +94,83 @@ def test_non_hero():
     check("不是英雄页面时返回 None", parse_hero("Heroes", "Some text\n==Heading==") is None)
 
 
+def test_abilities():
+    c = hero("Cassidy")
+    names = [a["name"] for a in c["abilities"]]
+    check("技能按页面顺序：武器、技能、终极", names == ["Peacekeeper", "Fan the Hammer", "Combat Roll", "Flashbang", "Deadeye"])
+    check("已移除的技能不列出（Magnetic Grenade、(old)）",
+          not any("Magnetic" in n or "(old)" in n for n in names))
+    roll = next(a for a in c["abilities"] if a["name"] == "Combat Roll")
+    check("技能类型", roll["type"] == "ability")
+    check("按键 ability 1 → Shift", roll["key"] == "Shift")
+    check("官方描述是纯文本", roll["description"] == "Roll in the direction you're moving to take reduced damage and reload.")
+    check("冷却时间", roll["stats"].get("cooldown") == "5 seconds")
+    check("tt 模板取显示值", roll["stats"].get("duration") == "0.4 seconds")
+    check("长篇 ability_details / 视频 / 图片不放进 stats",
+          not any(k in roll["stats"] for k in ("ability_details", "ability_video", "ability_image", "ability_keywords")))
+    dead = next(a for a in c["abilities"] if a["name"] == "Deadeye")
+    check("终极技能类型和按键 Q", dead["type"] == "ultimate" and dead["key"] == "Q")
+    peace = next(a for a in c["abilities"] if a["name"] == "Peacekeeper")
+    check("武器类型和主/副攻击", peace["type"] == "weapon" and peace["key"] == "Primary Fire")
+
+    perks = c["perks"]
+    check("天赋只列现行的（已移除的不列）",
+          sorted((p["tier"], p["name"]) for p in perks) ==
+          [("major", "Rollin' Round-Up"), ("major", "Silver Bullet"), ("minor", "Bang Bang"), ("minor", "Giddy Up")])
+    check("天赋带描述", all(p["description"] for p in perks))
+
+    j = hero("Junkrat")
+    passive = [a for a in j["abilities"] if a["type"] == "passive"]
+    check("被动技能", [a["name"] for a in passive] == ["Total Mayhem"] and passive[0]["key"] == "Passive")
+    for name in ("Ana", "Mauga", "Moira", "Reaper", "Reinhardt", "Tracer", "Widowmaker", "Zenyatta"):
+        h = hero(name)
+        kinds = {a["type"] for a in h["abilities"]}
+        if not ({"weapon", "ability", "ultimate"} <= kinds and len(h["perks"]) == 4):
+            check(f"{name}：有武器/技能/终极，现行天赋 4 个", False)
+            break
+    else:
+        check("其余 8 个英雄：都有武器/技能/终极，现行天赋都是 4 个", True)
+
+
+def _page(*abilities):
+    body = "\n".join("{{Ability details\n" + "\n".join(f"| {k} = {v}" for k, v in a.items()) + "\n}}" for a in abilities)
+    return "{{Infobox character\n| role = [[Damage]]\n| health = 250\n}}\n== Abilities ==\n" + body
+
+
+def test_ability_variants():
+    # 线上页面里有、10 个 fixture 里没有的写法（D.Mon、Emre、Sierra、Symmetra，2026-10-03 核对）
+    h = parse_hero("X", _page(
+        {"ability_name": "Plasma Saber", "ability_type": "Weapon;;Mech", "official_description": "Slash."},
+        {"ability_name": "Synthetic Burst Rifle", "ability_type": "Weapon (Hip Fire)", "key": "primary fire",
+         "official_description": "Burst fire.", "damage": "20"},
+        {"ability_name": "Propulsors", "ability_type": "Ability (Mech)", "key": "ability 1", "official_description": "Fly."},
+        {"ability_name": "Limit Break", "ability_type": "Ultimate Ability (Mech)", "key": "ultimate", "official_description": "Ult."},
+        {"ability_name": "Call Mech", "ability_type": "Ultimate Ability (Pilot)", "key": "ultimate", "official_description": "Mech."},
+        {"ability_name": "Teleporter", "ability_type": "Ability", "key": "Ability 2", "official_description": "Teleport."},
+        {"ability_name": "Shield Generator", "ability_type": "Ultimate Ability", "removed": "yes", "official_description": "Old."},
+        {"ability_name": "Precision Fusion", "ability_type": "Major Perk", "key": "reload", "official_description": "Perk."},
+        # Mercy 页面上忘了标 removed 的旧天赋
+        {"ability_name": "Flash Heal (old)", "ability_type": "Major Perk", "official_description": "Old perk."},
+    ))
+    by = {a["name"]: a for a in h["abilities"]}
+    check("括号写法的技能类型：Ability (Mech)", by.get("Propulsors", {}).get("type") == "ability")
+    check("括号写法的武器类型：Weapon (Hip Fire)", by.get("Synthetic Burst Rifle", {}).get("type") == "weapon")
+    check("括号写法的武器也进入武器数据（几枪击杀用）", any(w["name"] == "Synthetic Burst Rifle" for w in h["weapons"]))
+    check("括号里的限定词作为形态/开火方式", by.get("Propulsors", {}).get("form") == "Mech"
+          and by.get("Synthetic Burst Rifle", {}).get("key") == "Primary Fire")
+    check("两个终极（机甲/驾驶员）都保留", by.get("Limit Break", {}).get("type") == "ultimate"
+          and by.get("Call Mech", {}).get("form") == "Pilot")
+    check("key = ultimate → Q", by.get("Limit Break", {}).get("key") == "Q")
+    check("key 大小写不敏感（Ability 2 → E）", by.get("Teleporter", {}).get("key") == "E")
+    check("removed = yes 也算已移除", "Shield Generator" not in by)
+    check("名字带 (old) 但没标 removed 的也不列", [p["name"] for p in h["perks"]] == ["Precision Fusion"])
+    check("分号写法的武器形态：Weapon;;Mech", by.get("Plasma Saber", {}).get("form") == "Mech")
+
+
 if __name__ == "__main__":
     test_damage_strings()
+    test_abilities()
+    test_ability_variants()
     test_cassidy()
     test_tank_modes()
     test_other_heroes()
