@@ -38,9 +38,11 @@
     - 要注明来源（CC-BY-SA 3.0）。
     - 禁止自动访问非 API 的 HTML 页面。
   - `action=parse&page=Liquipedia:Matches&prop=text&format=json&formatversion=2` 返回约 370KB 的 HTML，分两块：
-    - `data-toggle-area-content="1"`（即将进行）：约 100 场比赛，每场有 `data-timestamp`（Unix 秒）、赛事链接 `title`（如 `Overwatch Champions Series/2026/Asia/Stage 3/Korea/Regular Season#Week 1`）、双方队名（`<span class="name"><a title="...">`），以及 Bo 场数。
-    - `data-toggle-area-content="2"`（已结束）：约 50 场比赛，带比分（如 `2 : 3`）。
-  - 本次核对时，100 场即将进行的比赛里有 26 场是 OWCS（Korea、Japan、China Stage 3），其余主要是 FACEIT League。
+    - `data-toggle-area-content="1"`（即将进行）：50 场比赛，每场是一个 `<div class="match-info">`，有 `data-timestamp`（Unix 秒）、赛事链接 `title`（如 `Overwatch Champions Series/2026/Asia/Stage 3/Korea/Regular Season#Week 1`）、双方队名（`<span class="name"><a title="...">`），以及 Bo 场数。
+    - `data-toggle-area-content="2"`（已结束）：50 场比赛，带 `data-finished="finished"` 和两个 `match-info-header-scoreholder-score`（如 `2 : 3`）。
+    - 每场的 `match-info-tournament-name` 里有赛事链接 `href="/overwatch/<路径>#<轮次>"`，以及 Liquipedia 给的显示名（如 `OWCS Korea Stage 3 - Regular Season - Week 1`）。
+    - 队伍页面不存在时，`title` 带 ` (page does not exist)` 后缀；TBD 队伍没有链接，只有纯文本。
+  - 本次核对时，100 场比赛里有 26 场是 OWCS（Korea、Japan、China Stage 3），其中 6 场已结束；其余主要是 FACEIT League。
 - **esports.overwatch.com**
   - `/en-us/news` 返回 500，不可用。
   - 首页 `/en-us` 有 1–2 条精选新闻，格式为 `<a href="https://esports.overwatch.com/en-us/news/<slug>">`，链接里带日期和 `<h2>` 标题。
@@ -56,14 +58,14 @@
   ```json
   {"id": "<tournament>|<start>|<team1>|<team2>", "start": 1791000000,
    "tournament": "Overwatch Champions Series/2026/Asia/Stage 3/Korea/Regular Season#Week 1",
-   "label": "OWCS 2026 Asia Stage 3 Korea — Regular Season Week 1",
+   "label": "OWCS Korea Stage 3 - Regular Season - Week 1",
    "team1": "T1", "team2": "ZETA DIVISION", "best_of": 5,
    "finished": false, "score": null, "url": "https://liquipedia.net/overwatch/<tournament path>"}
   ```
   - `finished` 为 true 时，`score` 是 `[队1, 队2]`。
   - 队名缺失（TBD）的比赛保留，队名记为 `"TBD"`。
 - **过滤**：常量 `OFFICIAL_PREFIXES = ("Overwatch Champions Series/", "Overwatch World Cup/")`，赛事路径以这些前缀开头的比赛才保留。
-- **`label`**：由赛事路径生成，`Overwatch Champions Series` 缩写为 `OWCS`，`#` 后面的部分接在 ` — ` 之后。
+- **`label`**：直接使用 Liquipedia 给的赛事显示名，不再根据路径拼接（比拼出来的更准确）。
 
 ### 新闻
 
@@ -84,13 +86,15 @@
 - 内容：
   ```json
   {"channel_id": 123 | null, "reminded": ["<id>", ...], "resulted": ["<id>", ...],
-   "digest_date": "2026-10-03" | null, "seen_news": ["<url>", ...], "initialized": true}
+   "digest_date": "2026-10-03" | null, "seen_news": ["<url>", ...],
+   "initialized": true, "news_initialized": true}
   ```
-- `reminded` 和 `resulted` 只保留最近 14 天的比赛，避免无限增长。
+- `reminded` 和 `resulted` 都是 `{id: start}`，只保留最近 14 天，避免无限增长；`seen_news` 只保留最近 200 条。
 
 ### 纯函数 `plan(now, matches, news, state) -> (messages, new_state)`
 
-- **初始化**：`initialized` 为 false 时，把已经结束的比赛记入 `resulted`、已有新闻记入 `seen_news`，不产生任何消息，然后置为 true。
+- **初始化**：比赛和新闻分开初始化，互不阻塞（官方首页打不开时，比赛照常工作）。`initialized` 为 false 时，把已经结束的比赛记入 `resulted`；`news_initialized` 为 false 时，把已有新闻记入 `seen_news`。初始化时不产生任何消息。
+- **返回值**：`list[Post]`，每个 `Post` 包含 `text`（可以为 None，表示只记账）和 `marks`（发出后要记的账）。
 - **预告**：
   - 发送条件：悉尼本地时间 ≥ 10:00、`digest_date` 不是今天（悉尼日期），并且未来 24 小时内有比赛。
   - 内容：按开始时间排序的比赛列表。
@@ -102,7 +106,7 @@
 ### 后台任务 `run_feed(bot, store, ...)`
 
 - 每 60 秒执行一次 `plan`。距离上次抓比赛超过 10 分钟就重新抓，距离上次抓新闻超过 3 小时就重新抓新闻。
-- 没有设置频道时只抓取、不发送。
+- 没有设置频道时照常记账、不发送，这样之后再设置频道也不会补发一堆旧消息。
 - 发送失败（频道被删除、没有权限）时记日志，不更新这条消息对应的状态，下一轮再重试。
 
 ### 消息格式（英文）
@@ -123,7 +127,7 @@
 - `esports here` / `esports off` / `esports status` 加入 `COMMANDS`（`parse_command` 原样识别）。
 - **`here` / `off`**：发指令的人需要在该频道有 `manage_channels` 权限，否则回复 "You need Manage Channels permission to change the esports channel." `here` 写入 `channel_id`，`off` 清空。
 - **`status`**：回复当前推送频道（或未设置），以及接下来最多 3 场比赛。
-- **启动**：后台任务 `run_feed`，退出时取消。
+- **启动**：后台任务 `EsportsFeed.run(bot.post_esports)`，退出时取消。`post_esports` 先等 bot 登录完成（`wait_until_ready`），发送时不 ping 任何人。
 - **`HELP_TEXT`**：加上这三条指令。
 
 ## 配置
@@ -145,6 +149,7 @@
 - Liquipedia 汇总页只显示最近约 100 场比赛，赛程密集时，24 小时预告可能不完整。
 - 官方首页只放 1–2 条精选新闻，新闻推送频率会很低。
 - 两个数据源都是解析页面，对方改版时会失效：这时只记日志、不推送，不会发出错误内容。
+- 比赛 ID 由赛事、开始时间和队名拼成：TBD 队伍确定后、或比赛改期后，会被当成一场新比赛。提醒窗口只有 15 分钟，到时队伍通常已经确定，所以影响很小。
 
 ## 测试
 
@@ -160,4 +165,4 @@
   - 首次启用时不刷旧数据。
   - 悉尼夏令时切换日（2026-10-04 开始夏令时）。
   - 剧透遮罩格式、消息拆分、状态清理。
-- **指令**：`esports here/off/status` 的路由和权限检查（用假的 Discord 消息）。
+- **`tests/test_esports_bot.py`**：`esports here/off/status` 的路由和权限检查（用假的 Discord 消息），以及 `post_esports` 的发送行为。
