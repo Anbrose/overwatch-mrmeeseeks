@@ -185,7 +185,22 @@ async def main():
     check("下拉菜单列出可用客户端", [o.value for o in sel.options] == [x.client_id for x in reg.available()])
     check("英雄显示名来自名单", bot.hero_name("dva") == "D.Va" and bot.hero_name("soldier-76") == "Soldier: 76")
 
-    # ---------- 10. 标注菜单可构造 ----------
+    # ---------- 10. 英雄名单：OverFast + 自带名单 ----------
+    import json as _json
+    from label_ui import merge_heroes
+    bundled = _json.loads((Path(ROOT) / "server" / "data" / "roster.json").read_text(encoding="utf-8"))
+    check("自带名单里有新英雄 Doctrine（辅助）",
+          {"key": "doctrine", "name": "Doctrine", "role": "support"} in bundled)
+    live = [{"key": "ana", "name": "Ana", "role": "support"}, {"key": "sombra", "name": "Sombra", "role": "support"}]
+    merged = merge_heroes(live, [{"key": "doctrine", "name": "Doctrine", "role": "support"},
+                                 {"key": "sombra", "name": "Sombra", "role": "damage"}])
+    keys = [h["key"] for h in merged]
+    check("OverFast 没有的新英雄从自带名单补上", "doctrine" in keys)
+    check("同一个英雄以 OverFast 为准（比如改了职责）", next(h for h in merged if h["key"] == "sombra")["role"] == "support"
+          and keys.count("sombra") == 1)
+    check("标注菜单的辅助列表里有 Doctrine", ("doctrine", "Doctrine") in build_roster(merged)["support"])
+
+    # ---------- 11. 标注菜单可构造 ----------
     lv = LabelView(labels, roster, bot.hero_name, "pid", {42})
     first = [o.value for o in lv.children[0].options]
     check("标注菜单第一级：三个职责 + 阵亡/未选/丢弃",

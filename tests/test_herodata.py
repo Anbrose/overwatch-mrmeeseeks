@@ -53,6 +53,7 @@ def test_aliases_file():
     aliases = load_aliases()
     check("aliases.json 能读", "Cassidy" in aliases and "麦克雷" in aliases["Cassidy"])
     check("瑞希 是 Mizuki", "瑞希" in aliases.get("Mizuki", []))
+    check("血律 是 Doctrine（第 5 赛季新英雄）", "血律" in aliases.get("Doctrine", []))
     flat = [a for v in aliases.values() for a in v]
     check("别名之间没有重复", len(flat) == len(set(flat)))
 
