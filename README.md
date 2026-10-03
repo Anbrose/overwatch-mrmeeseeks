@@ -323,12 +323,15 @@ journalctl -u mrmeeseeks -f      # 查看日志
 | `ANTHROPIC_API_KEY` | 否 | 空 | 留空则只识别截图，不给建议 |
 | `CLAUDE_MODEL` | 否 | `claude-sonnet-5` | 给建议用的模型；想更快可换成 `claude-haiku-4-5-20251001`。可用模型见[模型列表](https://platform.claude.com/docs/en/models/overview) |
 | `ADVISE_EFFORT` | 否 | `low` | 给建议时的思考强度（`low`/`medium`/`high`），越高越慢 |
-| `STATE_DIR` | 否 | `state/` | 标注的模板和待标注队列存放位置；Docker 部署时是挂载的 `/state` |
+| `STATE_DIR` | 否 | `state/` | 标注的模板、待标注队列和许愿次数（`wishes.json`）存放位置；Docker 部署时是挂载的 `/state` |
 | `WS_HOST` | 否 | `0.0.0.0` | WebSocket 监听地址；用反向代理时改为 `127.0.0.1` |
 | `WS_PORT` | 否 | `8765` | WebSocket 端口 |
 | `MIN_SNAPSHOT_INTERVAL` | 否 | `5` | 同一客户端两次分析的最短间隔（秒） |
 | `HERO_DATA_PATH` | 否 | `server/herodata/heroes.json` | 英雄数据缓存文件。Docker 部署时位于 `herodata` 卷 |
 | `HERO_REFRESH_HOURS` | 否 | `24` | 每隔多少小时刷新英雄数据（Overwatch Wiki）和对位数据（counterwatch.gg）；对位数据缓存在同一目录的 `matchups.json` |
+| `WISH_CHANNEL_ID` | 否 | 空 | 功能许愿频道的 ID，留空不启用。见下方「功能许愿频道」 |
+| `WISH_GAMES` | 否 | 守望先锋 + 22 个热门游戏 | 许愿表单里「哪个游戏」的下拉选项，逗号分隔，最多 24 个；末尾自动加 `Other ｜ 其他` |
+| `WISH_REVIEWER_ID` | 否 | 空 | 许愿方案的最终审核人（Discord 用户 ID）。方案里会请许愿人 @ 这个人；留空则写「找管理员」 |
 
 ### 客户端参数
 
@@ -361,8 +364,33 @@ python client\client.py --help
 | `@mrmeeseeks player Name#1234` | 用 [OverFast](https://overfast-api.tekrop.fr/) 查玩家各职责段位、总体数据和最常玩的 5 个英雄。BattleTag 区分大小写；生涯设为私密时只能看到段位 |
 | `@mrmeeseeks disconnect` | 解绑本频道的客户端 |
 | `@mrmeeseeks help` | 显示帮助 |
+| `@mrmeeseeks wishes [游戏] [7d]` | 管理员（「管理服务器」权限或 `WISH_REVIEWER_ID`）导出许愿 CSV，按 👍 数排序，私信发送。可按游戏（包含匹配，`漫威` 也行）、最近 N 天筛选 |
 | `@mrmeeseeks <问题>` | 英雄问答：数值（血量、子弹体积）、最近的补丁、N 米处几枪击杀。例如 `@mrmeeseeks 卡西迪最近被削了吗`、`@mrmeeseeks 卡西迪 30 米爆头几枪杀毛加`、`@mrmeeseeks 查莉娅怕谁`。克制关系来自 [counterwatch.gg](https://www.counterwatch.gg) 的对位评分（对决和团战结果，全段位，不是整局胜率）。需要 `ANTHROPIC_API_KEY` |
 | `@mrmeeseeks esports here` / `esports off` / `esports status` | 赛事推送频道：在当前频道推送 OWCS 和世界杯的每日赛程预告（悉尼时间 10:00）、开赛前 15 分钟提醒、赛果（比分用剧透遮罩）和官方新闻。`here`/`off` 需要"管理频道"权限。比赛数据来自 [Liquipedia](https://liquipedia.net/overwatch)（CC-BY-SA） |
+
+### 功能许愿频道
+
+用户在这个频道里只能点按钮、填表单来许愿（先在下拉菜单里选游戏），每人每天 2 次，悉尼时间 0 点重置。bot 会把表单发成卡片，加 👍 用于投票，并开一个子区用于讨论。
+
+下拉菜单里是守望先锋和 22 个热门游戏（「英文名 ｜ 中文名」，列表在 `server/wishes.py` 的 `DEFAULT_GAMES`）。小众游戏选最后的 `Other ｜ 其他`，提交后点 bot 私下回复里的按钮填游戏名；10 分钟内没填就按 `Other` 发出。
+
+每条许愿发出后，bot 会参考服务器现有的分类、频道和自己现有的功能，在子区里起草一份方案（需要 `ANTHROPIC_API_KEY`）：要不要为新游戏开分类、建哪些频道、功能放在哪个频道、实现步骤。然后 @ 许愿人 review：
+
+- 想改：在子区里 `@mrmeeseeks <要改什么>`，bot 重写整份方案（每条许愿最多改 5 次；许愿人、审核人和管理员可以要求修改）
+- 满意：在子区里 @ 审核人（`WISH_REVIEWER_ID`）做最终审核。bot 只出方案，不会自己建频道
+- 方案没生成出来：在子区里 `@mrmeeseeks plan` 重试
+
+每条许愿（表单内容 + 历次方案）存档在 `state/wishes/<消息ID>.json`，频道里的卡片删了也还在。用 `@mrmeeseeks wishes` 导出。
+
+设置步骤：
+
+1. 新建文字频道，例如 `💡｜功能许愿池`
+2. 频道权限：
+   - `@everyone`：开 **查看频道**、**阅读消息历史**、**添加反应**、**在子区中发送消息**；关 **发送消息**、**创建公开子区**、**创建私密子区**
+   - mrmeeseeks：开 **发送消息**、**在子区中发送消息**、**嵌入链接**、**附加文件**、**阅读消息历史**、**创建公开子区**、**添加反应**、**管理消息**（置顶入口消息要用）
+3. 打开开发者模式，右键频道 → 复制频道 ID，填进 `.env` 的 `WISH_CHANNEL_ID`，然后重启 bot
+
+bot 启动时会在频道里发一条带「Make a wish」按钮的置顶消息；已经有了就直接复用，被删了会重新发。在这个频道里 @mrmeeseeks 不会触发指令。
 
 ### 配对规则
 
@@ -390,6 +418,7 @@ python tests/test_counter_advice.py # 换英雄建议里的对位评分和换人
 python tests/test_esports.py   # Liquipedia 赛程、官方新闻解析
 python tests/test_esports_feed.py # 赛事推送调度：预告、提醒、赛果、新闻、夏令时
 python tests/test_esports_bot.py  # esports 指令和权限
+python tests/test_wishes.py     # 功能许愿：每日限额、存档导出、表单提交、入口消息、方案起草与修改
 ```
 
 每个脚本最后一行显示 `N/N passed`，全部通过时退出码为 0。

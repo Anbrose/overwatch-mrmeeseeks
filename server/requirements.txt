@@ -1,7 +1,8 @@
-discord.py>=2.4
+discord.py>=2.6  # 2.6 起表单里能放下拉菜单（ui.Label）
 websockets>=14
 anthropic>=0.40
 python-dotenv>=1.0
 mwparserfromhell>=0.6
 numpy>=1.26
 rapidocr-onnxruntime==1.4.4  # OCR 参数在这个版本上验证过
+tzdata  # zoneinfo 时区数据，slim 镜像里不一定有
