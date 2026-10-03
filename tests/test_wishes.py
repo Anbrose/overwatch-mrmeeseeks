@@ -469,7 +469,7 @@ async def test_plans():
     check("draft: dev notes never posted in thread", "DEV v1" not in content and "<member>" not in content)
     check("draft: archived with dev notes", [(p["text"], p["dev"]) for p in wl.get(300)["plans"]] == [("PLAN v1", "DEV v1")])
     check("draft: prompt keeps tech out of the member part",
-          "Never mention data sources" in first["system"] and "<developer>" in first["system"])
+          "Never mention how it would be built" in first["system"] and "<developer>" in first["system"])
 
     msg, replies = thread_message(thread, member(7))
     await plans.handle(msg, "put it in #general")
