@@ -109,6 +109,13 @@ def test_reminders():
     check("开赛 5 分钟内仍补发", len(texts(run_plan(start + timedelta(minutes=5), [m], [], late))) == 1)
     later = ready_state(digest_date="2026-10-03")
     check("开赛超过 5 分钟不补发", texts(run_plan(start + timedelta(minutes=6), [m], [], later)) == [])
+    tbd = match("tbd", start, t1="TBD", t2="TBD")
+    st = ready_state(digest_date="2026-10-03")
+    check("双方都是 TBD 不提醒、不记账", texts(run_plan(start - timedelta(minutes=10), [tbd], [], st)) == []
+          and "tbd" not in st["reminded"])
+    half = match("half", start, t1="T1", t2="TBD")
+    st = ready_state(digest_date="2026-10-03")
+    check("只有一方 TBD 仍然提醒", len(texts(run_plan(start - timedelta(minutes=10), [half], [], st))) == 1)
 
 
 def test_results():
@@ -136,7 +143,10 @@ def test_first_run_and_news():
     check("新闻抓取失败不阻塞比赛初始化", fresh["initialized"] and not fresh["news_initialized"])
     more = news + [{"url": "https://esports.overwatch.com/en-us/news/b", "title": None, "date": None}]
     posts = texts(run_plan(start + timedelta(hours=1, minutes=1), [done], more, state))
-    check("只推新出现的新闻；没标题时用默认标题", posts == ["📰 Overwatch esports news https://esports.overwatch.com/en-us/news/b"])
+    check("只推新出现的新闻；没标题时用默认标题", posts == ["📰 ||Overwatch esports news|| <https://esports.overwatch.com/en-us/news/b>"])
+    check("新闻标题遮罩、链接用尖括号抑制预览",
+          ef.format_news(news[0]) == "📰 ||A|| <https://esports.overwatch.com/en-us/news/a>"
+          and "<https://esports.overwatch.com/en-us/news/a>" in ef.format_news(news[0]))
     check("还没抓到比赛时（None）比赛部分什么都不做", ef.plan(SYD_10AM, None, [], ready_state()) == [])
 
 

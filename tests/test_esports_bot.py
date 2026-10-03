@@ -24,22 +24,28 @@ def check(name, cond):
     print(("PASS " if cond else "FAIL ") + name, flush=True)
 
 
+BOT_MEMBER = NS(id=2)
+
+
 class FakeChannel:
-    def __init__(self, channel_id, manage):
-        self.id, self.manage, self.sent = channel_id, manage, []
+    def __init__(self, channel_id, manage, bot_can_send=True):
+        self.id, self.manage, self.bot_can_send, self.sent = channel_id, manage, bot_can_send, []
 
     def permissions_for(self, member):
-        return NS(manage_channels=self.manage)
+        # bot 自己（guild.me）和指令发起者的权限分开
+        if member is BOT_MEMBER:
+            return NS(manage_channels=False, send_messages=self.bot_can_send)
+        return NS(manage_channels=self.manage, send_messages=True)
 
     async def send(self, text, allowed_mentions=None):
         self.sent.append((text, allowed_mentions))
 
 
 class FakeMessage:
-    def __init__(self, manage=True, guild=True, channel_id=555):
+    def __init__(self, manage=True, guild=True, channel_id=555, bot_can_send=True):
         self.author = NS(id=1)
-        self.guild = NS(id=9) if guild else None
-        self.channel = FakeChannel(channel_id, manage)
+        self.guild = NS(id=9, me=BOT_MEMBER) if guild else None
+        self.channel = FakeChannel(channel_id, manage, bot_can_send)
         self.replies = []
 
     async def reply(self, content):
@@ -75,6 +81,10 @@ def test_commands():
         asyncio.run(b._esports(m, "here"))
         check("有权限：设为当前频道并持久化", feed.channel_id == 555 and _reloaded(feed.path) == 555)
         check("回复确认", m.replies[0].startswith("✅"))
+
+        m = FakeMessage(manage=True, channel_id=999, bot_can_send=False)
+        asyncio.run(b._esports(m, "here"))
+        check("bot 在该频道不能发言时拒绝，频道不变", "Send Messages" in m.replies[0] and feed.channel_id == 555)
 
         feed.matches = [{"id": "x", "start": int(time.time()) + 3600, "finished": False, "team1": "T1",
                          "team2": "ZETA DIVISION", "label": "OWCS Korea Stage 3"}]

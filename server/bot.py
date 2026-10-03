@@ -232,6 +232,9 @@ class MeeseeksBot(discord.Client):
             if perms is None or not perms.manage_channels:
                 await message.reply("You need Manage Channels permission to change the esports channel.")
                 return
+            if action == "here" and not message.channel.permissions_for(message.guild.me).send_messages:
+                await message.reply("I can't send messages in this channel — give me Send Messages permission first.")
+                return
             feed.set_channel(message.channel.id if action == "here" else None)
             await message.reply("✅ OWCS schedule, reminders, results and news will be posted in this channel."
                                 if action == "here" else "Esports posts are turned off.")

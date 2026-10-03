@@ -85,7 +85,7 @@
 - 写入：临时文件加 `os.replace`，写失败只记日志。
 - 内容：
   ```json
-  {"channel_id": 123 | null, "reminded": ["<id>", ...], "resulted": ["<id>", ...],
+  {"channel_id": 123 | null, "reminded": {"<id>": start, ...}, "resulted": {"<id>": start, ...},
    "digest_date": "2026-10-03" | null, "seen_news": ["<url>", ...],
    "initialized": true, "news_initialized": true}
   ```

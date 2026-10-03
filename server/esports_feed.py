@@ -94,7 +94,8 @@ def format_result(m: dict[str, Any]) -> str:
 
 
 def format_news(n: dict[str, Any]) -> str:
-    return f"📰 {n['title'] or 'Overwatch esports news'} {n['url']}"
+    # 标题可能剧透赛果，用遮罩；链接用尖括号抑制 Discord 的链接预览
+    return f"📰 ||{n['title'] or 'Overwatch esports news'}|| <{n['url']}>"
 
 
 def split_lines(lines: list[str], limit: int = MAX_MESSAGE) -> list[str]:
@@ -132,6 +133,7 @@ def plan(now: datetime, matches: list[dict[str, Any]] | None, news: list[dict[st
             posts += [Post(t) for t in texts[:-1]] + [Post(texts[-1], {"digest_date": today})]
         for m in sorted(matches, key=lambda m: m["start"]):
             if (not m["finished"] and m["id"] not in state["reminded"]
+                    and not (m["team1"] == "TBD" and m["team2"] == "TBD")   # 对阵都没定，不提醒
                     and m["start"] - REMIND_BEFORE.total_seconds() <= ts <= m["start"] + REMIND_LATE.total_seconds()):
                 posts.append(Post(format_reminder(m), {"reminded": {m["id"]: m["start"]}}))
             if (m["finished"] and m["id"] not in state["resulted"]
