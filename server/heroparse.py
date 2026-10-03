@@ -3,6 +3,8 @@
 数据来源格式（2026-10 核对）：
 - Infobox：{{Infobox character | role = [[Tank]] | sub-role = [[Stalwart]] | health = 250 | armor = 300 | health6v6 = ...}}
 - 武器：{{Ability_details | ability_type = Weapon... | shot_type | damage | damage_falloff_range | headshot | pellets | pradius}}
+- 技能：同一个 {{Ability_details}}，ability_type 为 Ability / Ultimate Ability / Passive Ability /
+  Minor Perk / Major Perk；removed = 1 的是已从游戏里移除的旧技能、旧天赋
 - 补丁：{{ChangelogsTabber | owpvp = {{PatchTableElement|YYYY-MM-DD| 文本 }} ... }}
 """
 from __future__ import annotations
@@ -112,7 +114,7 @@ def _weapon(tpl, variables: dict[str, str]) -> dict[str, Any]:
     pr = _RANGE.match(_plain(raw.get("pradius", "")))
     return {
         "name": _plain(raw.get("ability_name", "")),
-        "fire": (_plain(raw.get("ability_type", "")).split(";;") + [""])[1] or None,
+        "fire": (lambda q: q if q and q.lower() not in _FORMS else None)(_type_parts(raw.get("ability_type", ""))[1]),
         "shot_type": _shot_type(raw.get("shot_type", "")),
         "damage": parse_damage(raw.get("damage", "")),
         "falloff_start": falloff_start,
@@ -123,6 +125,63 @@ def _weapon(tpl, variables: dict[str, str]) -> dict[str, Any]:
         "raw": {k: _plain(v) for k, v in raw.items()
                 if k in ("damage", "damage_falloff_range", "headshot", "pellets", "pradius", "shot_type")},
     }
+
+
+_ABILITY_TYPES = {"weapon": "weapon", "ability": "ability", "ultimate ability": "ultimate",
+                  "passive ability": "passive", "minor perk": "perk", "major perk": "perk"}
+_KEYS = {"ability 1": "Shift", "ability 2": "E", "primary fire": "Primary Fire", "secondary fire": "Secondary Fire",
+         "quick melee": "Quick Melee", "jump": "Jump", "reload": "Reload", "ultimate": "Q"}
+_FORMS = {"mech", "pilot"}          # D.Va / D.Mon 的机甲、驾驶员形态
+
+
+def _type_parts(text: str) -> tuple[str, str | None]:
+    """ability_type 的两种写法：'Weapon;;Primary Fire' 和 'Weapon (Hip Fire)' -> ('weapon', 'Hip Fire')。"""
+    text = _plain(text)
+    if ";;" in text:
+        kind, _, qual = text.partition(";;")
+    else:
+        m = re.match(r"^(.*?)\s*\((.*)\)\s*$", text)
+        kind, qual = (m.group(1), m.group(2)) if m else (text, "")
+    return kind.strip().lower(), (qual.strip() or None)
+
+
+def _removed(raw: dict[str, str]) -> bool:
+    # Wiki 有时忘了标 removed（如 Mercy 的「Flash Heal (old)」），名字带 (old) 的也算
+    return (_plain(raw.get("removed", "")).lower() in ("1", "yes", "true")
+            or _plain(raw.get("ability_name", "")).lower().endswith("(old)"))
+# 不放进 stats 的字段：长篇说明、媒体、旧描述、交互标记
+_SKIP = {"ability_name", "ability_image", "official_description", "old_description", "ability_type", "key",
+         "ability_details", "ability_video", "ability_keywords", "removed", "6v6_details"}
+
+
+def _value(text: str) -> str:
+    """字段值转纯文本，多行（<br>）用 "; " 连起来。"""
+    return "; ".join(p for p in (_plain(seg) for seg in _segments(text)) if p)
+
+
+def _ability(raw: dict[str, str]) -> dict[str, Any] | None:
+    """一个 {{Ability_details}}（变量已展开）-> 技能/天赋 dict；不认识的类型返回 None。"""
+    kind_text, qual = _type_parts(raw.get("ability_type", ""))
+    kind = _ABILITY_TYPES.get(kind_text)
+    if kind is None:
+        return None
+    form = qual if qual and qual.lower() in _FORMS else None
+    fire = qual if qual and not form else None
+    key_field = _plain(raw.get("key", "")).lower()
+    key = {"ultimate": "Q", "passive": "Passive"}.get(kind) or _KEYS.get(key_field) or fire
+    item = {
+        "name": _plain(raw.get("ability_name", "")),
+        "type": kind,
+        "key": key,
+        "form": form,
+        "description": _value(raw.get("official_description", "")),
+        "stats": {k: v for k, v in ((k, _value(v)) for k, v in raw.items()
+                                    if k not in _SKIP and not k.startswith("ignores_"))
+                  if v and v.lower() != "none"},
+    }
+    if kind == "perk":
+        item["tier"] = "major" if kind_text.startswith("major") else "minor"
+    return item
 
 
 def parse_patches(code) -> list[dict[str, str]]:
@@ -163,17 +222,20 @@ def parse_hero(title: str, wikitext: str) -> dict[str, Any] | None:
         role_queue["health"] += ROLE_QUEUE_TANK_BONUS
 
     variables: dict[str, str] = {}
-    weapons = []
+    weapons, abilities, perks = [], [], []
     for tpl in code.filter_templates():
         if _name(tpl) != "ability details":
             continue
         # 按页面顺序处理，让 {{#var:}} 能引用前面 {{#vardefineecho:}} 定义的值
         ability_type = _param(tpl, "ability_type") or ""
+        raw = {str(p.name).strip(): _resolve_vars(str(p.value).strip(), variables) for p in tpl.params}
+        if _removed(raw):    # 已从游戏里移除的旧技能/旧武器/旧天赋
+            continue
         if ability_type.strip().startswith("Weapon"):
             weapons.append(_weapon(tpl, variables))
-        else:
-            for p in tpl.params:
-                _resolve_vars(str(p.value), variables)
+        item = _ability(raw)
+        if item is not None:
+            (perks if item["type"] == "perk" else abilities).append(item)
 
     return {
         "name": title,
@@ -181,6 +243,8 @@ def parse_hero(title: str, wikitext: str) -> dict[str, Any] | None:
         "subrole": subrole,
         "hp": {"role_queue": role_queue, "open_queue": open_queue, "6v6": pool("6v6")},
         "weapons": weapons,
+        "abilities": abilities,
+        "perks": perks,
         "patches": parse_patches(code),
         "source_url": "https://overwatch.fandom.com/wiki/" + title.replace(" ", "_"),
     }

@@ -93,6 +93,32 @@ def test_tools():
     check("headshot 无法识别时返回错误", "headshot" in bad.get("error", ""))
 
 
+def test_abilities_tool():
+    store = make_store()
+    qa = HeroQA(None, "m", store)
+    r = qa.run_tool("get_hero_abilities", {"hero": "卡西迪"})
+    check("技能工具按中文名解析英雄", r.get("hero") == "Cassidy")
+    check("技能工具带职责、副职责和血量", r.get("role") == "Damage" and r.get("hp", {}).get("health") == 250)
+    names = [a["name"] for a in r.get("abilities", [])]
+    check("技能工具列出现行技能", names == ["Peacekeeper", "Fan the Hammer", "Combat Roll", "Flashbang", "Deadeye"])
+    check("技能工具带天赋", len(r.get("perks", [])) == 4)
+    check("技能工具带数据日期", r.get("fetched_at") == "2026-10-02T00:00:00Z")
+    check("未知英雄返回候选", qa.run_tool("get_hero_abilities", {"hero": "zzzz"}).get("error") == "unknown_hero")
+    old = {k: v for k, v in store.heroes["Tracer"].items() if k not in ("abilities", "perks")}
+    store.heroes["Tracer"] = old    # 旧缓存里没有技能字段（部署后、Wiki 刷新前）
+    r = qa.run_tool("get_hero_abilities", {"hero": "Tracer"})
+    check("旧缓存没有技能数据时给出说明而不是报错", r.get("error") == "no_ability_data")
+    stats = qa.run_tool("get_hero_stats", {"hero": "Cassidy"})
+    check("get_hero_stats 不带技能列表（保持上下文小）", "abilities" not in stats and "perks" not in stats)
+
+
+def test_abilities_prompt():
+    from hero_qa import SYSTEM
+    check("工具列表里有 get_hero_abilities", any(t["name"] == "get_hero_abilities" for t in TOOLS))
+    check("只发英雄名时给技能概览", "only a hero name" in SYSTEM and "get_hero_abilities" in SYSTEM)
+    check("不再声称技能信息不支持", "ability damage (non-weapon)" not in SYSTEM)
+
+
 def test_default_weapon():
     store = make_store()
     gun = {"name": "Kunai", "fire": None, "shot_type": "proj", "headshot": True, "pellets": 1,
@@ -177,8 +203,8 @@ def test_loop():
     answer = asyncio.run(HeroQA(client, "test-model", make_store()).answer("卡西迪爆头几枪杀猎空？"))
     check("循环结束后返回最终文本", answer == "2 发爆头即可击杀猎空。")
     first = client.requests[0]
-    check("请求带 system 和 4 个工具", "system" in first and [t["name"] for t in first["tools"]] ==
-          ["get_hero_stats", "get_patch_history", "shots_to_kill", "get_matchups"])
+    check("请求带 system 和 5 个工具", "system" in first and [t["name"] for t in first["tools"]] ==
+          ["get_hero_stats", "get_hero_abilities", "get_patch_history", "shots_to_kill", "get_matchups"])
     second = client.requests[1]["messages"]
     check("第二轮带上 assistant 的 tool_use 和 user 的 tool_result",
           second[1]["role"] == "assistant" and second[2]["role"] == "user")
@@ -278,6 +304,8 @@ def test_ask():
 
 if __name__ == "__main__":
     test_tools()
+    test_abilities_tool()
+    test_abilities_prompt()
     test_default_weapon()
     test_thinking_budget()
     test_tool_schema()
