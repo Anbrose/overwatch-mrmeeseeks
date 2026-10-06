@@ -14,6 +14,7 @@
 | `server/herodata.py` | 英雄数据：从 Wiki 抓取、缓存到 JSON、定时刷新、按中英文名查英雄 |
 | `server/damage.py` | 伤害衰减、护甲/护盾、爆头倍率、几枪击杀（纯函数） |
 | `server/hero_qa.py` | 英雄问答：Claude tool use 循环，数字只来自上面两个模块 |
+| `server/report.py` | `/report` 斜杠命令：弹出表单（选 bot + 描述），提交后发到报告频道 |
 | `client/client.py` | 本地客户端：连接/重连、配对码输入、Tab 监听、两段截图、上传 |
 
 ## 客户端状态
@@ -86,4 +87,4 @@
 - `地图分段对照`：每张地图每一段的关键位置名称，建议做成一个手动维护的 JSON 文件
 - `版本数据`：`herodata.HeroStore` 已有当前版本的英雄数值和补丁，可以直接作为 `patch_data` 接入
 
-新增 Discord 指令：在 `MeeseeksBot.on_message` 里按 `cmd` 分发。
+新增 Discord 指令：@ 指令在 `MeeseeksBot.on_message` 里按 `cmd` 分发；斜杠命令注册到 `MeeseeksBot.tree`（参考 `report.register`），启动时在 `setup_hook` 里同步到 Discord。

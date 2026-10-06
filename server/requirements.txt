@@ -1,4 +1,4 @@
-discord.py>=2.4
+discord.py>=2.6
 websockets>=14
 anthropic>=0.40
 python-dotenv>=1.0

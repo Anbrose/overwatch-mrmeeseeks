@@ -6,6 +6,7 @@
   @mrmeeseeks disconnect 解绑当前频道里的客户端
   @mrmeeseeks help       显示帮助
   @mrmeeseeks <问题>     英雄问答（数值、补丁、几枪击杀），见 hero_qa.py
+  /report                弹出表单报告某个 bot 的问题，见 report.py
 """
 from __future__ import annotations
 
@@ -22,6 +23,7 @@ from dotenv import load_dotenv
 from analyzer import Analyzer, format_facts
 from hero_qa import Cooldown, HeroQA
 from herodata import HeroStore, load_aliases, refresh_loop
+import report
 from registry import CODE_TTL_SECONDS, ClientConn, PairingError, Registry
 from ws_server import WSServer
 
@@ -34,7 +36,8 @@ HELP_TEXT = (
     "`@mrmeeseeks disconnect` Unpair the client bound to this channel\n"
     "`@mrmeeseeks help` Show this help\n"
     "`@mrmeeseeks <question>` Ask about heroes, e.g. `was Cassidy nerfed recently?`, "
-    "`Tracer HP`, `how many Cassidy headshots kill Mauga at 30m?`"
+    "`Tracer HP`, `how many Cassidy headshots kill Mauga at 30m?`\n"
+    "`/report` Report a problem with one of the bots"
 )
 COMMANDS = ("connect", "status", "disconnect", "help")
 ASK_COOLDOWN_SECONDS = 5
@@ -128,7 +131,8 @@ class ClientSelectView(discord.ui.View):
 # ---------------- Bot 本体 ----------------
 class MeeseeksBot(discord.Client):
     def __init__(self, registry: Registry, analyzer: Analyzer | None,
-                 store: HeroStore | None = None, hero_qa: HeroQA | None = None):
+                 store: HeroStore | None = None, hero_qa: HeroQA | None = None,
+                 report_bots: list[str] | None = None, report_channel_id: int | None = None):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents, allowed_mentions=discord.AllowedMentions(everyone=False, roles=False))
@@ -137,6 +141,17 @@ class MeeseeksBot(discord.Client):
         self.store = store
         self.hero_qa = hero_qa
         self.ask_cooldown = Cooldown(ASK_COOLDOWN_SECONDS)
+        self.tree = discord.app_commands.CommandTree(self)
+        if report_bots and report_channel_id:
+            report.register(self.tree, report_bots, report_channel_id)
+
+    async def setup_hook(self) -> None:
+        # 每次启动都同步：去掉 REPORT_* 配置后，Discord 上的 /report 也会被移除
+        try:
+            synced = await self.tree.sync()
+            log.info("Synced slash commands: %s", ", ".join(c.name for c in synced) or "(none)")
+        except discord.HTTPException:
+            log.exception("Failed to sync slash commands")
 
     async def on_ready(self) -> None:
         log.info("Logged in to Discord as %s", self.user)
@@ -273,9 +288,13 @@ async def main() -> None:
     store.load()
     hero_qa = HeroQA(AsyncAnthropic(api_key=api_key), model, store) if api_key else None
     refresh_hours = float(os.environ.get("HERO_REFRESH_HOURS", "24"))
+    report_bots = report.parse_bot_list(os.environ.get("REPORT_BOTS", ""))
+    report_channel_id = report.parse_channel_id(os.environ.get("REPORT_CHANNEL_ID", ""))
+    if not (report_bots and report_channel_id):
+        log.info("REPORT_BOTS / REPORT_CHANNEL_ID not set; /report is disabled")
 
     registry = Registry()
-    bot = MeeseeksBot(registry, analyzer, store, hero_qa)
+    bot = MeeseeksBot(registry, analyzer, store, hero_qa, report_bots, report_channel_id)
     ws = WSServer(
         registry, bot,
         host=os.environ.get("WS_HOST", "0.0.0.0"),

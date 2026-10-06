@@ -51,6 +51,7 @@ mrmeeseeks/
 │   ├── ws_server.py       WebSocket 握手、配对、收截图
 │   ├── registry.py        在线客户端与配对状态
 │   ├── analyzer.py        调用 Claude 识别和给建议
+│   ├── report.py          /report 问题反馈表单
 │   ├── requirements.txt
 │   └── .env.example       配置模板
 ├── client/                本地客户端
@@ -101,7 +102,7 @@ cd mrmeeseeks
    - 点 **Reset Token**，复制得到的 Token，下一步要用。**Token 相当于密码，不要发给任何人，也不要提交到 Git。**
    - 往下找到 **Privileged Gateway Intents**，打开 **Message Content Intent**，保存。
 3. 左侧进入 **OAuth2 → URL Generator**：
-   - **Scopes** 勾选 `bot`
+   - **Scopes** 勾选 `bot` 和 `applications.commands`（后者用于 `/report` 斜杠命令；之前只勾了 `bot` 的话，用新链接重新授权一次即可，不需要踢出 bot）
    - **Bot Permissions** 勾选：`View Channels`、`Send Messages`、`Attach Files`、`Read Message History`
 4. 复制页面底部生成的链接，在浏览器里打开，选择你的 Discord 服务器，授权。
 
@@ -325,6 +326,8 @@ journalctl -u mrmeeseeks -f      # 查看日志
 | `MIN_SNAPSHOT_INTERVAL` | 否 | `5` | 同一客户端两次分析的最短间隔（秒） |
 | `HERO_DATA_PATH` | 否 | `server/data/heroes.json` | 英雄数据缓存文件。Docker 部署时位于 `herodata` 卷 |
 | `HERO_REFRESH_HOURS` | 否 | `24` | 每隔多少小时从 Overwatch Wiki 刷新英雄数据 |
+| `REPORT_CHANNEL_ID` | 否 | 空 | `/report` 报告发到的频道 ID。与 `REPORT_BOTS` 都填了才启用 `/report` |
+| `REPORT_BOTS` | 否 | 空 | `/report` 下拉框里的 bot 名单，逗号分隔，最多 24 个，末尾自动加 `Other` |
 
 ### 客户端参数
 
@@ -355,6 +358,7 @@ python client\client.py --help
 | `@mrmeeseeks disconnect` | 解绑本频道的客户端 |
 | `@mrmeeseeks help` | 显示帮助 |
 | `@mrmeeseeks <问题>` | 英雄问答：数值（血量、子弹体积）、最近的补丁、N 米处几枪击杀。例如 `@mrmeeseeks 卡西迪最近被削了吗`、`@mrmeeseeks 卡西迪 30 米爆头几枪杀毛加`。需要 `ANTHROPIC_API_KEY` |
+| `/report` | 弹出表单报告某个 bot 的问题（选 bot、描述、时间、复现步骤），提交后发到 `REPORT_CHANNEL_ID` 频道。需要配置 `REPORT_CHANNEL_ID` 和 `REPORT_BOTS` |
 
 ### 配对规则
 
@@ -377,6 +381,7 @@ python tests/test_heroparse.py # Wiki 英雄页面解析
 python tests/test_damage.py    # 伤害衰减、护甲、几枪击杀
 python tests/test_herodata.py  # 英雄数据缓存、刷新、名字解析
 python tests/test_hero_qa.py   # 英雄问答工具与对话循环、bot 路由
+python tests/test_report.py    # /report 名单解析、报告 embed、表单提交
 ```
 
 每个脚本最后一行显示 `N/N passed`，全部通过时退出码为 0。
