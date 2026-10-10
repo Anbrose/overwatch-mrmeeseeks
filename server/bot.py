@@ -9,6 +9,7 @@
   @mrmeeseeks disconnect 解绑当前频道里的客户端
   @mrmeeseeks help       显示帮助
   @mrmeeseeks wishes [游戏] [7d]  管理员导出许愿 CSV（私信发送）
+  @mrmeeseeks patches here|off|status  官方补丁说明推送频道，见 patch_feed.py
   @mrmeeseeks <问题>     英雄问答（数值、补丁、几枪击杀），见 hero_qa.py
 
 功能许愿频道（WISH_CHANNEL_ID）只接受表单提交，见 wishes.py；许愿子区里的 @ 用来改方案，见 wish_plan.py。
@@ -32,6 +33,7 @@ from dotenv import load_dotenv
 import overfast
 import matchups
 from esports_feed import EsportsFeed
+from patch_feed import PatchFeed, PatchSummarizer, chinese_names
 from analyzer import Analyzer, format_facts, roles_from_roster
 from hero_qa import Cooldown, HeroQA
 from herodata import HeroStore, load_aliases, refresh_loop
@@ -63,13 +65,15 @@ HELP_TEXT = (
     "`@mrmeeseeks disconnect` Unpair the client bound to this channel\n"
     "`@mrmeeseeks esports here` / `esports off` Post OWCS schedule, reminders, results and news in this channel "
     "(needs Manage Channels); `esports status` shows the current setup\n"
+    "`@mrmeeseeks patches here` / `patches off` Post a summary of each new official Overwatch patch in this channel "
+    "(needs Manage Channels); `patches status` shows the latest patch\n"
     "`@mrmeeseeks help` Show this help\n"
     "`@mrmeeseeks wishes [game] [7d]` (admins) Get feature wishes with their votes as a CSV by DM\n"
     "`@mrmeeseeks <question>` Ask about heroes, e.g. `was Cassidy nerfed recently?`, "
     "`Tracer HP`, `how many Cassidy headshots kill Mauga at 30m?`"
 )
 COMMANDS = ("connect", "status", "disconnect", "help", "analyze", "label")
-ARG_COMMANDS = ("player", "esports", "wishes")     # 带参数的指令；参数保留大小写（BattleTag 大小写敏感）
+ARG_COMMANDS = ("player", "esports", "patches", "wishes")     # 带参数的指令；参数保留大小写（BattleTag 大小写敏感）
 ASK_COOLDOWN_SECONDS = 5
 
 
@@ -168,7 +172,7 @@ class MeeseeksBot(discord.Client):
                  store: HeroStore | None = None, hero_qa: HeroQA | None = None,
                  esports_feed: EsportsFeed | None = None,
                  wish_channel_id: int | None = None, wish_desk: WishDesk | None = None,
-                 wish_plans: WishPlans | None = None):
+                 wish_plans: WishPlans | None = None, patch_feed: PatchFeed | None = None):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents, allowed_mentions=discord.AllowedMentions(everyone=False, roles=False))
@@ -184,6 +188,7 @@ class MeeseeksBot(discord.Client):
         self.hero_qa = hero_qa
         self.ask_cooldown = Cooldown(ASK_COOLDOWN_SECONDS)
         self.esports_feed = esports_feed
+        self.patch_feed = patch_feed
         self.wish_channel_id = wish_channel_id
         self.wish_desk = wish_desk
         self.wish_plans = wish_plans
@@ -250,6 +255,8 @@ class MeeseeksBot(discord.Client):
             await self._player(message, arg)
         elif cmd == "esports":
             await self._esports(message, arg)
+        elif cmd == "patches":
+            await self._patches(message, arg)
         elif cmd == "analyze":
             await self._reanalyze(message)
         elif cmd == "label":
@@ -292,6 +299,54 @@ class MeeseeksBot(discord.Client):
         await self.wait_until_ready()
         channel = await self._channel(channel_id)
         await channel.send(text, allowed_mentions=discord.AllowedMentions.none())
+
+    post_patches = post_esports      # 补丁推送用同一个发送函数
+
+    async def _patches(self, message: discord.Message, arg: str) -> None:
+        feed = self.patch_feed
+        if feed is None:
+            await message.reply("The patch notes feed is not enabled on this server.")
+            return
+        action = arg.strip().lower()
+        if action in ("here", "off"):
+            perms = message.channel.permissions_for(message.author) if message.guild else None
+            if perms is None or not perms.manage_channels:
+                await message.reply("You need Manage Channels permission to change the patch notes channel.")
+                return
+            if action == "off":
+                feed.set_channel(None)
+                await message.reply("Patch notes posts are turned off.")
+                return
+            if not message.channel.permissions_for(message.guild.me).send_messages:
+                await message.reply("I can't send messages in this channel — give me Send Messages permission first.")
+                return
+            moved = feed.channel_id != message.channel.id
+            feed.set_channel(message.channel.id)
+            if not moved:
+                await message.reply("✅ Patch notes are already posted in this channel.")
+                return
+            await message.reply("✅ New official Overwatch patch notes will be summarized in this channel. "
+                                "Here's the latest one:")
+            try:
+                async with message.channel.typing():
+                    latest = await feed.post_latest(message.channel.id, self.post_patches)
+            except Exception:
+                log.exception("Could not post the latest patch to %s", message.channel.id)
+                latest = None
+            if latest is None:
+                await message.reply("I couldn't load the official patch notes right now; "
+                                    "new patches will still be posted here.")
+        elif action == "status":
+            where = f"<#{feed.channel_id}>" if feed.channel_id else "not set (use `@mrmeeseeks patches here`)"
+            lines = [f"Patch notes channel: {where}"]
+            if feed.patches:
+                latest = feed.patches[0]
+                lines.append(f"Latest official patch: [{latest['title']}](<{latest['url']}>)")
+            if feed.state.get("checked_at"):
+                lines.append(f"Last checked: {feed.state['checked_at'].replace('T', ' ')} UTC")
+            await message.reply("\n".join(lines))
+        else:
+            await message.reply("Usage: `@mrmeeseeks patches here`, `patches off` or `patches status`.")
 
     # ---------- 功能许愿 ----------
     def _in_wish_thread(self, channel) -> bool:
@@ -523,7 +578,16 @@ async def main() -> None:
     # 对位数据和英雄数据放在同一个目录（Docker 里是 herodata 卷）
     matchup_store = matchups.MatchupStore(os.path.join(os.path.dirname(os.path.abspath(store.path)), "matchups.json"))
     matchup_store.load()
-    hero_qa = (HeroQA(AsyncAnthropic(api_key=api_key), model, store, effort=effort, matchups=matchup_store)
+    # 补丁推送状态也放在 herodata 目录（Docker 里是 herodata 卷）
+    summarizer = (PatchSummarizer(AsyncAnthropic(api_key=api_key), model, effort,
+                                  os.environ.get("PATCH_LANGUAGE", "").strip() or "Simplified Chinese",
+                                  chinese_names(load_aliases()))
+                  if api_key else None)
+    patch_feed = PatchFeed(os.path.join(os.path.dirname(os.path.abspath(store.path)), "patch_state.json"),
+                           summarizer=summarizer)
+    patch_feed.load()
+    hero_qa = (HeroQA(AsyncAnthropic(api_key=api_key), model, store, effort=effort, matchups=matchup_store,
+                      patches=patch_feed)
                if api_key else None)
     analyzer = (Analyzer(api_key, model, effort, matchups=matchup_store, roles=roles_from_roster(roster))
                 if api_key else None)
@@ -555,7 +619,7 @@ async def main() -> None:
 
     registry = Registry()
     bot = MeeseeksBot(registry, analyzer, recognizer, labels, roster, store, hero_qa, esports_feed,
-                      int(wish_channel) if wish_channel else None, wish_desk, wish_plans)
+                      int(wish_channel) if wish_channel else None, wish_desk, wish_plans, patch_feed)
     ws = WSServer(
         registry, bot,
         host=os.environ.get("WS_HOST", "0.0.0.0"),
@@ -567,7 +631,8 @@ async def main() -> None:
         await ws.start()
         refreshers = [asyncio.create_task(refresh_loop(store, refresh_hours)),
                       asyncio.create_task(refresh_loop(matchup_store, refresh_hours, fetch=matchups.fetch_all)),
-                      asyncio.create_task(esports_feed.run(bot.post_esports))]
+                      asyncio.create_task(esports_feed.run(bot.post_esports)),
+                      asyncio.create_task(patch_feed.run(bot.post_patches))]
         try:
             await bot.start(token)
         except discord.LoginFailure:

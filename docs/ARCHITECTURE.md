@@ -17,6 +17,8 @@
 | `server/matchups.py` | 英雄对位（克制）数据：从 counterwatch.gg 抓取、缓存、每日刷新 |
 | `server/esports.py` | 赛事数据：解析 Liquipedia:Matches（比赛）和 esports.overwatch.com 首页（新闻） |
 | `server/esports_feed.py` | 赛事推送：`plan()` 纯函数决定发什么，`EsportsFeed` 负责抓取、状态持久化和发送 |
+| `server/patchnotes.py` | 官方补丁说明：抓取 overwatch.blizzard.com 的当月和上月补丁页，解析成整篇文本 + 按英雄分组的改动 |
+| `server/patch_feed.py` | 补丁推送：`PatchFeed` 定时检查、用 `PatchSummarizer`（Claude）写摘要并发到频道；也给英雄问答提供最近的官方补丁 |
 | `client/client.py` | 本地客户端：连接/重连、配对码输入、Tab 监听、两段截图、上传 |
 
 ## 客户端状态
@@ -99,6 +101,14 @@
 3. **发送**：发送成功后才记账，失败的下一轮重试。没有设置频道时照常记账、不发送。状态保存在英雄数据缓存同一目录的 `esports_state.json`。
 
 已知限制：Liquipedia 汇总页只有最近约 50 场即将进行和 50 场已结束的比赛；官方首页只放 1–2 条精选新闻。
+
+## 补丁推送
+
+英雄问答原来只从 Wiki 拿补丁历史，但 Wiki 的英雄页常常要过几天才收录新补丁。现在直接读官方补丁说明：
+
+1. **抓取**：`PatchFeed.run` 每 3 小时抓一次 `overwatch.blizzard.com/en-us/news/patch-notes/`（只显示当月）和上个月的归档页 `/live/YYYY/MM/`，合并后保留最近 8 个补丁。每个补丁按页面上的锚点 `patch-YYYY-MM-DD` 去重。当月页有内容却解析不出补丁时抛 `PatchNotesUnavailable`（多半是官网改版），失败时保留上一次的数据，10 分钟后重试。
+2. **发送**：新补丁用 `PatchSummarizer` 写成摘要（语言由 `PATCH_LANGUAGE` 决定；英雄中文名只用 `aliases.json` 里的，没有就保留英文，不让模型自己翻译），超过 2000 字时按行拆成多条。摘要生成一次就缓存；生成失败时只列出改动的英雄。发送成功后才记账，失败的下次重试。首次启动只记下已有的补丁，不补发；没有设置频道时照常记账、不发送。`patches here` 设置频道时立刻发一次最新的补丁。状态（频道、已发补丁、最近的补丁全文、摘要缓存）保存在英雄数据缓存同一目录的 `patch_state.json`。
+3. **问答**：`get_official_patch_notes` 工具按英雄返回最近几次官方补丁里该英雄的改动（官方写法如 `Lúcio` 通过 `HeroStore.resolve` 和 Wiki 名对齐）；不带英雄时返回最新补丁全文。提示词要求比 Wiki 新的改动以官方为准。
 
 ## 扩展点
 

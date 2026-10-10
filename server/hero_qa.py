@@ -21,13 +21,13 @@ MAX_TOKENS = 16000
 SYSTEM = """You are mrmeeseeks, an Overwatch hero data assistant in a Discord channel.
 Rules:
 1. Every number in your answer must come from a tool result in this conversation. Never use numbers from memory.
-2. To say whether a hero was buffed or nerfed, call get_patch_history and quote the relevant patch lines with their dates. If the recent changes only touch perks, say so.
+2. To say whether a hero was buffed or nerfed, or what changed recently, call get_official_patch_notes (Blizzard's official notes: newest, available the day a patch ships) and get_patch_history (Overwatch Wiki: longer history, but it can lag a few days behind a new patch). Quote the relevant lines with their dates, and trust the official notes for anything newer than the Wiki's newest patch. If the recent changes only touch perks or hit volumes, say so. If an official patch is newer than the Wiki data's fetched_at and changes a number you quote from another tool, give the patched value and say the Wiki number is outdated.
 3. For damage or "how many shots to kill" questions, call shots_to_kill. If a weapon has several damage variants (e.g. charge levels), pick the one the user means via `variant` and say which one you used.
 4. State the assumptions returned by the tools (e.g. all pellets hit, Role Queue health).
 5. Pass hero and weapon names to tools exactly as the user wrote them; never translate them yourself, the tools resolve names in any language. If a tool returns candidates for an unclear hero name, ask the user which hero they meant. Do not guess. When naming a weapon in your answer, use the name from the tool result.
 6. If a tool returns "unsupported", explain why. Time-to-kill and perk damage bonuses are not supported yet, and shots_to_kill only simulates weapons; for other abilities quote the numbers from get_hero_abilities instead.
 7. Answer in the language the user wrote in: if the message contains Chinese characters, answer in Chinese, even if it is only a hero name (e.g. "血律"). Use at most about 150 words (an ability overview may use up to about 300 words).
-8. End with one line: "Source: Overwatch Wiki, data fetched <fetched_at date>"; for matchup answers use "Source: counterwatch.gg, updated <source_updated>" instead.
+8. End with one line: "Source: Overwatch Wiki, data fetched <fetched_at date>"; for matchup answers use "Source: counterwatch.gg, updated <source_updated>" instead; when you used official patch notes, use or add "Blizzard patch notes, <patch date>".
 9. For counter or matchup questions ("who counters X", "how does X do against Y"), call get_matchups and quote its numbers. Explain that they measure duel and teamfight outcomes, not match win rate. Never state a counter relationship that get_matchups did not return.
 10. If the message is only a hero name (e.g. "Doctrine", "血律"), or asks what a hero's abilities, ultimate, passive or perks do, call get_hero_abilities. For only a hero name, give an overview: one header line with role, sub-role and health, then one line per weapon/ability/ultimate/passive as "- Name (key): what it does — key numbers (cooldown, damage/heal, duration)", then a "Perks" section with one short line per current minor and major perk. Keep ability and perk names exactly as the tools return them (official English names) and never invent a Chinese translation for them; hero names may use the Chinese name the user wrote."""
 
@@ -54,6 +54,16 @@ TOOLS = [
             "hero": _HERO,
             "limit": {"type": "integer", "description": "Number of patches, 1-20, default 5"},
         }, "required": ["hero"]},
+    },
+    {
+        "name": "get_official_patch_notes",
+        "description": "Blizzard's official patch notes from the last few weeks, newest first, available the day a "
+                       "patch ships. With hero: that hero's changes in each recent patch (section, developer "
+                       "comments, change lines). Without hero: the latest patch's full notes and which heroes changed.",
+        "input_schema": {"type": "object", "properties": {
+            "hero": {**_HERO, "description": "Optional hero, " + _HERO["description"]},
+            "limit": {"type": "integer", "description": "Number of patches to search, 1-8, default 4"},
+        }},
     },
     {
         "name": "shots_to_kill",
@@ -108,13 +118,15 @@ def _as_bool(value: Any) -> bool | None:
 
 class HeroQA:
     def __init__(self, client: Any, model: str, store: HeroStore, max_turns: int = MAX_TURNS,
-                 effort: str | None = "low", matchups: mu.MatchupStore | None = None):
+                 effort: str | None = "low", matchups: mu.MatchupStore | None = None,
+                 patches: Any = None):
         self.client = client
         self.model = model
         self.store = store
         self.max_turns = max_turns
         self.effort = effort   # 问答是短对话，low 足够且快；None 为模型默认
         self.matchups = matchups
+        self.patches = patches   # PatchFeed：.patches 是最近的官方补丁，新的在前
 
     # ---------- 工具 ----------
     def _hero(self, name: str) -> dict[str, Any]:
@@ -176,7 +188,37 @@ class HeroQA:
             return {**result, "fetched_at": self.store.fetched_at}
         if name == "get_matchups":
             return self._matchups(args)
+        if name == "get_official_patch_notes":
+            return self._official_patches(args)
         return {"error": f"unknown tool {name}"}
+
+    def _official_patches(self, args: dict[str, Any]) -> dict[str, Any]:
+        patches = self.patches.patches if self.patches is not None else []
+        if not patches:
+            return {"error": "no_official_patch_data",
+                    "message": "Official patch notes are not loaded yet; use get_patch_history instead."}
+        limit = args.get("limit")
+        limit = max(1, min(4 if limit is None else int(limit), 8))
+        recent = patches[:limit]
+        newest = {"newest_official_patch": patches[0]["date"], "checked_at": self.patches.state.get("checked_at")}
+        if not args.get("hero"):
+            latest = patches[0]
+            return {"date": latest["date"], "title": latest["title"], "url": latest["url"],
+                    "heroes_changed": sorted(latest["heroes"]), "notes": latest["text"][:12000], **newest}
+        hero = self._hero(args["hero"])
+        if "error" in hero:
+            return hero
+        found = []
+        for p in recent:
+            # 官方写法和 Wiki 名不一定一样（Lúcio / Lucio、Soldier: 76），用 resolve 对齐
+            lines = next((v for k, v in p["heroes"].items()
+                          if k == hero["name"] or self.store.resolve(k) is hero), None)
+            if lines:
+                found.append({"date": p["date"], "title": p["title"], "url": p["url"], "changes": lines})
+        result = {"hero": hero["name"], "patches": found, "patches_searched": [p["date"] for p in recent], **newest}
+        if not found:
+            result["note"] = f"{hero['name']} is not mentioned in the last {len(recent)} official patches."
+        return result
 
     def _matchups(self, args: dict[str, Any]) -> dict[str, Any]:
         if self.matchups is None or not self.matchups.ready:

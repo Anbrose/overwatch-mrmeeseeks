@@ -329,6 +329,7 @@ journalctl -u mrmeeseeks -f      # 查看日志
 | `MIN_SNAPSHOT_INTERVAL` | 否 | `5` | 同一客户端两次分析的最短间隔（秒） |
 | `HERO_DATA_PATH` | 否 | `server/herodata/heroes.json` | 英雄数据缓存文件。Docker 部署时位于 `herodata` 卷 |
 | `HERO_REFRESH_HOURS` | 否 | `24` | 每隔多少小时刷新英雄数据（Overwatch Wiki）和对位数据（counterwatch.gg）；对位数据缓存在同一目录的 `matchups.json` |
+| `PATCH_LANGUAGE` | 否 | `Simplified Chinese` | 补丁推送摘要用的语言（英文写法，例如 `English`、`Traditional Chinese`） |
 | `WISH_CHANNEL_ID` | 否 | 空 | 功能许愿频道的 ID，留空不启用。见下方「功能许愿频道」 |
 | `WISH_GAMES` | 否 | 守望先锋 + 22 个热门游戏 | 许愿表单里「哪个游戏」的下拉选项，逗号分隔，最多 24 个；末尾自动加 `Other ｜ 其他` |
 | `WISH_DAILY_LIMIT` | 否 | `2` | 每人每天能许几个愿，悉尼时间 0 点重置。改了之后重启，置顶入口消息里的说明会自动更新 |
@@ -366,8 +367,9 @@ python client\client.py --help
 | `@mrmeeseeks disconnect` | 解绑本频道的客户端 |
 | `@mrmeeseeks help` | 显示帮助 |
 | `@mrmeeseeks wishes [游戏] [7d]` | 管理员（「管理服务器」权限或 `WISH_REVIEWER_ID`）导出许愿 CSV，按 👍 数排序，私信发送。可按游戏（包含匹配，`漫威` 也行）、最近 N 天筛选 |
-| `@mrmeeseeks <问题>` | 英雄问答：数值（血量、子弹体积）、最近的补丁、N 米处几枪击杀。例如 `@mrmeeseeks 卡西迪最近被削了吗`、`@mrmeeseeks 卡西迪 30 米爆头几枪杀毛加`、`@mrmeeseeks 查莉娅怕谁`。克制关系来自 [counterwatch.gg](https://www.counterwatch.gg) 的对位评分（对决和团战结果，全段位，不是整局胜率）。需要 `ANTHROPIC_API_KEY` |
+| `@mrmeeseeks <问题>` | 英雄问答：数值（血量、子弹体积）、最近的补丁、N 米处几枪击杀。例如 `@mrmeeseeks 卡西迪最近被削了吗`（先查[官方补丁说明](https://overwatch.blizzard.com/en-us/news/patch-notes/)，补丁当天就能答对，再查 Wiki 的历史记录）、`@mrmeeseeks 卡西迪 30 米爆头几枪杀毛加`、`@mrmeeseeks 查莉娅怕谁`。克制关系来自 [counterwatch.gg](https://www.counterwatch.gg) 的对位评分（对决和团战结果，全段位，不是整局胜率）。需要 `ANTHROPIC_API_KEY` |
 | `@mrmeeseeks esports here` / `esports off` / `esports status` | 赛事推送频道：在当前频道推送 OWCS 和世界杯的每日赛程预告（悉尼时间 10:00）、开赛前 15 分钟提醒、赛果（比分用剧透遮罩）和官方新闻。`here`/`off` 需要"管理频道"权限。比赛数据来自 [Liquipedia](https://liquipedia.net/overwatch)（CC-BY-SA） |
+| `@mrmeeseeks patches here` / `patches off` / `patches status` | 补丁推送频道：每 3 小时检查一次[官方补丁说明](https://overwatch.blizzard.com/en-us/news/patch-notes/)，有新补丁就发一篇摘要（新内容、每个英雄的增强/削弱和关键数值、其他改动）并附原文链接。`here` 设置后会立刻发一次最新的补丁。`here`/`off` 需要"管理频道"权限；摘要需要 `ANTHROPIC_API_KEY`，没有时只列出改动的英雄 |
 
 ### 功能许愿频道
 
@@ -419,6 +421,7 @@ python tests/test_counter_advice.py # 换英雄建议里的对位评分和换人
 python tests/test_esports.py   # Liquipedia 赛程、官方新闻解析
 python tests/test_esports_feed.py # 赛事推送调度：预告、提醒、赛果、新闻、夏令时
 python tests/test_esports_bot.py  # esports 指令和权限
+python tests/test_patchnotes.py   # 官方补丁说明解析、推送频道、问答工具、patches 指令
 python tests/test_wishes.py     # 功能许愿：每日限额、存档导出、表单提交、入口消息、方案起草与修改
 ```
 
