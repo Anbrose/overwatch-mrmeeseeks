@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable
 
 import patchnotes
-from herodata import _norm
+from keybinds import KeyBinds, name_key
 
 log = logging.getLogger("mrmeeseeks.patches")
 
@@ -36,7 +36,7 @@ SUMMARY_INPUT_LIMIT = 40000   # 补丁原文最多喂给模型多少字符
 
 Send = Callable[[int, str], Awaitable[None]]
 
-SUMMARY_FORMAT = "v3"          # 摘要格式变了就改它，旧格式的缓存不再使用
+SUMMARY_FORMAT = "v4"          # 摘要格式变了就改它，旧格式的缓存不再使用
 SECTIONS = ("Basic Info", "Abilities", "Perks")
 SUMMARY_SYSTEM = """You write the patch-notes post for an Overwatch community Discord server whose members \
 read English, Chinese and Korean. Summarize the official patch notes you are given.
@@ -60,10 +60,14 @@ names are abilities and which are perks. Only list heroes with changes other tha
 there is a hit-volume pass, mention it once under Other. Put a blank line between heroes.
 **Other**: at most 3 bullets for the most noticeable remaining changes. Omit if none.
 
-Name tags: never write a hero, weapon, ability or perk name as plain text. Write [[Hero]] for a hero and \
-[[Hero|Name]] for one of its weapons, abilities or perks, copying the English names exactly from the \
-list below; they are replaced with English/Chinese/Korean names and hero icons for you. Maps, modes \
-and events stay plain English.
+Name tags: never write a hero, weapon, ability or perk name as plain text, not even inside a change \
+description. Write [[Hero]] for a hero and [[Hero|Name]] for one of its weapons, abilities or perks, \
+copying the English names exactly from the list below, e.g. "    - [[Shion|Survival Instinct]] (Minor, \
+new): [[Shion|Evade]] overhealth duration +1s". When you mention another hero's ability, name that hero \
+too: "attaching to [[Jetpack Cat]]'s [[Jetpack Cat|Lifeline]]". Tags are replaced with \
+English/Chinese/Korean names, default key bindings and hero icons for you, so never write key bindings \
+or "(Passive)" yourself. Maps, modes and \
+events stay plain English.
 Rules: only use facts and numbers from the notes. No opinions or tier predictions. No greeting, no \
 sign-off, no links (the title and link are added for you).
 
@@ -135,8 +139,9 @@ def render(patch: dict[str, Any], summary: str | None) -> str:
     return f"🛠️ **{patch['title']}**\n\n{body}\n\n🔗 Full patch notes: <{patch['url']}>"
 
 
-def name_list(patch: dict[str, Any]) -> str:
-    """给模型看的英文名单：每个英雄一行，按官方结构分出技能（带图标的条目）和威能（带 Perk 后缀）。"""
+def name_list(patch: dict[str, Any], kit: Callable[[str], list[str]] | None = None) -> str:
+    """给模型看的英文名单：每个英雄一行，按官方结构分出技能（带图标的条目）和威能；
+    kit(英雄) 给出它的全部技能（Wiki），描述里提到没改动的技能（如 Evade）时也能打标签。"""
     lines = []
     for hero in patch["heroes"]:
         abilities, perks = [], []
@@ -150,21 +155,24 @@ def name_list(patch: dict[str, Any]) -> str:
                                  else name)
                 else:
                     abilities.append(name)
+        # 官方 "Scrap Gun – Primary Fire" 改动了，就不再提供 Wiki 的 "Scrap Gun" / "Scrap Gun Alt Fire"，免得模型挑错名字
+        changed = {name_key(_FIRE_MODE.sub("", a)) for a in abilities}
+        others = [a for a in (kit(hero) if kit else [])
+                  if not any(name_key(a).startswith(c) or c.startswith(name_key(a)) for c in changed)]
         parts = [f"Abilities: {' | '.join(dict.fromkeys(abilities))}" if abilities else "",
-                 f"Perks: {' | '.join(dict.fromkeys(perks))}" if perks else ""]
+                 f"Perks: {' | '.join(dict.fromkeys(perks))}" if perks else "",
+                 f"Other abilities: {' | '.join(dict.fromkeys(others))}" if others else ""]
         detail = "; ".join(p for p in parts if p)
         lines.append(f"{hero} — {detail}" if detail else hero)
     return "\n".join(lines) or "(none)"
 
 
+_FIRE_MODE = re.compile(r"\s*(?:–|-|——)\s*(?:Primary|Secondary) Fire\s*$", re.I)
+_SPLIT_FIRE = re.compile(r"\[\[([^\]|]+)\|([^\]]+?)\]\]\s*\((Primary|Secondary) Fire\)", re.I)
+_PASSIVE_TWICE = re.compile(r"`Passive`( \((?:new )?passive\))", re.I)
 _HERO_BULLET = re.compile(r"^- .*\*\*\s*\[\[([^\]|]+)\]\]\s*\*\*")
 _SECTION = re.compile(r"^\s*-\s*\*\*\s*(basic info|abilities|perks)\s*\*\*\s*:?\s*(.*)$", re.I)
 _FIRST_TAG = re.compile(r"\[\[([^\]|]+?)\|([^\]]+?)\]\]")
-
-
-def name_key(name: str) -> str:
-    """对照用的名称键：忽略大小写、标点和末尾括号（"Reconstruction (Passive)" 和 "Reconstruction" 相同）。"""
-    return _norm(re.sub(r"\s*\([^)]*\)\s*$", "", name))
 
 
 def entry_kinds(patch: dict[str, Any]) -> dict[str, dict[str, str]]:
@@ -236,12 +244,16 @@ def trilingual(en: str, tr: dict[str, str] | None, zh_fallback: str = "") -> str
 
 
 def fill_names(text: str, table: dict[str, Any], fallback_zh: dict[str, str] | None = None,
-               icons: dict[str, str] | None = None) -> tuple[str, list[str]]:
-    """把 [[Hero]]、[[Hero|Name]] 换成「英文/中文/韩文」，中韩文只取对照表里的官方名称；英雄名前加头像表情。
+               icons: dict[str, str] | None = None, keys: Callable[[str, str], str | None] | None = None,
+               kinds: dict[str, dict[str, str]] | None = None) -> tuple[str, list[str]]:
+    """把 [[Hero]]、[[Hero|Name]] 换成「英文/中文/韩文」，中韩文只取对照表里的官方名称；英雄名前加头像表情，
+    技能名后加默认键位（keys，威能不加）。
 
-    国服页面没对上时英雄中文名退回 aliases.json（fallback_zh）；对照表里没有的名称只写英文、留空其余。
+    一条改动开头的技能名（标题）总是写成三语，缺的语言留空；描述里顺带提到的技能有译名才写三语，
+    没有就只写英文，免得一串空斜杠。
+    国服页面没对上时英雄中文名退回 aliases.json（fallback_zh）。
     返回 (替换后的文本, 对照表里找不到的标签)。"""
-    fallback_zh, icons = fallback_zh or {}, icons or {}
+    fallback_zh, icons, kinds = fallback_zh or {}, icons or {}, kinds or {}
     heroes, names = table.get("heroes", {}), table.get("names", {})
     unknown: list[str] = []
 
@@ -255,8 +267,20 @@ def fill_names(text: str, table: dict[str, Any], fallback_zh: dict[str, str] | N
         hits = [t for t in (entry_in(h, name) for h in names.values()) if t is not None]
         return hits[0] if len(hits) == 1 else None
 
+    def owner(name: str) -> str | None:
+        hits = [h for h, t in names.items() if entry_in(t, name) is not None]
+        return hits[0] if len(hits) == 1 else None
+
+    def ability(hero: str | None, name: str, tr: dict[str, str] | None, heading: bool) -> str:
+        shown = trilingual(name, tr) if heading or (tr and (tr.get("zh") or tr.get("ko"))) else name
+        perk = hero is not None and kinds.get(hero, {}).get(name_key(name)) == "Perks"
+        key = keys(hero, name) if keys and hero and not perk else None
+        return f"{shown} `{key}`" if key else shown
+
     def sub(m: re.Match) -> str:
         first, second = m.group(1).strip(), (m.group(2) or "").strip()
+        line_start = text.rfind("\n", 0, m.start()) + 1
+        heading = re.fullmatch(r"\s*- ", text[line_start:m.start()]) is not None
         if not second:
             if first in heroes:
                 name = trilingual(first, heroes[first], fallback_zh.get(first, ""))
@@ -265,25 +289,37 @@ def fill_names(text: str, table: dict[str, Any], fallback_zh: dict[str, str] | N
             if tr is None:
                 unknown.append(m.group(0))
                 return trilingual(first, None, fallback_zh.get(first, ""))
-            return trilingual(first, tr)
+            return ability(owner(first), first, tr, heading)
         tr = entry_in(names.get(first, {}), second) or entry_anywhere(second)
-        if tr is None:
+        if tr is None and heading:      # 描述里提到本次没改动的技能（如 Evade）本来就不在对照表里
             unknown.append(m.group(0))
-        return trilingual(second, tr)
+        return ability(first, second, tr, heading)
 
-    return _TAG.sub(sub, text), unknown
+    # 模型常把 "Scrap Gun – Primary Fire" 拆成 "[[Roadhog|Scrap Gun]] (Primary Fire)"，先合回官方全名
+    text = _SPLIT_FIRE.sub(lambda m: f"[[{m.group(1)}|{m.group(2)} – {m.group(3).title()} Fire]]", text)
+    # 模型有时在被动技能后面再写一遍 "(Passive)"，和键位重复
+    filled = _PASSIVE_TWICE.sub(lambda m: "`Passive`" + (" (new)" if "new" in m.group(1).lower() else ""), _TAG.sub(sub, text))
+    return filled, unknown
 
 
 class PatchSummarizer:
-    def __init__(self, client, model: str, effort: str | None = None, fallback_zh: dict[str, str] | None = None):
+    def __init__(self, client, model: str, effort: str | None = None, fallback_zh: dict[str, str] | None = None,
+                 keybinds: KeyBinds | None = None):
         self.client = client
         self.model = model
         self.effort = effort
         self.fallback_zh = fallback_zh or {}   # aliases.json 的中文英雄名，国服页面缺失时用
+        self.keybinds = keybinds or KeyBinds()
+
+    def _kit(self, hero: str) -> list[str]:
+        """英雄的全部技能名（Wiki），给模型在描述里打标签用。"""
+        store = self.keybinds.store
+        found = store.resolve(hero) if store is not None else None
+        return [a["name"] for a in found.get("abilities", [])] if isinstance(found, dict) else []
 
     async def summarize(self, patch: dict[str, Any]) -> str:
         """模型写的原始摘要：名称还是 [[...]] 标签，由 finish() 在发送时替换。"""
-        system = SUMMARY_SYSTEM.format(names=name_list(patch))
+        system = SUMMARY_SYSTEM.format(names=name_list(patch, self._kit))
         notes = f"{patch['title']}\n\n{patch['text']}"[:SUMMARY_INPUT_LIMIT]
         resp = await self.client.messages.create(
             model=self.model, max_tokens=MAX_TOKENS, system=system,
@@ -295,8 +331,10 @@ class PatchSummarizer:
         return text
 
     def finish(self, patch: dict[str, Any], raw: str, table: dict[str, Any], icons: dict[str, str] | None = None) -> str:
-        """补全三个分类，再把标签换成三语名称和头像。"""
-        text, unknown = fill_names(normalize_sections(raw, entry_kinds(patch)), table, self.fallback_zh, icons)
+        """补全三个分类，再把标签换成三语名称、键位和头像。"""
+        kinds = entry_kinds(patch)
+        text, unknown = fill_names(normalize_sections(raw, kinds), table, self.fallback_zh, icons,
+                                   self.keybinds.for_patch(patch), kinds)
         if unknown:
             log.warning("Summary of %s used names not in the name table: %s", patch["id"], ", ".join(unknown[:10]))
         return text

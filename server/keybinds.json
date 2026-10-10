@@ -1,0 +1,10 @@
+{
+  "_comment": "技能默认键位（PC）的手动标注，优先于补丁原文和 Wiki。格式：{\"英雄英文名\": {\"技能英文名\": \"Shift\"}}，键位可写 LMB / RMB / Shift / E / Q / Ctrl / Passive。启动日志会列出还没有键位的技能。",
+  "Doctrine": {
+    "Shrouded Momentum": "Shift",
+    "Invigorating Drones": "E"
+  },
+  "Wrecking Ball": {
+    "Piledriver": "Ctrl"
+  }
+}

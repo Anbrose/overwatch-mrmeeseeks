@@ -34,6 +34,7 @@ import overfast
 import matchups
 from esports_feed import EsportsFeed
 from hero_emojis import HeroEmojis
+from keybinds import KeyBinds, load_manual as load_manual_keys
 from patch_feed import PatchFeed, PatchSummarizer, chinese_names
 from analyzer import Analyzer, format_facts, roles_from_roster
 from hero_qa import Cooldown, HeroQA
@@ -580,7 +581,12 @@ async def main() -> None:
     matchup_store = matchups.MatchupStore(os.path.join(os.path.dirname(os.path.abspath(store.path)), "matchups.json"))
     matchup_store.load()
     # 补丁推送状态也放在 herodata 目录（Docker 里是 herodata 卷）
-    summarizer = (PatchSummarizer(AsyncAnthropic(api_key=api_key), model, effort, chinese_names(load_aliases()))
+    keys = KeyBinds(store, load_manual_keys())
+    if keys.missing():
+        log.warning("No default key known for %d abilities (add them to server/keybinds.json): %s",
+                    len(keys.missing()), ", ".join(f"{h} / {a}" for h, a in keys.missing()))
+    summarizer = (PatchSummarizer(AsyncAnthropic(api_key=api_key), model, effort, chinese_names(load_aliases()),
+                                  keys)
                   if api_key else None)
     patch_feed = PatchFeed(os.path.join(os.path.dirname(os.path.abspath(store.path)), "patch_state.json"),
                            summarizer=summarizer)

@@ -340,3 +340,30 @@ async def fetch_translations(en: dict[str, Any]) -> dict[str, Any]:
             if found[lang] is None:
                 log.warning("No %s patch notes found for %s", lang, en["id"])
     return translations(en, found["ko"], found["cn"])
+
+
+# ---------- 新技能的默认键位 ----------
+_ASSIGNED = re.compile(r"assigned to (Primary Fire|Secondary Fire|Ability 1|Ability 2|Ultimate|Shift|E|Q)\b", re.I)
+_NEW_PASSIVE = re.compile(r"\bnew passive\b", re.I)
+
+
+def stated_keys(patch: dict[str, Any]) -> dict[str, dict[str, str]]:
+    """补丁原文里写明的新技能键位：{英雄: {技能名: "Secondary Fire" / "Ability 1" / "Passive" ...}}。
+
+    例如 "Trash Compactor:" 下面的 "- New ability assigned to Secondary Fire by default."。"""
+    keys: dict[str, dict[str, str]] = {}
+    for hero, lines in patch.get("heroes", {}).items():
+        ability = None
+        for line in lines:
+            text = line.strip()
+            if text.endswith(":") and not text.startswith("-"):
+                ability = text[:-1].strip()
+                continue
+            if ability is None or not text.startswith("-"):
+                continue
+            m = _ASSIGNED.search(text)
+            if m:
+                keys.setdefault(hero, {})[ability] = m.group(1)
+            elif _NEW_PASSIVE.search(text):
+                keys.setdefault(hero, {})[ability] = "Passive"
+    return keys
