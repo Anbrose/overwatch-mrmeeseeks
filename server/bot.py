@@ -579,9 +579,7 @@ async def main() -> None:
     matchup_store = matchups.MatchupStore(os.path.join(os.path.dirname(os.path.abspath(store.path)), "matchups.json"))
     matchup_store.load()
     # 补丁推送状态也放在 herodata 目录（Docker 里是 herodata 卷）
-    summarizer = (PatchSummarizer(AsyncAnthropic(api_key=api_key), model, effort,
-                                  os.environ.get("PATCH_LANGUAGE", "").strip() or "Simplified Chinese",
-                                  chinese_names(load_aliases()))
+    summarizer = (PatchSummarizer(AsyncAnthropic(api_key=api_key), model, effort, chinese_names(load_aliases()))
                   if api_key else None)
     patch_feed = PatchFeed(os.path.join(os.path.dirname(os.path.abspath(store.path)), "patch_state.json"),
                            summarizer=summarizer)
