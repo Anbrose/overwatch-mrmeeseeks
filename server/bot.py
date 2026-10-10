@@ -33,6 +33,7 @@ from dotenv import load_dotenv
 import overfast
 import matchups
 from esports_feed import EsportsFeed
+from hero_emojis import HeroEmojis
 from patch_feed import PatchFeed, PatchSummarizer, chinese_names
 from analyzer import Analyzer, format_facts, roles_from_roster
 from hero_qa import Cooldown, HeroQA
@@ -618,6 +619,7 @@ async def main() -> None:
     registry = Registry()
     bot = MeeseeksBot(registry, analyzer, recognizer, labels, roster, store, hero_qa, esports_feed,
                       int(wish_channel) if wish_channel else None, wish_desk, wish_plans, patch_feed)
+    patch_feed.icons = HeroEmojis(bot).for_patch     # 补丁摘要里英雄名旁边的头像
     ws = WSServer(
         registry, bot,
         host=os.environ.get("WS_HOST", "0.0.0.0"),
