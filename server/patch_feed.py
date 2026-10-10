@@ -1,6 +1,8 @@
 """补丁推送频道：定时检查官方补丁说明，有新补丁就用 Claude 写成摘要发到频道。
 
 摘要格式：全部是要点列表，改动内容用英文；英雄、武器、技能、威能名写成「英文/简体中文/韩文」。
+每个英雄下面固定分 Basic Info / Abilities / Perks 三项（normalize_sections 兜底补 "None"），
+英雄名前面是头像表情（hero_emojis.py）。
 模型只写 [[Hero]] / [[Hero|Ability]] 标签，由 fill_names 换成官方页面上的中文、韩文名称
 （patchnotes.fetch_translations），缺哪种语言就留空，模型碰不到中韩文名称，也就没法写错。
 
@@ -22,6 +24,7 @@ from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable
 
 import patchnotes
+from herodata import _norm
 
 log = logging.getLogger("mrmeeseeks.patches")
 
@@ -33,30 +36,38 @@ SUMMARY_INPUT_LIMIT = 40000   # 补丁原文最多喂给模型多少字符
 
 Send = Callable[[int, str], Awaitable[None]]
 
-SUMMARY_FORMAT = "v2"          # 摘要格式变了就改它，旧格式的缓存不再使用
+SUMMARY_FORMAT = "v3"          # 摘要格式变了就改它，旧格式的缓存不再使用
+SECTIONS = ("Basic Info", "Abilities", "Perks")
 SUMMARY_SYSTEM = """You write the patch-notes post for an Overwatch community Discord server whose members \
 read English, Chinese and Korean. Summarize the official patch notes you are given.
 
-Format: Discord markdown, bullet points only (no paragraphs), in English, under 3500 characters:
+Format: Discord markdown, bullet points only (no paragraphs), in English, under 4000 characters:
 - First bullet: what this patch is (new season, balance patch, bug fixes, ...).
 **New content**: one bullet per new season, hero, mode, map or event. Omit if none.
 **Hero changes**: one top-level bullet per hero, starting with ⬆️ (buff), ⬇️ (nerf) or 🔄 (rework or \
-mixed), then the hero's name tag in bold, e.g. "- 🔄 **[[Roadhog]]**". Under it, one nested bullet \
-("  - ") per changed weapon, ability or perk: its name tag, then the change in English with numbers \
-(from → to), e.g. "  - [[Roadhog|Chain Hook]]: cooldown 7s → 6s (5v5)". Add "(Minor Perk)" or \
-"(Major Perk)" after a perk's tag, "(new)" or "(removed)" where it applies. Leave hit-volume-only \
-changes out of these bullets; if there is a hit-volume pass, add one bullet for it. Put a blank line \
-between heroes.
+mixed), then the hero's name tag in bold, e.g. "- 🔄 **[[Roadhog]]**". Under every hero, always these \
+three sub-bullets in this order, even when empty:
+  - **Basic Info**: changes to the hero itself (role, health, armor, movement, ultimate cost, hit \
+volumes, ...).
+  - **Abilities**: weapons, abilities, ultimate and passive.
+  - **Perks**: minor and major perks.
+Write a sub-bullet with nothing in it as "  - **Perks**: None". Otherwise put one nested bullet \
+("    - ") per change under it, even when there is only one: the name tag, then the change in English \
+with numbers (from → to), e.g. "    - [[Roadhog|Chain Hook]]: cooldown 7s → 6s (5v5)". Keep each nested \
+line under 160 characters: only the most important numbers, not every detail. Mark perks like \
+"(Minor, new)" or "(Major, removed)" and other new or removed abilities "(new)" or "(removed)". Basic Info changes have no name tag. The list below says which \
+names are abilities and which are perks. Only list heroes with changes other than hit volumes; if \
+there is a hit-volume pass, mention it once under Other. Put a blank line between heroes.
 **Other**: at most 3 bullets for the most noticeable remaining changes. Omit if none.
 
 Name tags: never write a hero, weapon, ability or perk name as plain text. Write [[Hero]] for a hero and \
 [[Hero|Name]] for one of its weapons, abilities or perks, copying the English names exactly from the \
-list below; they are replaced with English/Chinese/Korean names for you. Maps, modes and events stay \
-plain English.
+list below; they are replaced with English/Chinese/Korean names and hero icons for you. Maps, modes \
+and events stay plain English.
 Rules: only use facts and numbers from the notes. No opinions or tier predictions. No greeting, no \
 sign-off, no links (the title and link are added for you).
 
-Heroes in this patch and their changed weapons, abilities and perks:
+Heroes in this patch:
 {names}"""
 _TAG = re.compile(r"\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]")
 
@@ -124,13 +135,99 @@ def render(patch: dict[str, Any], summary: str | None) -> str:
     return f"🛠️ **{patch['title']}**\n\n{body}\n\n🔗 Full patch notes: <{patch['url']}>"
 
 
-def name_list(patch: dict[str, Any], table: dict[str, Any]) -> str:
-    """给模型看的英文名单：每个英雄一行，后面跟这次改动到的武器/技能/威能（威能已去掉后缀）。"""
+def name_list(patch: dict[str, Any]) -> str:
+    """给模型看的英文名单：每个英雄一行，按官方结构分出技能（带图标的条目）和威能（带 Perk 后缀）。"""
     lines = []
     for hero in patch["heroes"]:
-        entries = table.get("names", {}).get(hero, {})
-        lines.append(f"{hero}: {' | '.join(entries)}" if entries else hero)
+        abilities, perks = [], []
+        for block in patch.get("blocks", []):
+            if block["hero"] != hero:
+                continue
+            for entry in block["entries"]:
+                name, suffix = patchnotes.split_perk(entry["name"])
+                if patchnotes.entry_kind(entry) == "perk":
+                    perks.append(f"{name} ({suffix.split()[0]})" if suffix and suffix.split()[0] in ("Minor", "Major")
+                                 else name)
+                else:
+                    abilities.append(name)
+        parts = [f"Abilities: {' | '.join(dict.fromkeys(abilities))}" if abilities else "",
+                 f"Perks: {' | '.join(dict.fromkeys(perks))}" if perks else ""]
+        detail = "; ".join(p for p in parts if p)
+        lines.append(f"{hero} — {detail}" if detail else hero)
     return "\n".join(lines) or "(none)"
+
+
+_HERO_BULLET = re.compile(r"^- .*\*\*\s*\[\[([^\]|]+)\]\]\s*\*\*")
+_SECTION = re.compile(r"^\s*-\s*\*\*\s*(basic info|abilities|perks)\s*\*\*\s*:?\s*(.*)$", re.I)
+_FIRST_TAG = re.compile(r"\[\[([^\]|]+?)\|([^\]]+?)\]\]")
+
+
+def name_key(name: str) -> str:
+    """对照用的名称键：忽略大小写、标点和末尾括号（"Reconstruction (Passive)" 和 "Reconstruction" 相同）。"""
+    return _norm(re.sub(r"\s*\([^)]*\)\s*$", "", name))
+
+
+def entry_kinds(patch: dict[str, Any]) -> dict[str, dict[str, str]]:
+    """{英雄: {名称键: "Abilities" 或 "Perks"}}，按官方页面结构（见 patchnotes.entry_kind）。"""
+    kinds: dict[str, dict[str, str]] = {}
+    for block in patch.get("blocks", []):
+        for entry in block["entries"]:
+            name = patchnotes.split_perk(entry["name"])[0]
+            perk = patchnotes.entry_kind(entry) == "perk"
+            kinds.setdefault(block["hero"], {})[name_key(name)] = "Perks" if perk else "Abilities"
+    return kinds
+
+
+def normalize_sections(text: str, kinds: dict[str, dict[str, str]] | None = None) -> str:
+    """每个英雄下面固定 Basic Info / Abilities / Perks 三项、这个顺序，没有内容的写 "None"。
+
+    - 写在标题同一行的改动挪到下一级要点，统一格式；
+    - 按官方结构（kinds）把放错大类的技能/威能挪回去，不带标签的行算 Basic Info。
+    只处理 **Hero changes** 段里、名字是 [[Hero]] 标签的英雄条目（在替换名称之前调用）。"""
+    kinds = kinds or {}
+    lines, out, in_heroes, i = text.split("\n"), [], False, 0
+    while i < len(lines):
+        line = lines[i]
+        if re.fullmatch(r"\*\*[^*]+\*\*:?", line.strip()) and not line.startswith(" "):
+            in_heroes = "hero changes" in line.lower()
+        hero = _HERO_BULLET.match(line) if in_heroes else None
+        if hero is None:
+            out.append(line)
+            i += 1
+            continue
+        j = i + 1
+        while j < len(lines) and lines[j].startswith(" "):
+            j += 1
+        hero_kinds = kinds.get(hero.group(1).strip(), {})
+        items: dict[str, list[str]] = {name: [] for name in SECTIONS}
+        current = last = "Basic Info"
+
+        def add(item: str) -> None:
+            nonlocal last
+            tag = _FIRST_TAG.search(item)
+            last = (hero_kinds.get(name_key(tag.group(2))) if tag else None) or current
+            items[last].append(item)
+
+        for child in lines[i + 1:j]:
+            m = _SECTION.match(child)
+            if m:
+                current = last = next(s for s in SECTIONS if s.lower() == m.group(1).lower())
+                rest = m.group(2).strip()
+                if rest and rest.rstrip(".").lower() != "none":
+                    add(f"    - {rest}")      # 写在标题同一行的改动挪到下一级
+                continue
+            if not child.strip():
+                continue
+            if child.startswith("      "):        # 更深一层的说明跟着上一项（它可能被挪到别的大类）
+                items[last].append(child)
+                continue
+            body = child.strip()
+            add(f"    {body}" if body.startswith("- ") else f"    - {body}")
+        out.append(line)
+        for name in SECTIONS:
+            out += [f"  - **{name}**"] + items[name] if items[name] else [f"  - **{name}**: None"]
+        i = j
+    return "\n".join(out)
 
 
 def trilingual(en: str, tr: dict[str, str] | None, zh_fallback: str = "") -> str:
@@ -138,30 +235,38 @@ def trilingual(en: str, tr: dict[str, str] | None, zh_fallback: str = "") -> str
     return f"{en}/{tr.get('zh') or zh_fallback}/{tr.get('ko', '')}"
 
 
-def fill_names(text: str, table: dict[str, Any], fallback_zh: dict[str, str] | None = None) -> tuple[str, list[str]]:
-    """把 [[Hero]]、[[Hero|Name]] 换成「英文/中文/韩文」，中韩文只取对照表里的官方名称。
+def fill_names(text: str, table: dict[str, Any], fallback_zh: dict[str, str] | None = None,
+               icons: dict[str, str] | None = None) -> tuple[str, list[str]]:
+    """把 [[Hero]]、[[Hero|Name]] 换成「英文/中文/韩文」，中韩文只取对照表里的官方名称；英雄名前加头像表情。
 
     国服页面没对上时英雄中文名退回 aliases.json（fallback_zh）；对照表里没有的名称只写英文、留空其余。
     返回 (替换后的文本, 对照表里找不到的标签)。"""
-    fallback_zh = fallback_zh or {}
+    fallback_zh, icons = fallback_zh or {}, icons or {}
     heroes, names = table.get("heroes", {}), table.get("names", {})
     unknown: list[str] = []
 
+    def entry_in(hero_names: dict[str, dict[str, str]], name: str) -> dict[str, str] | None:
+        if name in hero_names:
+            return hero_names[name]
+        key = name_key(name)          # 模型偶尔省掉 "(Passive)" 这类括号
+        return next((t for n, t in hero_names.items() if name_key(n) == key), None)
+
     def entry_anywhere(name: str) -> dict[str, str] | None:
-        hits = [t[name] for t in names.values() if name in t]
+        hits = [t for t in (entry_in(h, name) for h in names.values()) if t is not None]
         return hits[0] if len(hits) == 1 else None
 
     def sub(m: re.Match) -> str:
         first, second = m.group(1).strip(), (m.group(2) or "").strip()
         if not second:
             if first in heroes:
-                return trilingual(first, heroes[first], fallback_zh.get(first, ""))
+                name = trilingual(first, heroes[first], fallback_zh.get(first, ""))
+                return f"{icons[first]} {name}" if first in icons else name
             tr = entry_anywhere(first)     # 模型偶尔把技能写成 [[Name]]
             if tr is None:
                 unknown.append(m.group(0))
                 return trilingual(first, None, fallback_zh.get(first, ""))
             return trilingual(first, tr)
-        tr = names.get(first, {}).get(second) or entry_anywhere(second)
+        tr = entry_in(names.get(first, {}), second) or entry_anywhere(second)
         if tr is None:
             unknown.append(m.group(0))
         return trilingual(second, tr)
@@ -176,9 +281,9 @@ class PatchSummarizer:
         self.effort = effort
         self.fallback_zh = fallback_zh or {}   # aliases.json 的中文英雄名，国服页面缺失时用
 
-    async def summarize(self, patch: dict[str, Any], table: dict[str, Any] | None = None) -> str:
-        table = table or patchnotes.translations(patch)
-        system = SUMMARY_SYSTEM.format(names=name_list(patch, table))
+    async def summarize(self, patch: dict[str, Any]) -> str:
+        """模型写的原始摘要：名称还是 [[...]] 标签，由 finish() 在发送时替换。"""
+        system = SUMMARY_SYSTEM.format(names=name_list(patch))
         notes = f"{patch['title']}\n\n{patch['text']}"[:SUMMARY_INPUT_LIMIT]
         resp = await self.client.messages.create(
             model=self.model, max_tokens=MAX_TOKENS, system=system,
@@ -187,7 +292,11 @@ class PatchSummarizer:
         text = "".join(b.text for b in resp.content if b.type == "text").strip()
         if resp.stop_reason == "max_tokens" or not text:
             raise RuntimeError(f"no summary text (stop_reason={resp.stop_reason})")
-        text, unknown = fill_names(text, table, self.fallback_zh)
+        return text
+
+    def finish(self, patch: dict[str, Any], raw: str, table: dict[str, Any], icons: dict[str, str] | None = None) -> str:
+        """补全三个分类，再把标签换成三语名称和头像。"""
+        text, unknown = fill_names(normalize_sections(raw, entry_kinds(patch)), table, self.fallback_zh, icons)
         if unknown:
             log.warning("Summary of %s used names not in the name table: %s", patch["id"], ", ".join(unknown[:10]))
         return text
@@ -197,11 +306,13 @@ class PatchFeed:
     def __init__(self, path: str,
                  fetch: Callable[[], Awaitable[list[dict[str, Any]]]] = patchnotes.fetch_recent,
                  summarizer: PatchSummarizer | None = None,
-                 translate: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] = patchnotes.fetch_translations):
+                 translate: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] = patchnotes.fetch_translations,
+                 icons: Callable[[dict[str, Any]], Awaitable[dict[str, str]]] | None = None):
         self.path = path
         self.fetch = fetch
         self.summarizer = summarizer
         self.translate = translate
+        self.icons = icons            # 补丁 -> {英雄: 头像表情}，见 hero_emojis.py；None 表示不加头像
         self.state = new_state()
         self.lock = asyncio.Lock()     # 定时检查和 `patches here` 不能同时发同一个补丁
 
@@ -264,20 +375,30 @@ class PatchFeed:
         return f"{SUMMARY_FORMAT}:{patch_id}"
 
     async def text_for(self, patch: dict[str, Any]) -> str:
-        """摘要只生成一次并缓存；失败时用只列英雄的简短版本（不缓存，下次再试）。"""
-        summary = self.state["summaries"].get(self._key(patch["id"]))
-        if summary is None and self.summarizer is not None:
+        """模型摘要和名称对照表只生成一次并缓存，每次发送时再填名称和头像（头像表情可能是后来才有的）。
+        失败时用只列英雄的简短版本（不缓存，下次再试）。"""
+        if self.summarizer is None:
+            return render(patch, None)
+        cached = self.state["summaries"].get(self._key(patch["id"]))
+        if cached is None:
             try:
                 try:
                     table = await self.translate(patch)
                 except Exception:
                     log.exception("Could not load Chinese/Korean names for %s; leaving them empty", patch["id"])
                     table = patchnotes.translations(patch)
-                summary = await self.summarizer.summarize(patch, table)
-                self.state["summaries"][self._key(patch["id"])] = summary
+                cached = {"raw": await self.summarizer.summarize(patch), "table": table}
+                self.state["summaries"][self._key(patch["id"])] = cached
             except Exception:
                 log.exception("Could not summarize %s; posting the short version", patch["id"])
-        return render(patch, summary)
+                return render(patch, None)
+        icons = {}
+        if self.icons is not None:
+            try:
+                icons = await self.icons(patch)
+            except Exception:
+                log.exception("Could not load hero icons for %s; posting without them", patch["id"])
+        return render(patch, self.summarizer.finish(patch, cached["raw"], cached["table"], icons))
 
     async def _post(self, channel_id: int, patch: dict[str, Any], send: Send) -> None:
         for chunk in split_message(await self.text_for(patch)):

@@ -95,12 +95,12 @@ class _Parser(HTMLParser):
         elif kind == "ability":
             self.in_ability = True
             if self.block is not None:
-                self.block["entries"].append({"name": text, "icon": self.icon["ability"]})
+                self.block["entries"].append({"name": text, "icon": self.icon["ability"], "kind": "ability"})
             self._line(f"{text}:")
-        elif kind == "perk":     # 英雄条目里不带图标的小标题，通常是威能（"Scrap Hook – Minor Perk"）
+        elif kind == "perk":     # 英雄条目里不带图标的小标题是威能（官方有时连 "– Minor Perk" 后缀都没写）
             self.in_ability = False
             if self.block is not None:
-                self.block["entries"].append({"name": text, "icon": None})
+                self.block["entries"].append({"name": text, "icon": None, "kind": "perk"})
             self._line(text)
         elif kind == "li":
             self._line(("  - " if self.in_ability else "- ") + text)
@@ -244,6 +244,11 @@ async def fetch_recent(today: date | None = None) -> list[dict[str, Any]]:
 _PERK = re.compile(r"\s*(?:–|-|——|—)\s*((?:Minor|Major) Perk|[次主]要威能|次级威能|(?:보조|주요) 특전)\s*$")
 
 
+def entry_kind(entry: dict[str, Any]) -> str:
+    """"ability" 或 "perk"：按页面结构判断；旧缓存里没有 kind 时看名称后缀。"""
+    return entry.get("kind") or ("perk" if split_perk(entry["name"])[1] else "ability")
+
+
 def split_perk(name: str) -> tuple[str, str | None]:
     """"Scrap Hook – Minor Perk" -> ("Scrap Hook", "Minor Perk")；不是威能时第二项为 None。"""
     m = _PERK.search(name)
@@ -295,10 +300,9 @@ def translations(en: dict[str, Any], ko: dict[str, Any] | None = None,
             for mine, theirs in zip(block["entries"], other["entries"]):
                 if _icon_mismatch(mine, theirs, lang):
                     continue
-                name, kind = split_perk(mine["name"])
-                other_name, other_kind = split_perk(theirs["name"])
-                if (kind is None) != (other_kind is None):
-                    continue     # 一边是威能一边不是：顺序错位了
+                if entry_kind(mine) != entry_kind(theirs):
+                    continue     # 一边是威能一边是技能：顺序错位了
+                name, other_name = split_perk(mine["name"])[0], split_perk(theirs["name"])[0]
                 entry = table.setdefault(name, {"zh": "", "ko": ""})
                 entry[lang] = entry[lang] or other_name
         for entry in block["entries"]:
