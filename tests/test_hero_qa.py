@@ -206,8 +206,9 @@ def test_loop():
     answer = asyncio.run(HeroQA(client, "test-model", make_store()).answer("卡西迪爆头几枪杀猎空？"))
     check("循环结束后返回最终文本", answer == "2 发爆头即可击杀猎空。")
     first = client.requests[0]
-    check("请求带 system 和 5 个工具", "system" in first and [t["name"] for t in first["tools"]] ==
-          ["get_hero_stats", "get_hero_abilities", "get_patch_history", "shots_to_kill", "get_matchups"])
+    check("请求带 system 和 6 个工具", "system" in first and [t["name"] for t in first["tools"]] ==
+          ["get_hero_stats", "get_hero_abilities", "get_patch_history", "get_official_patch_notes",
+           "shots_to_kill", "get_matchups"])
     second = client.requests[1]["messages"]
     check("第二轮带上 assistant 的 tool_use 和 user 的 tool_result",
           second[1]["role"] == "assistant" and second[2]["role"] == "user")
