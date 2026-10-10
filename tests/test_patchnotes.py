@@ -19,6 +19,7 @@ import patchnotes  # noqa: E402
 from hero_qa import SYSTEM, TOOLS, HeroQA  # noqa: E402
 from herodata import HeroStore, load_aliases  # noqa: E402
 import hero_emojis  # noqa: E402
+import keybinds  # noqa: E402
 from patch_feed import (PatchFeed, PatchSummarizer, chinese_names, entry_kinds, fill_names,  # noqa: E402
                         name_list, normalize_sections, render, split_message)
 
@@ -249,8 +250,8 @@ async def test_feed():
     reloaded.load()
     check("feed: state persisted (channel, seen, patches, summary cache)", reloaded.channel_id == 77
           and "patch-2026-10-06" in reloaded.state["seen"] and reloaded.patches[0]["id"] == "patch-2026-10-06"
-          and reloaded.state["summaries"]["v3:patch-2026-10-06"]["raw"] == "SUMMARY of 2026-10-06"
-          and reloaded.state["summaries"]["v3:patch-2026-10-06"]["table"]["heroes"]["Roadhog"]["zh"] == "路霸")
+          and reloaded.state["summaries"]["v4:patch-2026-10-06"]["raw"] == "SUMMARY of 2026-10-06"
+          and reloaded.state["summaries"]["v4:patch-2026-10-06"]["table"]["heroes"]["Roadhog"]["zh"] == "路霸")
 
     # 发送失败：不记账，下次重试
     feed2, box2 = make_feed("f2", old, FakeSummarizer())
@@ -288,7 +289,7 @@ async def test_feed():
     await feed4.check(s4)
     check("feed: summary failure posts the hero list instead",
           len(s4.sent) == 1 and "Heroes changed:" in s4.sent[0][1] and "Roadhog" in s4.sent[0][1]
-          and "v3:patch-2026-10-06" not in feed4.state["summaries"])
+          and "v4:patch-2026-10-06" not in feed4.state["summaries"])
 
     # 名称对照抓取失败：照样写摘要，名称留空
     feed7, box7 = make_feed("f7", patchnotes.merge(LIVE, old), FakeSummarizer())
@@ -306,7 +307,7 @@ async def test_feed():
     check("feed: old-format cached summary ignored and dropped",
           "旧的" not in s8.sent[0][1] and feed8.summarizer.calls == ["patch-2026-10-06"])
     await feed8.refresh()
-    check("feed: refresh prunes old-format keys", list(feed8.state["summaries"]) == ["v3:patch-2026-10-06"])
+    check("feed: refresh prunes old-format keys", list(feed8.state["summaries"]) == ["v4:patch-2026-10-06"])
 
     # 头像：每次发送时取，缓存的摘要也能用上后来才有的头像
     icon_calls = []
@@ -469,6 +470,89 @@ def test_sections():
     check("sections: only inside Hero changes, only for hero tags",
           "- **[[Doctrine]]** joins a mode\n\n**Hero changes**" in out and "- **Hit volumes**: adjusted\n\n**Other**" in out
           and out.endswith("- **[[Ana]]** something"))
+
+
+# ---------------- 键位 ----------------
+def kit_store():
+    store = HeroStore("unused.json", load_aliases())
+    store.heroes = {
+        "Shion": {"name": "Shion", "abilities": [
+            {"name": "Kira Pistols", "key": None, "type": "weapon"},
+            {"name": "Evade", "key": "Shift", "type": "ability"},
+            {"name": "Satsuriku Spree", "key": None, "type": "ultimate"}]},
+        "Roadhog": {"name": "Roadhog", "abilities": [
+            {"name": "Scrap Gun", "key": "Primary Fire", "type": "weapon"},
+            {"name": "Chain Hook", "key": "Shift", "type": "ability"},
+            {"name": "Take a Breather", "key": "E", "type": "ability"}]},
+        "Doctrine": {"name": "Doctrine", "abilities": [
+            {"name": "Shrouded Momentum", "key": None, "type": "ability"},
+            {"name": "Invigorating Drones", "key": None, "type": "ability"}]},
+        "Sombra": {"name": "Sombra", "abilities": [{"name": "Translocator", "key": "E", "type": "ability"}]},
+        "Domina": {"name": "Domina", "abilities": [{"name": "Reconstruction", "key": "Passive", "type": "passive"}]},
+    }
+    return store
+
+
+def test_keybinds():
+    stated = patchnotes.stated_keys(LIVE[0])
+    check("stated keys: new abilities from the patch text",
+          stated == {"Roadhog": {"Trash Compactor": "Secondary Fire"},
+                     "Sombra": {"Hotfix": "Secondary Fire", "Cyberspace": "Ability 1", "Conspirator": "Passive"}})
+    kb = keybinds.KeyBinds(kit_store(), {"Doctrine": {"Shrouded Momentum": "shift"}})
+    key = kb.for_patch(LIVE[0])
+    check("keys: Wiki ability", key("Shion", "Evade") == "Shift" and key("Roadhog", "Chain Hook") == "Shift")
+    check("keys: stated in the patch beats a stale Wiki", key("Roadhog", "Trash Compactor") == "RMB"
+          and key("Sombra", "Cyberspace") == "Shift" and key("Sombra", "Conspirator") == "Passive")
+    check("keys: from the official name", key("Roadhog", "Scrap Gun – Primary Fire") == "LMB"
+          and key("Roadhog", "Scrap Gun – Secondary Fire") == "RMB")
+    check("keys: Wiki without key falls back by type", key("Shion", "Kira Pistols") == "LMB"
+          and key("Shion", "Satsuriku Spree") == "Q" and key("Domina", "Reconstruction (Passive)") == "Passive")
+    check("keys: manual label, any case", key("Doctrine", "Shrouded Momentum") == "Shift")
+    check("keys: unknown -> no key (no guessing)", key("Doctrine", "Invigorating Drones") is None
+          and key("Nobody", "Thing") is None)
+    check("keys: hero name in Chinese resolves", key("路霸", "chain hook") == "Shift")
+    check("missing: abilities nobody knows the key of", kb.missing() == [("Doctrine", "Invigorating Drones")])
+
+    path = os.path.join(TMP, "kb.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump({"_comment": "x", "Doctrine": {"Invigorating Drones": "E", "_note": "y"}}, f)
+    check("manual file: comments ignored", keybinds.load_manual(path) == {"Doctrine": {"Invigorating Drones": "E"}})
+    check("manual file: missing file -> empty", keybinds.load_manual(os.path.join(TMP, "nope.json")) == {})
+
+    table = patchnotes.translations(LIVE[0], KO[0], CN[0])
+    kinds = entry_kinds(LIVE[0])
+    text = ("    - [[Shion|Survival Instinct]] (Minor, new): [[Shion|Evade]] overhealth +1s\n"
+            "    - [[Roadhog|Chain Hook]]: cooldown 7s → 6s\n"
+            "    - [[Roadhog|Here, Piggy Piggy]] (Minor, new): during Whole Hog, [[Roadhog|Chain Hook]] cooldown -80%\n"
+            "    - [[Roadhog|Trash Compactor]] (new): absorbs projectiles")
+    out, unknown = fill_names(text, table, keys=key, kinds=kinds)
+    lines = out.split("\n")
+    check("fill: perk heading has no key; ability in its description gets one (English only when untranslated)",
+          lines[0] == "    - Survival Instinct/生存本能/생존 본능 (Minor, new): Evade `Shift` overhealth +1s")
+    check("fill: ability heading trilingual + key", lines[1] == "    - Chain Hook/链钩/사슬 갈고리 `Shift`: cooldown 7s → 6s")
+    check("fill: translated ability in a description stays trilingual + key",
+          lines[2].endswith("during Whole Hog, Chain Hook/链钩/사슬 갈고리 `Shift` cooldown -80%")
+          and lines[2].startswith("    - Here, Piggy Piggy/小猪快来/이리 와 꼬마 돼지야 (Minor"))
+    check("fill: new ability key from the patch text", lines[3].startswith("    - Trash Compactor/废品压缩器/쓰레기 압축기 `RMB`"))
+    check("fill: description mentions outside the table aren't warnings", unknown == [])
+
+    nl = name_list(LIVE[0], lambda h: [a["name"] for a in kit_store().heroes.get(h, {}).get("abilities", [])])
+    check("name list: other abilities offered for tagging, changed ones not repeated",
+          "Shion — Perks: Rapid Reload (Minor) | Survival Instinct (Minor); Other abilities: Kira Pistols | Evade" in nl)
+    hog = next(l for l in nl.split("\n") if l.startswith("Roadhog"))
+    check("name list: Wiki 'Scrap Gun' not offered when the official 'Scrap Gun – Primary Fire' changed",
+          "Other abilities" not in hog or "Scrap Gun |" not in hog.split("Other abilities")[1] + " |")
+    out, _ = fill_names("    - [[Domina|Reconstruction]] (Passive): x\n    - [[Sombra|Conspirator]] (new Passive): y",
+                        table, keys=lambda h, n: "Passive", kinds=kinds)
+    check("fill: no '(Passive)' repeated after the Passive key",
+          out == "    - Reconstruction/护盾重构（被动）/재조립(지속 능력) `Passive`: x\n"
+                 "    - Conspirator/运筹帷幄/공모자 `Passive` (new): y")
+    check("keys: crouch label", keybinds.label("Crouch") == "Ctrl")
+    out, unknown = fill_names("    - [[Roadhog|Scrap Gun]] (Primary Fire): x\n    - [[Roadhog|Scrap Gun]] (secondary fire): (removed)",
+                              table, keys=key, kinds=kinds)
+    check("fill: '[[Hero|Weapon]] (Primary Fire)' merged back into the official name",
+          out == "    - Scrap Gun – Primary Fire/爆裂枪——主要攻击模式/고철총 - 기본 발사 `LMB`: x\n"
+                 "    - Scrap Gun – Secondary Fire/爆裂枪——辅助攻击模式/고철총 - 보조 발사 `RMB`: (removed)" and unknown == [])
 
 
 # ---------------- 头像表情 ----------------
@@ -705,6 +789,7 @@ if __name__ == "__main__":
     test_text_helpers()
     test_sections()
     test_sections_by_kind()
+    test_keybinds()
     test_qa_tool()
     asyncio.run(run_async())
     failed = [n for n, ok in results if not ok]
