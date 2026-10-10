@@ -18,7 +18,8 @@ import bot  # noqa: E402
 import patchnotes  # noqa: E402
 from hero_qa import SYSTEM, TOOLS, HeroQA  # noqa: E402
 from herodata import HeroStore, load_aliases  # noqa: E402
-from patch_feed import (PatchFeed, PatchSummarizer, chinese_names, render, split_message)  # noqa: E402
+from patch_feed import (PatchFeed, PatchSummarizer, chinese_names, fill_names, name_list,  # noqa: E402
+                        render, split_message)
 
 FIXTURES = os.path.join(ROOT, "tests", "fixtures", "patchnotes")
 TMP = tempfile.mkdtemp()
@@ -38,6 +39,8 @@ def fixture(name):
 
 LIVE = patchnotes.parse_page(fixture("live.html"))
 SEPT = patchnotes.parse_page(fixture("2026-09.html"))
+KO = patchnotes.parse_page(fixture("live-ko.html"))
+CN = patchnotes.parse_page(fixture("cn-2026-10.html"))
 
 
 # ---------------- 解析 ----------------
@@ -70,6 +73,64 @@ def test_parse():
     check("garbage page parses to nothing", patchnotes.parse_page("<html><body>maintenance</body></html>") == [])
 
 
+def test_locales():
+    check("ko: same anchor id as English", [p["id"] for p in KO] == ["patch-2026-10-06"])
+    check("cn: no anchor, date taken from the Chinese title (Beijing time, a day later)",
+          [(p["id"], p["date"]) for p in CN][:1] == [("patch-2026-10-07", "2026-10-07")])
+    en, ko, cn = LIVE[0], KO[0], CN[0]
+    check("blocks: same hero-entry count in all three", len(en["blocks"]) == len(ko["blocks"]) == len(cn["blocks"]) == 46)
+    hog = en["blocks"][0]
+    check("blocks: hero icon and perks + abilities in page order",
+          hog["hero"] == "Roadhog" and hog["icon"] and [e["name"] for e in hog["entries"]][:2] ==
+          ["Scrap Hook – Minor Perk", "Shrapnel Launcher – Minor Perk"]
+          and hog["entries"][5] == {"name": "Scrap Gun – Primary Fire", "icon": hog["entries"][5]["icon"]}
+          and hog["entries"][5]["icon"] and hog["entries"][0]["icon"] is None)
+    check("blocks: Korean icons identical to English", [b["icon"] for b in en["blocks"]] == [b["icon"] for b in ko["blocks"]])
+    check("perk split: three languages", [patchnotes.split_perk(n) for n in
+          ("Scrap Hook – Minor Perk", "废料链钩——次级威能", "고철 갈고리 - 보조 특전", "Chain Hook", "Pulled Pork – Major Perk")]
+          == [("Scrap Hook", "Minor Perk"), ("废料链钩", "次级威能"), ("고철 갈고리", "보조 특전"), ("Chain Hook", None),
+              ("Pulled Pork", "Major Perk")])
+    check("title dates", [patchnotes._title_date(t) for t in
+          ("Overwatch Retail Patch Notes – October 6, 2026", "《守望先锋》补丁说明——2026年10月7日", "패치 노트 - 2026년 10월 6일", "x")]
+          == ["2026-10-06", "2026-10-07", "2026-10-06", None])
+
+    check("match: Korean by id", patchnotes.find_match(KO, en) is KO[0])
+    check("match: Chinese by date +1 day", patchnotes.find_match(CN, en) is CN[0])
+    check("match: nothing within a day", patchnotes.find_match(CN, SEPT[0]) is None)
+
+    t = patchnotes.translations(en, ko, cn)
+    check("table: hero names", t["heroes"]["Roadhog"] == {"zh": "路霸", "ko": "로드호그"}
+          and t["heroes"]["Domina"] == {"zh": "金驭", "ko": "도미나"} and t["heroes"]["Jetpack Cat"]["zh"] == "飞天猫")
+    check("table: ability names", t["names"]["Roadhog"]["Chain Hook"] == {"zh": "链钩", "ko": "사슬 갈고리"}
+          and t["names"]["Roadhog"]["Scrap Gun – Primary Fire"] == {"zh": "爆裂枪——主要攻击模式", "ko": "고철총 - 기본 발사"}
+          and t["names"]["Cassidy"]["Deadeye"] == {"zh": "神射手", "ko": "황야의 무법자"})
+    check("table: perk names without suffix", t["names"]["Roadhog"]["Scrap Hook"] == {"zh": "废料链钩", "ko": "고철 갈고리"})
+    check("table: complete for this patch",
+          all(v["zh"] and v["ko"] for d in t["names"].values() for v in d.values())
+          and all(v["zh"] and v["ko"] for v in t["heroes"].values()))
+
+    only_en = patchnotes.translations(en)
+    check("table: no other pages -> every slot empty but names listed",
+          only_en["heroes"]["Roadhog"] == {"zh": "", "ko": ""} and "Chain Hook" in only_en["names"]["Roadhog"])
+    short_cn = {**cn, "blocks": cn["blocks"][1:]}
+    t2 = patchnotes.translations(en, ko, short_cn)
+    check("table: Chinese hero count differs -> Chinese left empty, Korean kept",
+          t2["heroes"]["Roadhog"] == {"zh": "", "ko": "로드호그"} and t2["names"]["Roadhog"]["Chain Hook"]["zh"] == "")
+    cn_blocks = [dict(b) for b in cn["blocks"]]
+    cn_blocks[0] = {**cn_blocks[0], "entries": cn_blocks[0]["entries"][1:]}
+    t3 = patchnotes.translations(en, None, {**cn, "blocks": cn_blocks})
+    check("table: entry count differs in one hero -> that hero's abilities empty, hero name kept",
+          t3["heroes"]["Roadhog"]["zh"] == "路霸" and t3["names"]["Roadhog"]["Chain Hook"]["zh"] == ""
+          and t3["names"]["Sombra"]["Hotfix"]["zh"] == "在线修复")
+    swapped = [dict(b) for b in cn["blocks"]]
+    e = list(swapped[0]["entries"])
+    e[4], e[5] = e[5], e[4]      # 一个威能和一个技能换了位置
+    swapped[0] = {**swapped[0], "entries": e}
+    t4 = patchnotes.translations(en, None, {**cn, "blocks": swapped})
+    check("table: perk/ability misalignment not trusted",
+          t4["names"]["Roadhog"]["Toxic Exhaust"]["zh"] == "" and t4["names"]["Roadhog"]["Scrap Gun – Primary Fire"]["zh"] == "")
+
+
 def test_merge_and_months():
     merged = patchnotes.merge(LIVE, SEPT, SEPT)
     check("merge: deduped, newest first", [p["date"] for p in merged] ==
@@ -93,6 +154,21 @@ async def test_fetch():
         got = await patchnotes.fetch_recent(date(2026, 10, 8))
         check("fetch: current + previous month", [p["date"] for p in got][:2] == ["2026-10-06", "2026-09-22"]
               and len(got) == 5)
+        pages[patchnotes.KO_URL + "live/2026/10/"] = fixture("live-ko.html")
+        pages[patchnotes.CN_URL + "live/2026/10/"] = fixture("cn-2026-10.html")
+        t = await patchnotes.fetch_translations(LIVE[0])
+        check("fetch translations: Korean and Chinese month pages", t["heroes"]["Roadhog"] == {"zh": "路霸", "ko": "로드호그"})
+
+        async def flaky(session, url):
+            if "ow.blizzard.cn" in url:
+                raise patchnotes.aiohttp.ClientError("down")
+            return pages[url]
+        patchnotes._page = flaky
+        t = await patchnotes.fetch_translations(LIVE[0])
+        check("fetch translations: China site down -> Chinese empty, Korean kept",
+              t["heroes"]["Roadhog"] == {"zh": "", "ko": "로드호그"})
+        patchnotes._page = fake_page
+
         pages[patchnotes.BASE_URL] = "<html>new design</html>"
         try:
             await patchnotes.fetch_recent(date(2026, 10, 8))
@@ -106,24 +182,32 @@ async def test_fetch():
 # ---------------- 推送频道 ----------------
 class FakeSummarizer:
     def __init__(self, fail=False):
-        self.calls, self.fail = [], fail
+        self.calls, self.tables, self.fail = [], [], fail
 
-    async def summarize(self, patch):
+    async def summarize(self, patch, table=None):
         self.calls.append(patch["id"])
+        self.tables.append(table)
         if self.fail:
             raise RuntimeError("api down")
         return f"SUMMARY of {patch['date']}"
 
 
 def make_feed(name, patches_list, summarizer=None):
-    box = {"patches": patches_list, "fail": False}
+    box = {"patches": patches_list, "fail": False, "translate_fail": False}
 
     async def fetch():
         if box["fail"]:
             raise RuntimeError("network")
         return box["patches"]
 
-    return PatchFeed(os.path.join(TMP, f"{name}.json"), fetch=fetch, summarizer=summarizer), box
+    async def translate(patch):
+        if box["translate_fail"]:
+            raise RuntimeError("names down")
+        return patchnotes.translations(patch, KO[0], CN[0]) if patch["id"] == "patch-2026-10-06" else \
+            patchnotes.translations(patch)
+
+    return PatchFeed(os.path.join(TMP, f"{name}.json"), fetch=fetch, summarizer=summarizer,
+                     translate=translate), box
 
 
 class Sender:
@@ -153,12 +237,13 @@ async def test_feed():
     check("feed: post has title and link", "🛠️ **Overwatch Retail Patch Notes – October 6, 2026**" in send.sent[0][1])
     await feed.check(send)
     check("feed: not posted again", len(send.sent) == 1 and summ.calls == ["patch-2026-10-06"])
+    check("feed: summarizer got the trilingual name table", summ.tables[0]["heroes"]["Roadhog"]["ko"] == "로드호그")
 
     reloaded = PatchFeed(feed.path)
     reloaded.load()
     check("feed: state persisted (channel, seen, patches, summary cache)", reloaded.channel_id == 77
           and "patch-2026-10-06" in reloaded.state["seen"] and reloaded.patches[0]["id"] == "patch-2026-10-06"
-          and reloaded.state["summaries"]["patch-2026-10-06"] == "SUMMARY of 2026-10-06")
+          and reloaded.state["summaries"]["v2:patch-2026-10-06"] == "SUMMARY of 2026-10-06")
 
     # 发送失败：不记账，下次重试
     feed2, box2 = make_feed("f2", old, FakeSummarizer())
@@ -196,7 +281,25 @@ async def test_feed():
     await feed4.check(s4)
     check("feed: summary failure posts the hero list instead",
           len(s4.sent) == 1 and "Heroes changed:" in s4.sent[0][1] and "Roadhog" in s4.sent[0][1]
-          and "patch-2026-10-06" not in feed4.state["summaries"])
+          and "v2:patch-2026-10-06" not in feed4.state["summaries"])
+
+    # 名称对照抓取失败：照样写摘要，名称留空
+    feed7, box7 = make_feed("f7", patchnotes.merge(LIVE, old), FakeSummarizer())
+    box7["translate_fail"] = True
+    s7 = Sender()
+    await feed7.post_latest(3, s7)
+    check("feed: name lookup failure -> summary still written with empty slots",
+          "SUMMARY" in s7.sent[0][1] and feed7.summarizer.tables[0]["heroes"]["Roadhog"] == {"zh": "", "ko": ""})
+
+    # 旧格式（中文摘要）的缓存不再使用
+    feed8, _ = make_feed("f8", patchnotes.merge(LIVE, old), FakeSummarizer())
+    feed8.state["summaries"] = {"patch-2026-10-06": "旧的中文摘要"}
+    s8 = Sender()
+    await feed8.post_latest(3, s8)
+    check("feed: old-format cached summary ignored and dropped",
+          "旧的中文摘要" not in s8.sent[0][1] and feed8.summarizer.calls == ["patch-2026-10-06"])
+    await feed8.refresh()
+    check("feed: refresh prunes old-format keys", list(feed8.state["summaries"]) == ["v2:patch-2026-10-06"])
 
     # 设置频道后立刻发最新的
     feed5, _ = make_feed("f5", patchnotes.merge(LIVE, old), FakeSummarizer())
@@ -220,6 +323,11 @@ def test_text_helpers():
     check("split: chunks within limit, nothing lost",
           all(len(c) <= 1990 for c in chunks) and "\n".join(chunks) == long_text and len(chunks) > 1)
     check("split: one giant line is hard-cut", all(len(c) <= 1990 for c in split_message("y" * 5000)))
+    heroes = "\n\n".join(f"- **Hero {i}**\n" + "\n".join(f"  - change {j} " + "z" * 60 for j in range(8))
+                         for i in range(12))
+    parts = split_message(heroes)
+    check("split: breaks between heroes, never inside one",
+          len(parts) > 1 and all(p.startswith("- **Hero") for p in parts) and "\n\n".join(parts) == heroes)
     check("render: link not embedded", "<https://" in render(LIVE[0], "S"))
     names = chinese_names(load_aliases())
     check("names: first Chinese alias", names.get("Cassidy") == "卡西迪" and names.get("Doctrine") == "血律"
@@ -229,22 +337,41 @@ def test_text_helpers():
 
 async def test_summarizer():
     calls = []
+    reply = ("- Season 5 patch.\n\n- 🔄 **[[Roadhog]]**\n  - [[Roadhog|Chain Hook]]: cooldown 7s → 6s\n"
+             "  - [[Roadhog|Scrap Hook]] (Minor Perk): 2 → 4\n\n- ⬆️ **[[Domina]]**\n"
+             "  - [[Crystal Charge]] fallback\n  - [[Domina|Made Up Ability]]: x")
 
     async def create(**kw):
         calls.append(kw)
-        return NS(stop_reason="end_turn", content=[NS(type="text", text="  总结  ")])
+        return NS(stop_reason="end_turn", content=[NS(type="text", text=f"  {reply}  ")])
 
     client = NS(messages=NS(create=create))
-    summ = PatchSummarizer(client, "m", "low", "Simplified Chinese", {"Cassidy": "卡西迪", "Mercy": "天使", "Pharah": "法老之鹰"})
-    text = await summ.summarize(LIVE[0])
+    summ = PatchSummarizer(client, "m", "low", {"Roadhog": "路霸(aliases)", "Pharah": "法老之鹰"})
+    table = patchnotes.translations(LIVE[0], KO[0], CN[0])
+    text = await summ.summarize(LIVE[0], table)
     system = calls[0]["system"]
-    check("summary: returns stripped text", text == "总结")
-    check("summary: language and only relevant hero names in prompt",
-          "in Simplified Chinese" in system and "Cassidy = 卡西迪" in system and "Mercy = 天使" in system
-          and "Pharah" not in system)
-    check("summary: rules keep numbers honest, no invented names",
-          "only use facts and numbers from the notes" in system and "never invent a translation" in system)
+    check("summary: bullets, English content, name tags",
+          "bullet points only" in system and "in English" in system and "[[Roadhog|Chain Hook]]" in system)
+    check("summary: model sees English names only (can't misspell Chinese/Korean)",
+          "Roadhog: Scrap Hook | Shrapnel Launcher" in system and "路霸" not in system and "로드호그" not in system)
+    check("summary: only heroes in this patch", "Pharah" not in system)
+    check("summary: tags replaced with official trilingual names",
+          "**Roadhog/路霸/로드호그**" in text and "Chain Hook/链钩/사슬 갈고리: cooldown" in text
+          and "Scrap Hook/废料链钩/고철 갈고리 (Minor Perk)" in text and "**Domina/金驭/도미나**" in text)
+    check("summary: official Chinese name preferred over aliases", "路霸(aliases)" not in text)
+    check("summary: [[Name]] without hero resolved when unique",
+          "Crystal Charge/爆能水晶/수정 발사 fallback" in text)
+    check("summary: unknown name kept in English with empty slots", "Made Up Ability//: x" in text)
+    check("summary: no tags left", "[[" not in text and "]]" not in text)
     check("summary: full notes sent", "Trash Compactor" in calls[0]["messages"][0]["content"])
+
+    no_cn = patchnotes.translations(LIVE[0], KO[0], None)
+    filled, unknown = fill_names("[[Roadhog]] [[Roadhog|Chain Hook]] [[Domina]] [[Pharah]]", no_cn, {"Roadhog": "路霸"})
+    check("fill: China page missing -> hero falls back to aliases, abilities keep an empty Chinese slot",
+          filled.startswith("Roadhog/路霸/로드호그 Chain Hook//사슬 갈고리 Domina//도미나"))
+    check("fill: hero not in the patch reported, still formatted", "Pharah//" in filled and unknown == ["[[Pharah]]"])
+    check("name list: ability names without perk suffix",
+          "Roadhog: Scrap Hook | Shrapnel Launcher | Here, Piggy Piggy" in name_list(LIVE[0], table))
 
     async def truncated(**kw):
         return NS(stop_reason="max_tokens", content=[])
@@ -404,6 +531,7 @@ async def run_async():
 
 if __name__ == "__main__":
     test_parse()
+    test_locales()
     test_merge_and_months()
     test_text_helpers()
     test_qa_tool()
