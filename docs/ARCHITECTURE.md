@@ -16,7 +16,9 @@
 | `server/hero_qa.py` | 英雄问答：Claude tool use 循环，数字只来自上面两个模块和 `matchups.py` |
 | `server/matchups.py` | 英雄对位（克制）数据：从 counterwatch.gg 抓取、缓存、每日刷新 |
 | `server/esports.py` | 赛事数据：解析 Liquipedia:Matches（比赛）和 esports.overwatch.com 首页（新闻） |
-| `server/esports_feed.py` | 赛事推送：`plan()` 纯函数决定发什么，`EsportsFeed` 负责抓取、状态持久化和发送 |
+| `server/esports_feed.py` | 赛事推送：`plan()` 纯函数决定发什么（含按赛区分频道），`EsportsFeed` 负责抓取、状态持久化和发送 |
+| `server/regions.py` | 赛区 -> 频道的绑定（`regions.json`），以及 Liquipedia 赛事路径 -> 赛区的识别；赛事推送和开播通知共用 |
+| `server/live_watch.py` | 开播通知：手动登记的 B 站直播间（`live_sources.json`）、状态查询、开播/下播判定。不依赖 discord.py |
 | `server/patchnotes.py` | 官方补丁说明：抓取 overwatch.blizzard.com 的当月和上月补丁页，解析成整篇文本 + 按英雄分组的改动 |
 | `server/patch_feed.py` | 补丁推送：`PatchFeed` 定时检查、用 `PatchSummarizer`（Claude）写摘要并发到频道；也给英雄问答提供最近的官方补丁 |
 | `client/client.py` | 本地客户端：连接/重连、配对码输入、Tab 监听、两段截图、上传 |
@@ -99,8 +101,20 @@
 1. **抓取**：比赛每 10 分钟通过 Liquipedia MediaWiki API 解析一次 `Liquipedia:Matches`（条款要求 gzip、带联系方式的 User-Agent、parse 每 30 秒最多 1 次，并注明 CC-BY-SA 来源），只保留赛事路径以 `Overwatch Champions Series/`、`Overwatch World Cup/` 开头的比赛。新闻每 3 小时抓一次官方首页。抓取失败时保留上一次的数据。
 2. **计划**：`esports_feed.plan(now, matches, news, state)` 返回要发的消息，每条附带发出后要记的账：悉尼时间 10:00 发未来 24 小时的预告，开赛前 15 分钟发提醒（开赛超过 5 分钟不补发），比赛开始后 24 小时内发赛果（剧透遮罩），以及新出现的新闻。首次启用时只记账、不发送。
 3. **发送**：发送成功后才记账，失败的下一轮重试。没有设置频道时照常记账、不发送。状态保存在英雄数据缓存同一目录的 `esports_state.json`。
+4. **分赛区**：`regions.region_candidates` 把赛事路径里的段按 `REGION_ALIASES` 映射成赛区列表，具体的在前（`…/Asia/Stage 3/Korea/…` → `['korea', 'asia']`；没有赛区的总决赛、季中赛 → `['world']`，世界杯 → `['owwc', 'world']`）。`plan()` 收到赛区 -> 频道的绑定后，每场比赛取列表里第一个绑定了频道的赛区作为 `Post.channel`，都没绑就是 `None`（默认频道）。预告按目标频道分组，每个频道一份只含自己比赛的预告，只有最后一条记 `digest_date`。新闻只发默认频道。绑定用 `@mrmeeseeks region <赛区>` 写进 `STATE_DIR/regions.json`。
 
 已知限制：Liquipedia 汇总页只有最近约 50 场即将进行和 50 场已结束的比赛；官方首页只放 1–2 条精选新闻。
+
+## 开播通知
+
+`live_watch.LiveWatcher` 每 `LIVE_POLL_INTERVAL` 秒（默认 30，最低 15）跑一次 `poll_once`：把所有登记的直播间分批（每批 20 个）发给 B 站公开的 `getRoomBaseInfo` 接口（不需要登录，标准库 urllib 跑在线程里），再用纯函数 `detect_transitions` 和上一轮比较，产出 `LiveEvent("live" | "offline")`，交给 `MeeseeksBot._live_notify`：按直播源的赛区在 `RegionStore` 里找频道，发一条带标题、封面的嵌入消息（不 ping 任何人）。
+
+- 第一次看到某个源只记基线，不发事件；`live add` 时也把当前状态写进基线，所以新加一个正在直播的源不会立刻刷屏
+- 查询失败（412 限流、断网）只记日志并保留上一轮状态，`live list` 会显示最近一次错误
+- 赛区没绑频道时事件只记日志；`live add` 回复里会提醒先 `region <赛区>`
+- 直播源存在 `STATE_DIR/live_sources.json`，按 `platform:room_id` 去重；短号在添加时用 `room_init` 接口解析成真实房间号
+
+接其他平台（Twitch、YouTube、CHZZK）：`Source.platform` 已预留；需要一个类似 `BilibiliClient.statuses` 的查询器，返回 `dict[room_id, RoomStatus]`，再在 `LiveWatcher.poll_once` 里按 platform 分发。Twitch 的 EventSub 可以做成推送而不是轮询。
 
 ## 补丁推送
 

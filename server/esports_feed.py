@@ -3,6 +3,9 @@
 plan() 是纯函数：给定当前时间、比赛、新闻和状态，返回要发的消息，每条消息附带"发出后要记的账"。
 EsportsFeed 负责抓取、持久化状态、调用 plan 并发送。没有设置频道时照常记账、不发送，
 这样之后再设置频道也不会补发一堆旧消息。
+
+分赛区：比赛按 Liquipedia 赛事路径归到赛区（regions.region_candidates），绑定了频道的赛区
+（`@mrmeeseeks region cn`）各发各的预告、提醒和赛果；没绑定的赛区和新闻发到 `esports here` 设的默认频道。
 """
 from __future__ import annotations
 
@@ -19,6 +22,7 @@ from typing import Any, Awaitable, Callable
 from zoneinfo import ZoneInfo
 
 import esports
+from regions import RegionStore, region_candidates, resolve
 
 log = logging.getLogger("mrmeeseeks.esports")
 
@@ -46,6 +50,7 @@ def new_state() -> dict[str, Any]:
 class Post:
     text: str | None                      # None 表示只记账、不发消息
     marks: dict[str, Any] = field(default_factory=dict)
+    channel: int | None = None            # 赛区频道；None 表示默认频道（state["channel_id"]）
 
 
 def apply_marks(state: dict[str, Any], marks: dict[str, Any]) -> None:
@@ -114,10 +119,18 @@ def split_lines(lines: list[str], limit: int = MAX_MESSAGE) -> list[str]:
 
 # ---------- 计划 ----------
 def plan(now: datetime, matches: list[dict[str, Any]] | None, news: list[dict[str, Any]] | None,
-         state: dict[str, Any]) -> list[Post]:
-    """now 必须带时区。matches/news 为 None 表示还没抓到（这一类本轮什么都不做）。"""
+         state: dict[str, Any], channels: dict[str, int] | None = None) -> list[Post]:
+    """now 必须带时区。matches/news 为 None 表示还没抓到（这一类本轮什么都不做）。
+
+    channels 是赛区 -> 频道 ID 的绑定；比赛按赛区发到绑定的频道，没绑定的用默认频道（Post.channel=None）。
+    """
     posts: list[Post] = []
     ts = now.timestamp()
+    channels = channels or {}
+
+    def target(m: dict[str, Any]) -> int | None:
+        return resolve(channels, region_candidates(m.get("tournament") or ""))
+
     # 首次启用：已经结束的比赛、已有新闻只记账，不刷屏。比赛和新闻各自初始化，互不阻塞
     if matches is not None and not state["initialized"]:
         posts.append(Post(None, {"initialized": True,
@@ -129,16 +142,25 @@ def plan(now: datetime, matches: list[dict[str, Any]] | None, news: list[dict[st
             upcoming = sorted((m for m in matches if not m["finished"]
                                and ts <= m["start"] <= ts + DIGEST_WINDOW.total_seconds()),
                               key=lambda m: m["start"])
-            texts = format_digest(upcoming) if upcoming else [None]
-            posts += [Post(t) for t in texts[:-1]] + [Post(texts[-1], {"digest_date": today})]
+            # 每个频道一份只含自己赛区比赛的预告；默认频道的那份在前。只有最后一条记 digest_date
+            groups: dict[int | None, list[dict[str, Any]]] = {}
+            for m in upcoming:
+                groups.setdefault(target(m), []).append(m)
+            digest: list[Post] = []
+            for channel in sorted(groups, key=lambda c: (c is not None, c or 0)):
+                digest += [Post(t, channel=channel) for t in format_digest(groups[channel])]
+            if not digest:
+                digest = [Post(None)]
+            digest[-1].marks = {"digest_date": today}
+            posts += digest
         for m in sorted(matches, key=lambda m: m["start"]):
             if (not m["finished"] and m["id"] not in state["reminded"]
                     and not (m["team1"] == "TBD" and m["team2"] == "TBD")   # 对阵都没定，不提醒
                     and m["start"] - REMIND_BEFORE.total_seconds() <= ts <= m["start"] + REMIND_LATE.total_seconds()):
-                posts.append(Post(format_reminder(m), {"reminded": {m["id"]: m["start"]}}))
+                posts.append(Post(format_reminder(m), {"reminded": {m["id"]: m["start"]}}, target(m)))
             if (m["finished"] and m["id"] not in state["resulted"]
                     and ts - RESULT_MAX_AGE.total_seconds() <= m["start"] <= ts):
-                posts.append(Post(format_result(m), {"resulted": {m["id"]: m["start"]}}))
+                posts.append(Post(format_result(m), {"resulted": {m["id"]: m["start"]}}, target(m)))
     if news is not None and not state["news_initialized"]:
         posts.append(Post(None, {"news_initialized": True, "seen_news": [n["url"] for n in news]}))
     elif news is not None:
@@ -152,9 +174,11 @@ def plan(now: datetime, matches: list[dict[str, Any]] | None, news: list[dict[st
 class EsportsFeed:
     def __init__(self, path: str,
                  fetch_matches: Callable[[], Awaitable[list[dict]]] = esports.fetch_matches,
-                 fetch_news: Callable[[], Awaitable[list[dict]]] = esports.fetch_news):
+                 fetch_news: Callable[[], Awaitable[list[dict]]] = esports.fetch_news,
+                 regions: RegionStore | None = None):
         self.path = path
         self.fetch_matches, self.fetch_news = fetch_matches, fetch_news
+        self.regions = regions                  # 赛区 -> 频道，None 表示全部发到默认频道
         self.state = new_state()
         self.matches: list[dict[str, Any]] | None = None
         self.news: list[dict[str, Any]] | None = None
@@ -194,6 +218,14 @@ class EsportsFeed:
         return sorted((m for m in self.matches or [] if not m["finished"] and m["start"] >= now),
                       key=lambda m: m["start"])[:n]
 
+    @property
+    def channels(self) -> dict[str, int]:
+        return dict(self.regions.channels) if self.regions else {}
+
+    def channel_for(self, m: dict[str, Any]) -> int | None:
+        """这场比赛会发到哪个频道（赛区频道，否则默认频道）。"""
+        return resolve(self.channels, region_candidates(m.get("tournament") or "")) or self.channel_id
+
     async def refresh(self, mono: float) -> None:
         """到点就重新抓；抓取失败保留上一次的数据。"""
         if mono - self._matches_at >= MATCH_REFRESH:
@@ -213,12 +245,13 @@ class EsportsFeed:
         await self.refresh(mono)
         state = copy.deepcopy(self.state)
         changed = False
-        for post in plan(now, self.matches, self.news, state):
-            if post.text is not None and state["channel_id"] is not None:
+        for post in plan(now, self.matches, self.news, state, self.channels):
+            channel_id = post.channel if post.channel is not None else state["channel_id"]
+            if post.text is not None and channel_id is not None:
                 try:
-                    await send(state["channel_id"], post.text)
+                    await send(channel_id, post.text)
                 except Exception:
-                    log.exception("Could not post to esports channel %s; will retry", state["channel_id"])
+                    log.exception("Could not post to esports channel %s; will retry", channel_id)
                     break   # 停止本 tick，下一轮重试剩余消息
             apply_marks(state, post.marks)
             changed = True
