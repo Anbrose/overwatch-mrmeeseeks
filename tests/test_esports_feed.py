@@ -313,6 +313,83 @@ def test_feed_tick_split_digest_send_failure():
         check("digest_date 未被记录（只在最后一行发出时记）", feed.state["digest_date"] is None)
 
 
+def test_region_routing():
+    """比赛按 Liquipedia 赛事路径归到赛区，绑定了频道的赛区各发各的；没绑的用默认频道（channel=None）。"""
+    from regions import RegionStore
+
+    KR = "Overwatch Champions Series/2026/Asia/Stage 3/Korea/Regular Season#Week 1"
+    CN = "Overwatch Champions Series/2026/China/Stage 3/Regular Season"
+    NA = "Overwatch Champions Series/2026/North America/Stage 3/Regular Season"
+    FINALS = "Overwatch Champions Series/2026/World Finals"
+
+    def tm(mid, start, tour, finished=False, score=None):
+        m = match(mid, start, finished, score, t1=mid.upper())
+        m["tournament"] = tour
+        return m
+
+    channels = {"asia": 11, "cn": 22}
+    state = ready_state()
+    ms = [tm("kr", SYD_10AM + timedelta(hours=1), KR), tm("cn", SYD_10AM + timedelta(hours=2), CN),
+          tm("na", SYD_10AM + timedelta(hours=3), NA), tm("fin", SYD_10AM + timedelta(hours=4), FINALS)]
+    posts = ef.plan(SYD_10AM, ms, [], state, channels)
+    digests = [p for p in posts if p.text and p.text.startswith("📅")]
+    check("每个频道一份预告：默认频道（na + 总决赛）在前，再 asia、cn", [p.channel for p in digests] == [None, 11, 22])
+    check("预告只含本频道赛区的比赛", "NA vs" in digests[0].text and "FIN vs" in digests[0].text
+          and "KR vs" not in digests[0].text and digests[1].text.count(" vs ") == 1 and "KR vs" in digests[1].text
+          and digests[2].text.count(" vs ") == 1 and "CN vs" in digests[2].text)
+    check("只有最后一条预告记 digest_date", [bool(p.marks) for p in digests] == [False, False, True])
+
+    start = SYD_10AM + timedelta(minutes=10)
+    state = ready_state(digest_date="2026-10-03")
+    posts = ef.plan(SYD_10AM, [tm("kr", start, KR), tm("na", start, NA)], [], state, channels)
+    routed = {next(iter(p.marks["reminded"])): p.channel for p in posts}
+    check("提醒发到赛区频道；没绑的赛区 channel=None（默认频道）", routed == {"kr": 11, "na": None})
+
+    done = tm("cn", SYD_10AM - timedelta(hours=1), CN, finished=True, score=[3, 1])
+    posts = ef.plan(SYD_10AM, [done], [], ready_state(digest_date="2026-10-03"), channels)
+    check("赛果发到赛区频道", len(posts) == 1 and posts[0].channel == 22 and posts[0].text.startswith("✅"))
+
+    posts = ef.plan(SYD_10AM, [tm("kr", start, KR)], [], ready_state(digest_date="2026-10-03"), None)
+    check("没有任何赛区绑定时全部发默认频道", posts and all(p.channel is None for p in posts))
+
+    news = [{"url": "https://esports.overwatch.com/en-us/news/a", "title": "x", "date": None}]
+    posts = ef.plan(SYD_10AM, [], news, ready_state(digest_date="2026-10-03"), channels)
+    check("新闻发默认频道", len(posts) == 1 and posts[0].channel is None)
+
+    # tick：用 RegionStore 路由，默认频道 42
+    now = datetime.now(UTC)
+    soon = now + timedelta(minutes=10)
+
+    async def fetch_matches():
+        return [tm("kr", soon, KR), tm("na", soon, NA)]
+
+    async def fetch_news():
+        return []
+
+    sent = []
+
+    async def send(channel_id, text):
+        sent.append((channel_id, text))
+
+    with tempfile.TemporaryDirectory() as d:
+        regions = RegionStore(None)
+        regions.set("asia", 11)
+        feed = ef.EsportsFeed(os.path.join(d, "esports_state.json"), fetch_matches, fetch_news, regions=regions)
+        feed.state.update(initialized=True, news_initialized=True, channel_id=42,
+                          digest_date=now.astimezone(ef.TZ).date().isoformat())
+        asyncio.run(feed.tick(now, send, mono=0))
+        check("tick：韩国比赛发到 asia 频道，北美比赛发到默认频道",
+              sorted(c for c, _ in sent) == [11, 42] and all("KR vs" in t for c, t in sent if c == 11))
+        check("channel_for 给出每场比赛的目标频道",
+              [feed.channel_for(m) for m in feed.matches] == [11, 42] and feed.channels == {"asia": 11})
+
+        sent.clear()
+        feed.state.update(channel_id=None, reminded={})
+        asyncio.run(feed.tick(now, send, mono=0))
+        check("没有默认频道时：有赛区频道的照发，其余只记账不发",
+              [c for c, _ in sent] == [11] and set(feed.state["reminded"]) == {"kr", "na"})
+
+
 if __name__ == "__main__":
     test_digest()
     test_digest_dst()
@@ -324,6 +401,7 @@ if __name__ == "__main__":
     test_feed_tick()
     test_feed_tick_send_failure_stops_tick()
     test_feed_tick_split_digest_send_failure()
+    test_region_routing()
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")
     sys.exit(0 if passed == len(results) else 1)

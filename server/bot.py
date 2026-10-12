@@ -10,6 +10,9 @@
   @mrmeeseeks help       显示帮助
   @mrmeeseeks wishes [游戏] [7d]  管理员导出许愿 CSV（私信发送）
   @mrmeeseeks patches here|off|status  官方补丁说明推送频道，见 patch_feed.py
+  @mrmeeseeks esports here|off|status  赛事推送的默认频道，见 esports_feed.py
+  @mrmeeseeks region <赛区> [off]       把当前频道绑定成某赛区的频道（赛事推送和开播通知共用），见 regions.py
+  @mrmeeseeks live add|remove|list     按赛区登记 B 站直播间，开播时通知，见 live_watch.py
   @mrmeeseeks <问题>     英雄问答（数值、补丁、几枪击杀），见 hero_qa.py
 
 功能许愿频道（WISH_CHANNEL_ID）只接受表单提交，见 wishes.py；许愿子区里的 @ 用来改方案，见 wish_plan.py。
@@ -23,6 +26,7 @@ import logging
 import os
 import time
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 
 import discord
@@ -33,6 +37,9 @@ from dotenv import load_dotenv
 import overfast
 import matchups
 from esports_feed import EsportsFeed
+from live_watch import (DEFAULT_POLL_INTERVAL, BilibiliClient, LiveError, LiveEvent, LiveStore, LiveWatcher, Source,
+                        parse_bilibili_target)
+from regions import KNOWN_REGIONS, RegionError, RegionStore, normalize_region
 from hero_emojis import HeroEmojis
 from keybinds import KeyBinds, load_manual as load_manual_keys
 from patch_feed import PatchFeed, PatchSummarizer, chinese_names
@@ -67,6 +74,10 @@ HELP_TEXT = (
     "`@mrmeeseeks disconnect` Unpair the client bound to this channel\n"
     "`@mrmeeseeks esports here` / `esports off` Post OWCS schedule, reminders, results and news in this channel "
     "(needs Manage Channels); `esports status` shows the current setup\n"
+    "`@mrmeeseeks region cn` Make this channel the home of one region (cn, asia, korea, japan, pacific, emea, na, world): "
+    "its matches and live alerts go here instead of the esports channel; `region cn off` unbinds, `region` lists\n"
+    "`@mrmeeseeks live add <region> <Bilibili room url> [label]` Alert that region's channel when the room goes live; "
+    "`live remove <url>`, `live list`\n"
     "`@mrmeeseeks patches here` / `patches off` Post a summary of each new official Overwatch patch in this channel "
     "(needs Manage Channels); `patches status` shows the latest patch\n"
     "`@mrmeeseeks help` Show this help\n"
@@ -75,7 +86,9 @@ HELP_TEXT = (
     "`Tracer HP`, `how many Cassidy headshots kill Mauga at 30m?`"
 )
 COMMANDS = ("connect", "status", "disconnect", "help", "analyze", "label")
-ARG_COMMANDS = ("player", "esports", "patches", "wishes")     # 带参数的指令；参数保留大小写（BattleTag 大小写敏感）
+ARG_COMMANDS = ("player", "esports", "patches", "wishes", "region", "live")     # 带参数的指令；参数保留大小写（BattleTag 大小写敏感）
+LIVE_USAGE = ("Usage: `@mrmeeseeks live add <region> <Bilibili room url or id> [label]`, "
+              "`live remove <room url or id>` or `live list`. Bind the region's channel first with `@mrmeeseeks region <region>`.")
 ASK_COOLDOWN_SECONDS = 5
 
 
@@ -174,7 +187,9 @@ class MeeseeksBot(discord.Client):
                  store: HeroStore | None = None, hero_qa: HeroQA | None = None,
                  esports_feed: EsportsFeed | None = None,
                  wish_channel_id: int | None = None, wish_desk: WishDesk | None = None,
-                 wish_plans: WishPlans | None = None, patch_feed: PatchFeed | None = None):
+                 wish_plans: WishPlans | None = None, patch_feed: PatchFeed | None = None,
+                 regions: RegionStore | None = None, live_watcher: LiveWatcher | None = None,
+                 live_notify_offline: bool = False):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents, allowed_mentions=discord.AllowedMentions(everyone=False, roles=False))
@@ -191,6 +206,11 @@ class MeeseeksBot(discord.Client):
         self.ask_cooldown = Cooldown(ASK_COOLDOWN_SECONDS)
         self.esports_feed = esports_feed
         self.patch_feed = patch_feed
+        self.regions = regions if regions is not None else RegionStore(None)
+        self.live_watcher = live_watcher
+        self.live_notify_offline = live_notify_offline
+        if live_watcher is not None:
+            live_watcher.notify = self._live_notify
         self.wish_channel_id = wish_channel_id
         self.wish_desk = wish_desk
         self.wish_plans = wish_plans
@@ -259,6 +279,10 @@ class MeeseeksBot(discord.Client):
             await self._esports(message, arg)
         elif cmd == "patches":
             await self._patches(message, arg)
+        elif cmd == "region":
+            await self._region(message, arg)
+        elif cmd == "live":
+            await self._live(message, arg)
         elif cmd == "analyze":
             await self._reanalyze(message)
         elif cmd == "label":
@@ -290,11 +314,155 @@ class MeeseeksBot(discord.Client):
         elif action == "status":
             where = f"<#{feed.channel_id}>" if feed.channel_id else "not set (use `@mrmeeseeks esports here`)"
             lines = [f"Esports channel: {where}"]
+            if feed.channels:
+                lines.append("Region channels: " + ", ".join(f"{r} → <#{c}>" for r, c in sorted(feed.channels.items())))
             for m in feed.upcoming():
-                lines.append(f"• <t:{m['start']}:f> {m['team1']} vs {m['team2']} · {m['label']}")
+                dest = feed.channel_for(m)
+                lines.append(f"• <t:{m['start']}:f> {m['team1']} vs {m['team2']} · {m['label']}"
+                             + (f" → <#{dest}>" if dest else ""))
             await message.reply("\n".join(lines)[:1990])
         else:
             await message.reply("Usage: `@mrmeeseeks esports here`, `esports off` or `esports status`.")
+
+    # ---------- 赛区频道 ----------
+    def _can_manage(self, message: discord.Message, perm: str = "manage_channels") -> bool:
+        perms = message.channel.permissions_for(message.author) if message.guild else None
+        return perms is not None and getattr(perms, perm, False)
+
+    async def _region(self, message: discord.Message, arg: str) -> None:
+        words = arg.split()
+        if not words or words[0].lower() in ("list", "status"):
+            if not self.regions.channels:
+                await message.reply("No region channels yet. In the channel for a region, run `@mrmeeseeks region cn` "
+                                    f"(known regions: {', '.join(KNOWN_REGIONS)}).")
+                return
+            lines = [f"**{r}** → <#{c}>" for r, c in sorted(self.regions.channels.items())]
+            lines.append("Matches whose region has no channel, and news, go to the `esports here` channel.")
+            await message.reply("\n".join(lines))
+            return
+        try:
+            region = normalize_region(words[0])
+        except RegionError as e:
+            await message.reply(f"❌ {e}")
+            return
+        if not self._can_manage(message):
+            await message.reply("You need Manage Channels permission to bind a region to a channel.")
+            return
+        if len(words) > 1 and words[1].lower() in ("off", "none", "remove"):
+            await message.reply(f"Region **{region}** is no longer bound to a channel." if self.regions.remove(region)
+                                else f"Region **{region}** had no channel.")
+            return
+        if not message.channel.permissions_for(message.guild.me).send_messages:
+            await message.reply("I can't send messages in this channel — give me Send Messages permission first.")
+            return
+        self.regions.set(region, message.channel.id)
+        n = sum(1 for s in self.live_watcher.store.sources.values() if s.region == region) if self.live_watcher else 0
+        note = "" if region in KNOWN_REGIONS else (
+            f"\n⚠️ `{region}` is not a region Liquipedia uses ({', '.join(KNOWN_REGIONS)}), "
+            "so OWCS matches won't be routed here automatically; live rooms added with this region will.")
+        await message.reply(f"✅ **{region}** matches and live alerts will be posted in <#{message.channel.id}>"
+                            f" ({n} live room(s) registered).{note}")
+
+    # ---------- 开播通知 ----------
+    async def _live(self, message: discord.Message, arg: str) -> None:
+        watcher = self.live_watcher
+        if watcher is None:
+            await message.reply("Live alerts are not enabled on this server.")
+            return
+        words = arg.split()
+        sub = words[0].lower() if words else "list"
+        rest = words[1:]
+        try:
+            if sub == "add" and len(rest) >= 2:
+                if not self._can_manage(message, "manage_messages"):
+                    await message.reply("You need Manage Messages permission to add live rooms.")
+                    return
+                region = normalize_region(rest[0])
+                target = parse_bilibili_target(rest[1])
+                if target is None:
+                    raise LiveError(f"`{rest[1]}` is not a Bilibili live room URL or room id.")
+                room_id = await watcher.client.resolve_room(target)
+                status = (await watcher.client.statuses([room_id])).get(room_id)
+                label = " ".join(rest[2:]).strip() or (status.uname if status else "") or f"room {room_id}"
+                src = Source(platform="bilibili", room_id=room_id, region=region, label=label,
+                             url=f"https://live.bilibili.com/{room_id}", added_by=str(message.author))
+                replaced = src.key in watcher.store.sources
+                watcher.store.add(src)
+                watcher.forget(src.key)
+                if status is not None:   # 当前状态作为基线，刚添加时不发通知
+                    watcher.state[src.key] = status.live
+                    watcher.last_statuses[room_id] = status
+                where = self.regions.get(region)
+                lines = [f"{'🔁 Updated' if replaced else '✅ Watching'} **{label}** (`{src.key}`) for region **{region}**."]
+                if status is not None:
+                    lines.append(f"Currently: {'🔴 LIVE — ' + status.title if status.live else '⚫ offline'}")
+                lines.append(f"Alerts go to <#{where}>." if where else
+                             f"⚠️ Region `{region}` has no channel yet: run `@mrmeeseeks region {region}` in the channel "
+                             "that should receive alerts.")
+                await message.reply("\n".join(lines))
+            elif sub == "remove" and rest:
+                if not self._can_manage(message, "manage_messages"):
+                    await message.reply("You need Manage Messages permission to remove live rooms.")
+                    return
+                target = parse_bilibili_target(rest[0])
+                if target is None:
+                    raise LiveError(f"`{rest[0]}` is not a Bilibili live room URL or room id.")
+                key = f"bilibili:{target}"
+                src = watcher.store.remove(key)
+                if src is None:   # 可能给的是短号
+                    try:
+                        key = f"bilibili:{await watcher.client.resolve_room(target)}"
+                        src = watcher.store.remove(key)
+                    except LiveError:
+                        src = None
+                if src is None:
+                    await message.reply(f"Not watching `{rest[0]}`. See `@mrmeeseeks live list`.")
+                    return
+                watcher.forget(key)
+                await message.reply(f"🗑️ Stopped watching **{src.label}** (`{key}`, region {src.region}).")
+            elif sub == "list":
+                groups = watcher.store.by_region()
+                if not groups:
+                    await message.reply("No live rooms registered yet.\n" + LIVE_USAGE)
+                    return
+                lines = []
+                for region, sources in sorted(groups.items()):
+                    ch = self.regions.get(region)
+                    where = f"<#{ch}>" if ch else f"⚠️ no channel (`@mrmeeseeks region {region}`)"
+                    lines.append(f"**{region}** → {where}")
+                    for src in sources:
+                        st = watcher.last_statuses.get(src.room_id)
+                        lines.append(f"  {'🔴' if st and st.live else '⚫'} {src.label} · <{src.url}>")
+                if watcher.last_error:
+                    lines.append(f"⚠️ Last poll failed: {watcher.last_error}")
+                await message.reply("\n".join(lines)[:1990])
+            else:
+                await message.reply(LIVE_USAGE)
+        except (LiveError, RegionError) as e:
+            await message.reply(f"❌ {e}")
+
+    async def _live_notify(self, ev: LiveEvent) -> None:
+        """LiveWatcher 的回调：按赛区找频道发开播消息。没绑频道的赛区只记日志。"""
+        channel_id = self.regions.get(ev.source.region)
+        if channel_id is None:
+            log.info("Region %s has no channel; skipping %s event for %s", ev.source.region, ev.kind, ev.source.key)
+            return
+        await self.wait_until_ready()
+        channel = await self._channel(channel_id)
+        src, st = ev.source, ev.status
+        if ev.kind == "live":
+            embed = discord.Embed(title=f"🔴 {src.label} is live", url=st.url, description=st.title or None,
+                                  color=0xFB7299, timestamp=datetime.now(timezone.utc))
+            embed.set_author(name=f"{src.region.upper()} · Bilibili")
+            if st.cover:
+                embed.set_image(url=st.cover)
+            if st.area:
+                embed.set_footer(text=st.area)
+            await channel.send(f"**{src.label}** just went live: {st.url}", embed=embed,
+                               allowed_mentions=discord.AllowedMentions.none())
+        elif self.live_notify_offline:
+            await channel.send(f"⚫ **{src.label}** ({src.region.upper()}) ended the stream.",
+                               allowed_mentions=discord.AllowedMentions.none())
 
     async def post_esports(self, channel_id: int, text: str) -> None:
         """推送任务用的发送函数：等 bot 登录完成再发，不 ping 任何人。"""
@@ -602,8 +770,20 @@ async def main() -> None:
         log.info("Advice model: %s (effort %s)", model, effort or "default")
     refresh_hours = float(os.environ.get("HERO_REFRESH_HOURS", "24"))
 
+    # 赛区 -> 频道的绑定和手动登记的直播源放在 STATE_DIR（Docker 里是挂载的 /state）
+    regions = RegionStore(state_dir / "regions.json")
+    regions.load()
+    live_store = LiveStore(state_dir / "live_sources.json")
+    live_store.load()
+    live_watcher = LiveWatcher(live_store, BilibiliClient(),
+                               interval=float(os.environ.get("LIVE_POLL_INTERVAL", "").strip() or DEFAULT_POLL_INTERVAL))
+    live_notify_offline = os.environ.get("LIVE_NOTIFY_OFFLINE", "").strip().lower() in ("1", "true", "yes")
+    log.info("Regions: %s; %d live room(s) registered", ", ".join(sorted(regions.channels)) or "none",
+             len(live_store.sources))
+
     # 赛事推送状态和英雄数据放在同一个目录（Docker 里是 herodata 卷）
-    esports_feed = EsportsFeed(os.path.join(os.path.dirname(os.path.abspath(store.path)), "esports_state.json"))
+    esports_feed = EsportsFeed(os.path.join(os.path.dirname(os.path.abspath(store.path)), "esports_state.json"),
+                               regions=regions)
     esports_feed.load()
 
     wish_channel = os.environ.get("WISH_CHANNEL_ID", "").strip()
@@ -624,7 +804,8 @@ async def main() -> None:
 
     registry = Registry()
     bot = MeeseeksBot(registry, analyzer, recognizer, labels, roster, store, hero_qa, esports_feed,
-                      int(wish_channel) if wish_channel else None, wish_desk, wish_plans, patch_feed)
+                      int(wish_channel) if wish_channel else None, wish_desk, wish_plans, patch_feed,
+                      regions=regions, live_watcher=live_watcher, live_notify_offline=live_notify_offline)
     patch_feed.icons = HeroEmojis(bot).for_patch     # 补丁摘要里英雄名旁边的头像
     ws = WSServer(
         registry, bot,
@@ -638,7 +819,8 @@ async def main() -> None:
         refreshers = [asyncio.create_task(refresh_loop(store, refresh_hours)),
                       asyncio.create_task(refresh_loop(matchup_store, refresh_hours, fetch=matchups.fetch_all)),
                       asyncio.create_task(esports_feed.run(bot.post_esports)),
-                      asyncio.create_task(patch_feed.run(bot.post_patches))]
+                      asyncio.create_task(patch_feed.run(bot.post_patches)),
+                      asyncio.create_task(live_watcher.run())]
         try:
             await bot.start(token)
         except discord.LoginFailure:

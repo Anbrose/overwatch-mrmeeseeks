@@ -102,7 +102,7 @@ cd mrmeeseeks
    - 往下找到 **Privileged Gateway Intents**，打开 **Message Content Intent**，保存。
 3. 左侧进入 **OAuth2 → URL Generator**：
    - **Scopes** 勾选 `bot`
-   - **Bot Permissions** 勾选：`View Channels`、`Send Messages`、`Attach Files`、`Read Message History`
+   - **Bot Permissions** 勾选：`View Channels`、`Send Messages`、`Attach Files`、`Embed Links`、`Read Message History`
 4. 复制页面底部生成的链接，在浏览器里打开，选择你的 Discord 服务器，授权。
 
 完成后 bot 会出现在服务器成员列表里，状态是离线，等第 4 步启动后才会上线。
@@ -323,10 +323,12 @@ journalctl -u mrmeeseeks -f      # 查看日志
 | `ANTHROPIC_API_KEY` | 否 | 空 | 留空则只识别截图，不给建议 |
 | `CLAUDE_MODEL` | 否 | `claude-sonnet-5` | 给建议用的模型；想更快可换成 `claude-haiku-4-5-20251001`。可用模型见[模型列表](https://platform.claude.com/docs/en/models/overview) |
 | `ADVISE_EFFORT` | 否 | `low` | 给建议时的思考强度（`low`/`medium`/`high`），越高越慢 |
-| `STATE_DIR` | 否 | `state/` | 标注的模板、待标注队列和许愿次数（`wishes.json`）存放位置；Docker 部署时是挂载的 `/state` |
+| `STATE_DIR` | 否 | `state/` | 标注的模板、待标注队列、许愿次数（`wishes.json`）、赛区频道绑定（`regions.json`）和直播源（`live_sources.json`）存放位置；Docker 部署时是挂载的 `/state` |
 | `WS_HOST` | 否 | `0.0.0.0` | WebSocket 监听地址；用反向代理时改为 `127.0.0.1` |
 | `WS_PORT` | 否 | `8765` | WebSocket 端口 |
 | `MIN_SNAPSHOT_INTERVAL` | 否 | `5` | 同一客户端两次分析的最短间隔（秒） |
+| `LIVE_POLL_INTERVAL` | 否 | `30` | 开播通知：轮询 B 站直播间状态的间隔（秒），最低 15 |
+| `LIVE_NOTIFY_OFFLINE` | 否 | 空 | 设为 `1` 时下播也发一条消息，默认只报开播 |
 | `HERO_DATA_PATH` | 否 | `server/herodata/heroes.json` | 英雄数据缓存文件。Docker 部署时位于 `herodata` 卷 |
 | `HERO_REFRESH_HOURS` | 否 | `24` | 每隔多少小时刷新英雄数据（Overwatch Wiki）和对位数据（counterwatch.gg）；对位数据缓存在同一目录的 `matchups.json` |
 | `WISH_CHANNEL_ID` | 否 | 空 | 功能许愿频道的 ID，留空不启用。见下方「功能许愿频道」 |
@@ -367,7 +369,9 @@ python client\client.py --help
 | `@mrmeeseeks help` | 显示帮助 |
 | `@mrmeeseeks wishes [游戏] [7d]` | 管理员（「管理服务器」权限或 `WISH_REVIEWER_ID`）导出许愿 CSV，按 👍 数排序，私信发送。可按游戏（包含匹配，`漫威` 也行）、最近 N 天筛选 |
 | `@mrmeeseeks <问题>` | 英雄问答：数值（血量、子弹体积）、最近的补丁、N 米处几枪击杀。例如 `@mrmeeseeks 卡西迪最近被削了吗`（先查[官方补丁说明](https://overwatch.blizzard.com/en-us/news/patch-notes/)，补丁当天就能答对，再查 Wiki 的历史记录）、`@mrmeeseeks 卡西迪 30 米爆头几枪杀毛加`、`@mrmeeseeks 查莉娅怕谁`。克制关系来自 [counterwatch.gg](https://www.counterwatch.gg) 的对位评分（对决和团战结果，全段位，不是整局胜率）。需要 `ANTHROPIC_API_KEY` |
-| `@mrmeeseeks esports here` / `esports off` / `esports status` | 赛事推送频道：在当前频道推送 OWCS 和世界杯的每日赛程预告（悉尼时间 10:00）、开赛前 15 分钟提醒、赛果（比分用剧透遮罩）和官方新闻。`here`/`off` 需要"管理频道"权限。比赛数据来自 [Liquipedia](https://liquipedia.net/overwatch)（CC-BY-SA） |
+| `@mrmeeseeks esports here` / `esports off` / `esports status` | 赛事推送的默认频道：推送 OWCS 和世界杯的每日赛程预告（悉尼时间 10:00）、开赛前 15 分钟提醒、赛果（比分用剧透遮罩）和官方新闻。绑定了赛区频道的比赛会发到赛区频道（见下方「按赛区分频道」），其余和新闻发到这里。`here`/`off` 需要"管理频道"权限；`status` 显示默认频道、赛区频道和接下来几场比赛各发到哪。比赛数据来自 [Liquipedia](https://liquipedia.net/overwatch)（CC-BY-SA） |
+| `@mrmeeseeks region <赛区>` / `region <赛区> off` / `region` | 把当前频道绑定成某个赛区的频道（需要"管理频道"权限）。该赛区的比赛预告、提醒、赛果和开播通知都发到这里。赛区名：`cn`、`asia`、`korea`、`japan`、`pacific`、`emea`、`na`、`world`（总决赛、季中赛）、`owwc`（世界杯）。不带参数列出所有绑定 |
+| `@mrmeeseeks live add <赛区> <B 站直播间链接或房间号> [名字]` / `live remove <链接或房间号>` / `live list` | 开播通知：手动登记 B 站直播间，开播时在该赛区的频道里发一条带标题和封面的消息（需要"管理消息"权限）。短号自动解析；不写名字用主播昵称 |
 | `@mrmeeseeks patches here` / `patches off` / `patches status` | 补丁推送频道：每 3 小时检查一次[官方补丁说明](https://overwatch.blizzard.com/en-us/news/patch-notes/)，有新补丁就发一篇要点式摘要并附原文链接：每个改动的英雄名前有头像，下面固定分 **Basic Info / Abilities / Perks** 三项（没有改动写 None）；改动内容用英文，英雄、武器、技能、威能名写成「英文/简体中文/韩文」（例如 `Roadhog/路霸/로드호그`、`Chain Hook/链钩/사슬 갈고리`），技能名后面标出 PC 默认键位（如 `Shift`），描述里顺带提到的技能也标（来源：补丁原文 > 官方技能名 > Wiki；都没有的写进 `server/keybinds.json` 手动标注，启动日志会列出缺键位的技能），中文取自国服官网、韩文取自韩服官网的同一篇补丁，找不到的语言留空。`here` 设置后会立刻发一次最新的补丁。`here`/`off` 需要"管理频道"权限；摘要需要 `ANTHROPIC_API_KEY`，没有时只列出改动的英雄 |
 
 ### 功能许愿频道
@@ -394,6 +398,30 @@ python client\client.py --help
 
 bot 启动时会在频道里发一条带「Make a wish」按钮的置顶消息；已经有了就直接复用，被删了会重新发。在这个频道里 @mrmeeseeks 不会触发指令。
 
+### 按赛区分频道
+
+赛事推送默认把所有赛区的比赛发到一个频道。如果想让 OWCS 各赛区各有一个频道，给每个赛区建一个频道，在里面绑定赛区：
+
+```
+#owcs-cn   里：@mrmeeseeks region cn
+#owcs-asia 里：@mrmeeseeks region asia      # 韩国、日本、太平洋赛区都归这里；想单独分出韩国就再 region korea
+#owcs-emea 里：@mrmeeseeks region emea
+#owcs-na   里：@mrmeeseeks region na
+```
+
+之后每个频道只收本赛区的预告、提醒和赛果（每个频道一份只含自己比赛的预告）。总决赛、季中赛等没有赛区的比赛，以及官方新闻，仍发到 `esports here` 设的默认频道；想单独放就 `region world`。赛区从 Liquipedia 的赛事路径自动识别（如 `Overwatch Champions Series/2026/Asia/Stage 3/Korea/…` → `korea`，退而求其次 `asia`）。
+
+**开播通知**：同一套赛区频道也用来发直播开播提醒。B 站上转播某赛区比赛的直播间可以手动登记：
+
+```
+@mrmeeseeks live add cn https://live.bilibili.com/7734200 守望先锋赛事
+@mrmeeseeks live add emea 12345 OWCS EMEA 转播
+@mrmeeseeks live list
+@mrmeeseeks live remove 7734200
+```
+
+bot 每 30 秒查一次 B 站公开接口（不需要登录），直播间从未开播变成直播中时，在该赛区的频道里发一条带标题和封面的消息。bot 启动或新加直播间时只记录当前状态，不补发。目前只支持 B 站；OWCS 亚洲、EMEA、北美的官方流在 Twitch / YouTube，暂时只能登记 B 站上的转播间。绑定和直播源存在 `STATE_DIR`（`regions.json`、`live_sources.json`），重启不丢。
+
 ### 配对规则
 
 - 配对码 5 分钟内有效，最多输错 5 次，之后自动作废，需要重新 `@mrmeeseeks`
@@ -419,7 +447,9 @@ python tests/test_matchups.py  # counterwatch 对位数据解析、缓存、查�
 python tests/test_counter_advice.py # 换英雄建议里的对位评分和换人候选
 python tests/test_esports.py   # Liquipedia 赛程、官方新闻解析
 python tests/test_esports_feed.py # 赛事推送调度：预告、提醒、赛果、新闻、夏令时
-python tests/test_esports_bot.py  # esports 指令和权限
+python tests/test_esports_bot.py  # esports / region / live 指令和权限、开播通知发送
+python tests/test_regions.py      # 赛区映射：Liquipedia 赛事路径 -> 赛区、赛区 -> 频道
+python tests/test_live.py         # 开播通知：B 站链接和接口解析、开播/下播判定、直播源文件、轮询循环
 python tests/test_patchnotes.py   # 官方补丁说明解析、推送频道、问答工具、patches 指令
 python tests/test_wishes.py     # 功能许愿：每日限额、存档导出、表单提交、入口消息、方案起草与修改
 ```
