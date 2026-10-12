@@ -323,12 +323,16 @@ journalctl -u mrmeeseeks -f      # 查看日志
 | `ANTHROPIC_API_KEY` | 否 | 空 | 留空则只识别截图，不给建议 |
 | `CLAUDE_MODEL` | 否 | `claude-sonnet-5` | 给建议用的模型；想更快可换成 `claude-haiku-4-5-20251001`。可用模型见[模型列表](https://platform.claude.com/docs/en/models/overview) |
 | `ADVISE_EFFORT` | 否 | `low` | 给建议时的思考强度（`low`/`medium`/`high`），越高越慢 |
-| `STATE_DIR` | 否 | `state/` | 标注的模板、待标注队列、许愿次数（`wishes.json`）、赛区频道绑定（`regions.json`）和直播源（`live_sources.json`）存放位置；Docker 部署时是挂载的 `/state` |
+| `STATE_DIR` | 否 | `state/` | 标注的模板、待标注队列、许愿次数（`wishes.json`）、赛区频道绑定（`regions.json`）、直播源（`live_sources.json`）和音乐分享的授权（`music.json`）存放位置；Docker 部署时是挂载的 `/state` |
 | `WS_HOST` | 否 | `0.0.0.0` | WebSocket 监听地址；用反向代理时改为 `127.0.0.1` |
 | `WS_PORT` | 否 | `8765` | WebSocket 端口 |
 | `MIN_SNAPSHOT_INTERVAL` | 否 | `5` | 同一客户端两次分析的最短间隔（秒） |
 | `LIVE_POLL_INTERVAL` | 否 | `30` | 开播通知：轮询 B 站直播间状态的间隔（秒），最低 15 |
 | `LIVE_NOTIFY_OFFLINE` | 否 | 空 | 设为 `1` 时下播也发一条消息，默认只报开播 |
+| `SPOTIFY_CLIENT_ID` | 否 | 空 | 音乐分享：[Spotify 开发者后台](https://developer.spotify.com/dashboard)里应用的 Client ID，留空不启用。见下方「音乐分享」 |
+| `SPOTIFY_REDIRECT_URI` | 否 | 空 | 音乐分享：Spotify 授权后跳回的地址，必须是 HTTPS 且和后台里填的一模一样，例如 `https://你的域名/mrmeeseeks/spotify/callback`。bot 在 WebSocket 同一个端口上接这个路径 |
+| `SPOTIFY_CLIENT_SECRET` | 否 | 空 | 音乐分享：可不填（用 PKCE）；填了就一并用 |
+| `MUSIC_POLL_INTERVAL` | 否 | `20` | 音乐分享：多少秒查一次每个人「正在播放」，最低 10 |
 | `HERO_DATA_PATH` | 否 | `server/herodata/heroes.json` | 英雄数据缓存文件。Docker 部署时位于 `herodata` 卷 |
 | `HERO_REFRESH_HOURS` | 否 | `24` | 每隔多少小时刷新英雄数据（Overwatch Wiki）和对位数据（counterwatch.gg）；对位数据缓存在同一目录的 `matchups.json` |
 | `WISH_CHANNEL_ID` | 否 | 空 | 功能许愿频道的 ID，留空不启用。见下方「功能许愿频道」 |
@@ -372,6 +376,8 @@ python client\client.py --help
 | `@mrmeeseeks esports here` / `esports off` / `esports status` | 赛事推送的默认频道：推送 OWCS 和世界杯的每日赛程预告（悉尼时间 10:00）、开赛前 15 分钟提醒、赛果（比分用剧透遮罩）和官方新闻。绑定了赛区频道的比赛会发到赛区频道（见下方「按赛区分频道」），其余和新闻发到这里。`here`/`off` 需要"管理频道"权限；`status` 显示默认频道、赛区频道和接下来几场比赛各发到哪。比赛数据来自 [Liquipedia](https://liquipedia.net/overwatch)（CC-BY-SA） |
 | `@mrmeeseeks region <赛区>` / `region <赛区> off` / `region` | 把当前频道绑定成某个赛区的频道（需要"管理频道"权限）。该赛区的比赛预告、提醒、赛果和开播通知都发到这里。赛区名：`cn`、`asia`、`korea`、`japan`、`pacific`、`emea`、`na`、`world`（总决赛、季中赛）、`owwc`（世界杯）。不带参数列出所有绑定 |
 | `@mrmeeseeks live add <赛区> <B 站直播间链接或房间号> [名字]` / `live remove <链接或房间号>` / `live list` | 开播通知：手动登记 B 站直播间，开播时在该赛区的频道里发一条带标题和封面的消息（需要"管理消息"权限）。短号自动解析；不写名字用主播昵称 |
+| `@mrmeeseeks music here` / `music off` / `music status` | 音乐分享频道（需要"管理频道"权限）：成员换歌时在这里发「xx 正在听 xx」。`status` 列出已连接 Spotify 的人和他们最近在听什么 |
+| `@mrmeeseeks share music` / `share music off` / `share music status` | 把自己的 Spotify 连上 bot：回复里有一个只有本人能点的按钮，点了弹出只有本人能看到的登录二维码和链接；授权后每放一首新歌，bot 在音乐频道发一条带封面和「Play on Spotify」按钮的消息。`off` 解除 |
 | `@mrmeeseeks patches here` / `patches off` / `patches status` | 补丁推送频道：每 3 小时检查一次[官方补丁说明](https://overwatch.blizzard.com/en-us/news/patch-notes/)，有新补丁就发一篇要点式摘要并附原文链接：每个改动的英雄名前有头像，下面固定分 **Basic Info / Abilities / Perks** 三项（没有改动写 None）；改动内容用英文，英雄、武器、技能、威能名写成「英文/简体中文/韩文」（例如 `Roadhog/路霸/로드호그`、`Chain Hook/链钩/사슬 갈고리`），技能名后面标出 PC 默认键位（如 `Shift`），描述里顺带提到的技能也标（来源：补丁原文 > 官方技能名 > Wiki；都没有的写进 `server/keybinds.json` 手动标注，启动日志会列出缺键位的技能），中文取自国服官网、韩文取自韩服官网的同一篇补丁，找不到的语言留空。`here` 设置后会立刻发一次最新的补丁。`here`/`off` 需要"管理频道"权限；摘要需要 `ANTHROPIC_API_KEY`，没有时只列出改动的英雄 |
 
 ### 功能许愿频道
@@ -422,6 +428,34 @@ bot 启动时会在频道里发一条带「Make a wish」按钮的置顶消息�
 
 bot 每 30 秒查一次 B 站公开接口（不需要登录），直播间从未开播变成直播中时，在该赛区的频道里发一条带标题和封面的消息。bot 启动或新加直播间时只记录当前状态，不补发。目前只支持 B 站；OWCS 亚洲、EMEA、北美的官方流在 Twitch / YouTube，暂时只能登记 B 站上的转播间。绑定和直播源存在 `STATE_DIR`（`regions.json`、`live_sources.json`），重启不丢。
 
+### 音乐分享
+
+给大家分享正在听的歌。管理员在音乐频道里 `@mrmeeseeks music here`，之后每个成员自己 `@mrmeeseeks share music`：
+
+1. bot 回一条带「Connect Spotify」按钮的消息，只有发起人能点
+2. 点了之后出现一条只有本人能看到的消息：登录二维码（手机扫，直接在 Spotify App 里授权）和登录链接（电脑点），10 分钟内有效
+3. 在 Spotify 里点「同意」，浏览器跳回 bot 的回调页显示连接成功
+4. 之后每换一首歌（约 20 秒内），bot 在音乐频道发「🎵 @某人 is listening to **歌名** by 歌手」，带封面和「▶️ Play on Spotify」按钮（点了在 Spotify 里打开这首歌）。授权时正在放的那首不补发；暂停再继续、单曲循环不重复发；播客和广告不发
+
+bot 只申请「读取正在播放」这一个权限，不能控制播放。`share music off` 随时解除；授权被撤销或账号被移出白名单时 bot 会自动移除并私信本人。
+
+**部署前要准备的（Spotify 这边的限制）**：
+
+- 在 [Spotify 开发者后台](https://developer.spotify.com/dashboard)创建一个应用，Redirect URI 填 `SPOTIFY_REDIRECT_URI` 的值，拿到 Client ID。**回调地址必须是 HTTPS**（Spotify 2025 年起的要求），所以服务器需要一个带证书的域名
+- 应用默认处于开发模式：**最多 5 个用户**，而且每个要先在应用的 Settings → User Management 里按 Spotify 账号邮箱加入白名单，**应用所有者需要 Spotify Premium**。不在白名单里的人登录会失败（回调页会提示）
+- 服务器上已有 Caddy 的话，在它的 Caddyfile 里把回调路径转给 bot 的 WebSocket 端口即可（bot 在同一个端口上接普通 HTTP 请求，其它路径回 404），例如：
+
+```
+你的域名 {
+    handle /mrmeeseeks/spotify/* {
+        reverse_proxy 127.0.0.1:8765     # Caddy 跑在 Docker 里时写服务器的 IP
+    }
+    # ……原有配置……
+}
+```
+
+然后 `SPOTIFY_REDIRECT_URI=https://你的域名/mrmeeseeks/spotify/callback`。授权信息（refresh token）存在 `STATE_DIR/music.json`（权限 0600），重启不丢。
+
 ### 配对规则
 
 - 配对码 5 分钟内有效，最多输错 5 次，之后自动作废，需要重新 `@mrmeeseeks`
@@ -450,6 +484,8 @@ python tests/test_esports_feed.py # 赛事推送调度：预告、提醒、赛�
 python tests/test_esports_bot.py  # esports / region / live 指令和权限、开播通知发送
 python tests/test_regions.py      # 赛区映射：Liquipedia 赛事路径 -> 赛区、赛区 -> 频道
 python tests/test_live.py         # 开播通知：B 站链接和接口解析、开播/下播判定、直播源文件、轮询循环
+python tests/test_music.py        # 音乐分享：PKCE 登录链接、授权回调、token 刷新、换歌判定、授权失效移除
+python tests/test_music_bot.py    # 音乐分享：share music / music here 指令、连接按钮、换歌消息、HTTP 回调路由
 python tests/test_patchnotes.py   # 官方补丁说明解析、推送频道、问答工具、patches 指令
 python tests/test_wishes.py     # 功能许愿：每日限额、存档导出、表单提交、入口消息、方案起草与修改
 ```
