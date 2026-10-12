@@ -7,7 +7,7 @@
 | 文件 | 职责 |
 |---|---|
 | `server/bot.py` | 入口。Discord bot（指令、下拉菜单、发消息）和 WebSocket 服务跑在同一个 asyncio 事件循环里 |
-| `server/ws_server.py` | WebSocket 服务：握手、配对码校验、截图接收、限流，把事件交给 bot |
+| `server/ws_server.py` | WebSocket 服务：握手、配对码校验、截图接收、限流，把事件交给 bot；同一端口也接少量普通 HTTP 请求（`http_routes`，目前只有 Spotify 授权回调） |
 | `server/registry.py` | 在线客户端表和配对状态机，不依赖网络和 Discord，便于单独测试 |
 | `server/analyzer.py` | 调用 Claude：先识别画面事实，再基于事实给建议 |
 | `server/heroparse.py` | 把 Overwatch Wiki 英雄页面的 wikitext 解析成规范化 dict（纯函数） |
@@ -19,6 +19,7 @@
 | `server/esports_feed.py` | 赛事推送：`plan()` 纯函数决定发什么（含按赛区分频道），`EsportsFeed` 负责抓取、状态持久化和发送 |
 | `server/regions.py` | 赛区 -> 频道的绑定（`regions.json`），以及 Liquipedia 赛事路径 -> 赛区的识别；赛事推送和开播通知共用 |
 | `server/live_watch.py` | 开播通知：手动登记的 B 站直播间（`live_sources.json`）、状态查询、开播/下播判定。不依赖 discord.py |
+| `server/music_share.py` | 音乐分享：Spotify 授权（Authorization Code + PKCE）、授权文件（`music.json`）、「正在播放」轮询和换歌判定、回调页。不依赖 discord.py |
 | `server/patchnotes.py` | 官方补丁说明：抓取 overwatch.blizzard.com 的当月和上月补丁页，解析成整篇文本 + 按英雄分组的改动 |
 | `server/patch_feed.py` | 补丁推送：`PatchFeed` 定时检查、用 `PatchSummarizer`（Claude）写摘要并发到频道；也给英雄问答提供最近的官方补丁 |
 | `client/client.py` | 本地客户端：连接/重连、配对码输入、Tab 监听、两段截图、上传 |
@@ -115,6 +116,19 @@
 - 直播源存在 `STATE_DIR/live_sources.json`，按 `platform:room_id` 去重；短号在添加时用 `room_init` 接口解析成真实房间号
 
 接其他平台（Twitch、YouTube、CHZZK）：`Source.platform` 已预留；需要一个类似 `BilibiliClient.statuses` 的查询器，返回 `dict[room_id, RoomStatus]`，再在 `LiveWatcher.poll_once` 里按 platform 分发。Twitch 的 EventSub 可以做成推送而不是轮询。
+
+## 音乐分享
+
+`music_share.MusicShare` 管两件事：
+
+1. **授权**：`begin(discord_id)` 生成一个 `state` 和 PKCE verifier，记在内存的 `pending`（10 分钟过期，同一个人再发起会作废上一个），返回 Spotify 登录链接；bot 把链接做成二维码（`segno`）和链接按钮，用 ephemeral 消息只发给本人。Spotify 跳回 `SPOTIFY_REDIRECT_URI` 时，`WSServer.process_request` 在 WebSocket 握手之前按路径把请求交给 `MusicShare.callback`：校验 `state`、用 code + verifier 换 token、查 `/me` 拿账号名、把当前正在放的歌记为基线，然后把 `Listener`（含 refresh token）写进 `STATE_DIR/music.json`（0600）。回调页是一段简单的 HTML。
+2. **轮询**：`run` 每 `MUSIC_POLL_INTERVAL` 秒（默认 20，最低 10）对每个人调一次 `/me/player/currently-playing`。access token 快过期或拿到 401 就用 refresh token 换新的（PKCE 每次刷新会轮换 refresh token，立刻落盘）。只有「正在播放」且曲目 id 和上次不同时才产出 `NowPlaying`，交给 `MeeseeksBot._music_notify` 发到音乐频道（嵌入消息 + `open.spotify.com` 链接按钮，mention 本人但不 ping）。204（没在放）、暂停、播客、广告都不算换歌，基线不动。
+
+- 429 按 `Retry-After` 等待后跳过本轮；其它错误记 `last_error`（`music status` 显示）并继续
+- 401/403 或 refresh 失败算一次授权失败，连续 3 轮后移除这个人并调用 `on_disconnect`（bot 私信本人原因）。403 多半是账号被移出 Spotify 应用的白名单
+- 没设音乐频道时事件只记日志
+
+Spotify 的限制：回调地址必须 HTTPS（回环地址除外），开发模式最多 5 个白名单用户、所有者要有 Premium；超过 5 人需要申请 extended quota（只对企业开放）。想换别的音乐平台（Apple Music、网易云）：`Listener` 加 `platform` 字段，另写一个返回 `Track` 的查询器即可，换歌判定和发送不用改。
 
 ## 补丁推送
 

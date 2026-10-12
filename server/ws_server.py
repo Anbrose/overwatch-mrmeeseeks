@@ -12,6 +12,9 @@
     {"type": "unpaired", "reason": "..."}
     {"type": "info" | "error", "message": "..."}
     {"type": "analysis", "summary": "..."}
+
+同一个端口也接少量普通 HTTP 请求（http_routes：路径 -> 处理函数），目前只有 Spotify 授权回调，
+见 music_share.py。其它非 WebSocket 请求回 404。
 """
 from __future__ import annotations
 
@@ -21,14 +24,18 @@ import binascii
 import json
 import logging
 import time
-from typing import Protocol
+from http import HTTPStatus
+from typing import Awaitable, Callable, Protocol
 
-from websockets.asyncio.server import ServerConnection, serve
+from websockets.asyncio.server import Request, Response, ServerConnection, serve
+from websockets.datastructures import Headers
 from websockets.exceptions import ConnectionClosed
 
 from registry import ClientConn, Registry
 
 log = logging.getLogger("mrmeeseeks.ws")
+
+HttpHandler = Callable[[str], Awaitable[tuple[int, str]]]   # query string -> (状态码, HTML)
 
 
 class Events(Protocol):
@@ -41,8 +48,10 @@ class Events(Protocol):
 
 class WSServer:
     def __init__(self, registry: Registry, events: Events, host: str, port: int,
-                 min_snapshot_interval: float = 5.0, max_image_bytes: int = 8 * 1024 * 1024):
+                 min_snapshot_interval: float = 5.0, max_image_bytes: int = 8 * 1024 * 1024,
+                 http_routes: dict[str, HttpHandler] | None = None):
         self.registry = registry
+        self.http_routes = dict(http_routes or {})
         self.events = events
         self.host = host
         self.port = port
@@ -54,7 +63,7 @@ class WSServer:
     async def start(self) -> None:
         # 两张 jpeg 的 base64 + JSON 包装，留足余量
         max_msg = int(self.max_image_bytes * 2 * 1.4) + 4096
-        self._server = await serve(self._handler, self.host, self.port,
+        self._server = await serve(self._handler, self.host, self.port, process_request=self.process_request,
                                    max_size=max_msg, ping_interval=20, ping_timeout=20)
         log.info("WebSocket server listening on %s:%s", self.host, self.port)
 
@@ -62,6 +71,25 @@ class WSServer:
         if self._server:
             self._server.close()
             await self._server.wait_closed()
+
+    # ---------- 普通 HTTP 请求 ----------
+    async def process_request(self, conn: ServerConnection, request: Request) -> Response | None:
+        """WebSocket 握手之前：注册过的路径走 HTTP 处理函数，其它非 WebSocket 请求回 404，返回 None 继续握手。"""
+        path, _, query = request.path.partition("?")
+        handler = self.http_routes.get(path)
+        if handler is not None:
+            try:
+                status, html = await handler(query)
+            except Exception:
+                log.exception("HTTP handler for %s failed", path)
+                status, html = 500, "Internal error"
+            body = html.encode("utf-8")
+            headers = Headers([("Content-Type", "text/html; charset=utf-8"), ("Content-Length", str(len(body))),
+                               ("Cache-Control", "no-store"), ("Connection", "close")])
+            return Response(status, HTTPStatus(status).phrase, headers, body)
+        if request.headers.get("Upgrade", "").lower() != "websocket":
+            return conn.respond(HTTPStatus.NOT_FOUND, "Not found")
+        return None
 
     # ---------- 连接处理 ----------
     async def _handler(self, ws: ServerConnection) -> None:
