@@ -274,8 +274,10 @@ def test_feed_tick_send_failure_stops_tick():
 def test_feed_tick_split_digest_send_failure():
     """Split digest: first chunk fails, others not attempted."""
     now = datetime.now(UTC)
+    # 推送时刻固定为"今天悉尼 10:00"，比赛相对它安排：用真实当前时间的话，悉尼凌晨跑测试时比赛已经开始，预告为空
+    utc_10am_syd = now.astimezone(ef.TZ).replace(hour=10, minute=0, second=0, microsecond=0).astimezone(UTC)
     # Create many matches to force split
-    many = [match(f"m{i}", now + timedelta(hours=1, minutes=i), t1="X" * 60, t2="Y" * 60)
+    many = [match(f"m{i}", utc_10am_syd + timedelta(hours=1, minutes=i), t1="X" * 60, t2="Y" * 60)
             for i in range(40)]
 
     send_attempts = []
@@ -302,10 +304,6 @@ def test_feed_tick_split_digest_send_failure():
         state["channel_id"] = 42
         feed.state = state
         feed.save()
-
-        # Set time to 10:00 Sydney time to trigger digest
-        sydney = now.astimezone(ef.TZ)
-        utc_10am_syd = sydney.replace(hour=10, minute=0, second=0, microsecond=0).astimezone(UTC)
 
         # Tick: first send fails
         asyncio.run(feed.tick(utc_10am_syd, send_fail_first, mono=0))
@@ -390,6 +388,93 @@ def test_region_routing():
               [c for c, _ in sent] == [11] and set(feed.state["reminded"]) == {"kr", "na"})
 
 
+def real(start, t1="Team Liquid", t2="The Kafe", finished=False, score=None,
+         tour="Overwatch Champions Series/2026/North America/Stage 3/Regular Season#Week 2"):
+    """真实格式的比赛 ID：赛事路径|开始时间|队1|队2。"""
+    ts = int(start.timestamp())
+    m = match(f"{tour}|{ts}|{t1}|{t2}", start, finished, score, t1=t1, t2=t2)
+    m["tournament"] = tour
+    return m
+
+
+def test_reschedule_dedupe():
+    """线上 2026-10-17：Liquipedia 把开赛推迟 10 分钟，比赛 ID 变了，同一场收到两条提醒。"""
+    start = at(2026, 10, 17, 21, 30)
+    first, moved = real(start), real(start + timedelta(minutes=10))
+    check("改期前后 base 相同", ef.match_base(first["id"]) == ef.match_base(moved["id"]))
+    state = ready_state(digest_date="2026-10-18")
+    check("改期前 15 分钟提醒一次", len(texts(run_plan(start - timedelta(minutes=15), [first], [], state))) == 1)
+    check("推迟 10 分钟后不再重复提醒", texts(run_plan(start - timedelta(minutes=5), [moved], [], state)) == [])
+    check("改期后的 ID 不需要另外记账（每次都按容差识别）", moved["id"] not in state["reminded"])
+    done_first = real(start, finished=True, score=[3, 1])
+    done_moved = real(start + timedelta(minutes=10), finished=True, score=[3, 1])
+    run_plan(start + timedelta(hours=2), [done_first], [], state)
+    check("赛果也不因改期重复发", texts(run_plan(start + timedelta(hours=2, minutes=1), [done_moved], [], state)) == [])
+    far = real(start + timedelta(hours=7))
+    check("同样两队相隔 6 小时以上算另一场", len(texts(run_plan(start + timedelta(hours=6, minutes=50),
+                                                         [far], [], state))) == 1)
+    other_stage = real(start + timedelta(minutes=20), tour="Overwatch Champions Series/2026/North America/Stage 3/Playoffs")
+    check("不同赛段的同样两队不受影响", len(texts(run_plan(start + timedelta(minutes=8), [other_stage], [], state))) == 1)
+    check("旧格式（非 赛事|时间|队1|队2）的 ID 原样比较", ef.match_base("a") == "a")
+
+
+def test_preview():
+    now = at(2026, 10, 17, 20, 0)
+    kr = real(now + timedelta(hours=2), "T1", "ZETA DIVISION",
+              tour="Overwatch Champions Series/2026/Asia/Stage 3/Korea/Regular Season#Week 2")
+    na_next = real(now + timedelta(hours=1))
+    na_done = real(now - timedelta(hours=3), "NTMR", "Disguised", finished=True, score=[3, 2])
+    na_later = real(now + timedelta(hours=30), "Shopify Rebellion", "Team Peps")
+    matches = [kr, na_next, na_done, na_later]
+    route = {kr["id"]: 11}
+    posts = ef.preview_posts(now, matches, lambda m: route.get(m["id"], 99) == 99)
+    check("只包含路由到当前频道的比赛", all("T1 vs" not in p for p in posts))
+    check("依次是预告、下一场提醒、最近一场赛果", [p.split("\n")[1][:1] for p in posts] == ["📅", "🔴", "✅"])
+    check("预告只含 24 小时内", "Shopify Rebellion" not in posts[0] and "Team Liquid" in posts[0])
+    check("提醒是下一场", "Team Liquid vs The Kafe" in posts[1])
+    check("赛果照常剧透遮罩", "||NTMR 3 : 2 Disguised||" in posts[2])
+    check("每条都标明是 Preview", all(p.startswith("🧪 Preview") for p in posts))
+    check("没有路由到这里的比赛：空列表", ef.preview_posts(now, matches, lambda m: False) == [])
+    check("还没抓到数据：空列表", ef.preview_posts(now, None, lambda m: True) == [])
+
+    with tempfile.TemporaryDirectory() as d:
+        feed = ef.EsportsFeed(os.path.join(d, "esports_state.json"))
+        feed.matches = matches
+        feed.set_channel(99)
+        before = json.dumps(feed.state, sort_keys=True)
+        out = feed.preview(99, now)
+        check("EsportsFeed.preview 用默认频道路由", len(out) == 3)
+        check("preview 不改状态（不记账）", json.dumps(feed.state, sort_keys=True) == before)
+        check("可以重复触发", feed.preview(99, now) == out)
+
+
+def test_rematch_not_swallowed():
+    """季后赛同一页面（没有轮次锚点）里两队数小时后重赛：前一场还在比赛列表里，就不是改期，而是另一场。"""
+    tour = "Overwatch Champions Series/2026/North America/Stage 3/Playoffs"
+    t = at(2026, 10, 25, 1, 0)
+    upper = real(t + timedelta(hours=1), tour=tour)
+    grand = real(t + timedelta(hours=5), tour=tour)
+    state = ready_state(digest_date="2026-10-25")
+    run_plan(t + timedelta(minutes=50), [upper, grand], [], state)
+    upper_done = dict(upper, finished=True, score=[3, 1])
+    run_plan(t + timedelta(hours=3), [upper_done, grand], [], state)
+    check("总决赛（同样两队、4 小时后）照常提醒", len(texts(run_plan(t + timedelta(hours=4, minutes=50),
+                                                            [upper_done, grand], [], state))) == 1)
+    grand_done = dict(grand, finished=True, score=[2, 3])
+    check("总决赛的赛果照常发", len(texts(run_plan(t + timedelta(hours=8), [upper_done, grand_done], [], state))) == 1)
+
+
+def test_preview_edges():
+    now = at(2026, 10, 17, 20, 0)
+    many = [real(now + timedelta(hours=1, minutes=i), "X" * 60 + str(i), "Y" * 60) for i in range(40)]
+    posts = ef.preview_posts(now, many, lambda m: True)
+    check("预告样例加上前缀后每条仍不超过 1990 字符", all(len(p) <= ef.MAX_MESSAGE for p in posts))
+    tbd = real(now + timedelta(minutes=30), "TBD", "TBD")
+    nxt = real(now + timedelta(hours=2))
+    posts = ef.preview_posts(now, [tbd, nxt], lambda m: True)
+    check("提醒样例跳过 TBD 对 TBD（和真实推送一致）", "Team Liquid vs The Kafe" in posts[1] and "TBD vs TBD" not in posts[1])
+
+
 if __name__ == "__main__":
     test_digest()
     test_digest_dst()
@@ -402,6 +487,10 @@ if __name__ == "__main__":
     test_feed_tick_send_failure_stops_tick()
     test_feed_tick_split_digest_send_failure()
     test_region_routing()
+    test_reschedule_dedupe()
+    test_preview()
+    test_rematch_not_swallowed()
+    test_preview_edges()
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")
     sys.exit(0 if passed == len(results) else 1)

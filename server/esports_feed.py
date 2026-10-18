@@ -33,12 +33,14 @@ REMIND_BEFORE = timedelta(minutes=15)
 REMIND_LATE = timedelta(minutes=5)      # 开赛超过 5 分钟就不再补发提醒
 RESULT_MAX_AGE = timedelta(hours=24)    # 只发最近 24 小时内开始的比赛的赛果
 STATE_KEEP = timedelta(days=14)
+SAME_MATCH_WINDOW = timedelta(hours=6)  # 同一赛事、同样两队、开始时间相差不到 6 小时视为同一场（Liquipedia 改期）
 MATCH_REFRESH = 600              # 比赛每 10 分钟抓一次
 NEWS_REFRESH = 3 * 3600          # 新闻每 3 小时抓一次
 TICK_SECONDS = 60
 WATCH_URL = "https://www.twitch.tv/ow_esports"
 ATTRIBUTION = "Data: Liquipedia (CC-BY-SA)"
 MAX_MESSAGE = 1990
+PREVIEW_PREFIX = "🧪 Preview\n"
 
 
 def new_state() -> dict[str, Any]:
@@ -67,6 +69,26 @@ def apply_marks(state: dict[str, Any], marks: dict[str, Any]) -> None:
             state[flag] = True
 
 
+def match_base(match_id: str) -> str:
+    """比赛 ID（赛事路径|开始时间|队1|队2）去掉开始时间：同一场比赛改期后 base 不变。"""
+    parts = match_id.split("|")
+    return "|".join([parts[0], *parts[2:]]) if len(parts) >= 4 else match_id
+
+
+def already(done: dict[str, int], m: dict[str, Any], listed: set[str] | frozenset[str] = frozenset()) -> bool:
+    """这场比赛是否已经处理过：ID 相同，或者同一赛事同样两队、开始时间相差不到 6 小时（改期）。
+
+    listed 是当前比赛列表里的所有 ID。改期时旧 ID 会从 Liquipedia 消失；旧 ID 还在列表里，
+    说明那是另一场（比如季后赛同一页面里几小时后的重赛），不能当成同一场吞掉。
+    """
+    if m["id"] in done:
+        return True
+    base = match_base(m["id"])
+    window = SAME_MATCH_WINDOW.total_seconds()
+    return any(k not in listed and match_base(k) == base and abs(v - m["start"]) < window
+               for k, v in done.items())
+
+
 def prune(state: dict[str, Any], now: datetime) -> None:
     cutoff = (now - STATE_KEEP).timestamp()
     for key in ("reminded", "resulted"):
@@ -83,9 +105,9 @@ def _bo(m: dict[str, Any]) -> str:
     return f" · Bo{m['best_of']}" if m.get("best_of") else ""
 
 
-def format_digest(matches: list[dict[str, Any]]) -> list[str]:
+def format_digest(matches: list[dict[str, Any]], limit: int = MAX_MESSAGE) -> list[str]:
     lines = [f"• <t:{m['start']}:t> (<t:{m['start']}:R>) {_vs(m)} · {m['label']}{_bo(m)}" for m in matches]
-    return split_lines(["📅 **Overwatch esports — next 24h**", *lines, ATTRIBUTION])
+    return split_lines(["📅 **Overwatch esports — next 24h**", *lines, ATTRIBUTION], limit)
 
 
 def format_reminder(m: dict[str, Any]) -> str:
@@ -153,12 +175,13 @@ def plan(now: datetime, matches: list[dict[str, Any]] | None, news: list[dict[st
                 digest = [Post(None)]
             digest[-1].marks = {"digest_date": today}
             posts += digest
+        listed = {x["id"] for x in matches}
         for m in sorted(matches, key=lambda m: m["start"]):
-            if (not m["finished"] and m["id"] not in state["reminded"]
+            if (not m["finished"] and not already(state["reminded"], m, listed)
                     and not (m["team1"] == "TBD" and m["team2"] == "TBD")   # 对阵都没定，不提醒
                     and m["start"] - REMIND_BEFORE.total_seconds() <= ts <= m["start"] + REMIND_LATE.total_seconds()):
                 posts.append(Post(format_reminder(m), {"reminded": {m["id"]: m["start"]}}, target(m)))
-            if (m["finished"] and m["id"] not in state["resulted"]
+            if (m["finished"] and not already(state["resulted"], m, listed)
                     and ts - RESULT_MAX_AGE.total_seconds() <= m["start"] <= ts):
                 posts.append(Post(format_result(m), {"resulted": {m["id"]: m["start"]}}, target(m)))
     if news is not None and not state["news_initialized"]:
@@ -168,6 +191,28 @@ def plan(now: datetime, matches: list[dict[str, Any]] | None, news: list[dict[st
             if n["url"] not in state["seen_news"]:
                 posts.append(Post(format_news(n), {"seen_news": [n["url"]]}))
     return posts
+
+
+def preview_posts(now: datetime, matches: list[dict[str, Any]] | None,
+                  routed_here: Callable[[dict[str, Any]], bool]) -> list[str]:
+    """`esports preview` 的样例：路由到当前频道的比赛里，未来 24 小时预告、下一场的提醒、最近一场的赛果。
+
+    纯函数，不读写状态；用真实数据，所以部署到新频道、绑定赛区后可以马上验证分流。
+    """
+    ts = now.timestamp()
+    mine = [m for m in matches or [] if routed_here(m)]
+    upcoming = sorted((m for m in mine if not m["finished"] and m["start"] >= ts), key=lambda m: m["start"])
+    finished = sorted((m for m in mine if m["finished"]), key=lambda m: m["start"])
+    posts: list[str] = []
+    soon = [m for m in upcoming if m["start"] <= ts + DIGEST_WINDOW.total_seconds()]
+    if soon:
+        posts += format_digest(soon, MAX_MESSAGE - len(PREVIEW_PREFIX))   # 加上前缀后仍不超长
+    remindable = [m for m in upcoming if not (m["team1"] == "TBD" and m["team2"] == "TBD")]   # 和真实推送一致
+    if remindable:
+        posts.append(format_reminder(remindable[0]))
+    if finished:
+        posts.append(format_result(finished[-1]))
+    return [PREVIEW_PREFIX + p for p in posts]
 
 
 # ---------- 运行 ----------
@@ -225,6 +270,11 @@ class EsportsFeed:
     def channel_for(self, m: dict[str, Any]) -> int | None:
         """这场比赛会发到哪个频道（赛区频道，否则默认频道）。"""
         return resolve(self.channels, region_candidates(m.get("tournament") or "")) or self.channel_id
+
+    def preview(self, channel_id: int, now: datetime | None = None) -> list[str]:
+        """当前频道会收到哪些推送的样例（不记账，可重复触发）。"""
+        return preview_posts(now or datetime.now(timezone.utc), self.matches,
+                             lambda m: self.channel_for(m) == channel_id)
 
     async def refresh(self, mono: float) -> None:
         """到点就重新抓；抓取失败保留上一次的数据。"""
