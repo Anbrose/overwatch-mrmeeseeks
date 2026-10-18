@@ -274,8 +274,10 @@ def test_feed_tick_send_failure_stops_tick():
 def test_feed_tick_split_digest_send_failure():
     """Split digest: first chunk fails, others not attempted."""
     now = datetime.now(UTC)
+    # 推送时刻固定为"今天悉尼 10:00"，比赛相对它安排：用真实当前时间的话，悉尼凌晨跑测试时比赛已经开始，预告为空
+    utc_10am_syd = now.astimezone(ef.TZ).replace(hour=10, minute=0, second=0, microsecond=0).astimezone(UTC)
     # Create many matches to force split
-    many = [match(f"m{i}", now + timedelta(hours=1, minutes=i), t1="X" * 60, t2="Y" * 60)
+    many = [match(f"m{i}", utc_10am_syd + timedelta(hours=1, minutes=i), t1="X" * 60, t2="Y" * 60)
             for i in range(40)]
 
     send_attempts = []
@@ -302,10 +304,6 @@ def test_feed_tick_split_digest_send_failure():
         state["channel_id"] = 42
         feed.state = state
         feed.save()
-
-        # Set time to 10:00 Sydney time to trigger digest
-        sydney = now.astimezone(ef.TZ)
-        utc_10am_syd = sydney.replace(hour=10, minute=0, second=0, microsecond=0).astimezone(UTC)
 
         # Tick: first send fails
         asyncio.run(feed.tick(utc_10am_syd, send_fail_first, mono=0))
