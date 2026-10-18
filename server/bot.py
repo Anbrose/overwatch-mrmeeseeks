@@ -13,6 +13,8 @@
   @mrmeeseeks esports here|off|status  赛事推送的默认频道，见 esports_feed.py
   @mrmeeseeks region <赛区> [off]       把当前频道绑定成某赛区的频道（赛事推送和开播通知共用），见 regions.py
   @mrmeeseeks live add|remove|list     按赛区登记 B 站直播间，开播时通知，见 live_watch.py
+  @mrmeeseeks music here|off|status    音乐分享频道，见 music_share.py
+  @mrmeeseeks share music [off|status] 把自己的 Spotify 连上 bot（只给本人的二维码），换歌时在音乐频道分享
   @mrmeeseeks <问题>     英雄问答（数值、补丁、几枪击杀），见 hero_qa.py
 
 功能许愿频道（WISH_CHANNEL_ID）只接受表单提交，见 wishes.py；许愿子区里的 @ 用来改方案，见 wish_plan.py。
@@ -39,6 +41,8 @@ import matchups
 from esports_feed import EsportsFeed
 from live_watch import (DEFAULT_POLL_INTERVAL, BilibiliClient, LiveError, LiveEvent, LiveStore, LiveWatcher, Source,
                         parse_bilibili_target)
+from music_share import (DEFAULT_POLL_INTERVAL as MUSIC_POLL_INTERVAL, Listener, MusicShare, MusicStore, NowPlaying,
+                         SpotifyClient, SpotifyConfig)
 from regions import KNOWN_REGIONS, RegionError, RegionStore, normalize_region
 from hero_emojis import HeroEmojis
 from keybinds import KeyBinds, load_manual as load_manual_keys
@@ -79,6 +83,10 @@ HELP_TEXT = (
     "its matches and live alerts go here instead of the esports channel; `region cn off` unbinds, `region` lists\n"
     "`@mrmeeseeks live add <region> <Bilibili room url> [label]` Alert that region's channel when the room goes live; "
     "`live remove <url>`, `live list`\n"
+    "`@mrmeeseeks share music` Link your Spotify (private QR code / login link); each new song you play is then "
+    "shared in the music channel with a play button. `share music off` unlinks, `share music status` checks\n"
+    "`@mrmeeseeks music here` / `music off` Make this channel the music sharing channel (needs Manage Channels); "
+    "`music status` shows who is linked\n"
     "`@mrmeeseeks patches here` / `patches off` Post a summary of each new official Overwatch patch in this channel "
     "(needs Manage Channels); `patches status` shows the latest patch\n"
     "`@mrmeeseeks help` Show this help\n"
@@ -87,9 +95,11 @@ HELP_TEXT = (
     "`Tracer HP`, `how many Cassidy headshots kill Mauga at 30m?`"
 )
 COMMANDS = ("connect", "status", "disconnect", "help", "analyze", "label")
-ARG_COMMANDS = ("player", "esports", "patches", "wishes", "region", "live")     # 带参数的指令；参数保留大小写（BattleTag 大小写敏感）
+ARG_COMMANDS = ("player", "esports", "patches", "wishes", "region", "live", "share", "music")     # 带参数的指令；参数保留大小写（BattleTag 大小写敏感）
 LIVE_USAGE = ("Usage: `@mrmeeseeks live add <region> <Bilibili room url or id> [label]`, "
               "`live remove <room url or id>` or `live list`. Bind the region's channel first with `@mrmeeseeks region <region>`.")
+SHARE_USAGE = "Usage: `@mrmeeseeks share music` to link your Spotify, `share music off` to unlink, `share music status`."
+SPOTIFY_GREEN = 0x1DB954
 ASK_COOLDOWN_SECONDS = 5
 
 
@@ -181,6 +191,55 @@ class ClientSelectView(discord.ui.View):
                 pass
 
 
+# ---------------- 音乐分享：连接 Spotify 的按钮 ----------------
+def qr_png(url: str) -> bytes:
+    """登录链接的二维码（手机扫了直接在 Spotify 里授权）。"""
+    import segno
+    buf = io.BytesIO()
+    segno.make(url, error="m").save(buf, kind="png", scale=6, border=2)
+    return buf.getvalue()
+
+
+def play_view(url: str) -> discord.ui.View:
+    view = discord.ui.View()
+    view.add_item(discord.ui.Button(label="Play on Spotify", emoji="▶️", url=url))
+    return view
+
+
+class SpotifyConnectView(discord.ui.View):
+    """`@mrmeeseeks share music` 的回复：只有发起人能点，点了弹出只给本人看的二维码和登录链接。"""
+
+    def __init__(self, share: MusicShare, owner_id: int):
+        super().__init__(timeout=600)
+        self.share = share
+        self.owner_id = owner_id
+        self.message: discord.Message | None = None
+
+    @discord.ui.button(label="Connect Spotify", emoji="🎧", style=discord.ButtonStyle.success)
+    async def connect(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        if interaction.user.id != self.owner_id:
+            await interaction.response.send_message("Run `@mrmeeseeks share music` yourself to link your own Spotify.",
+                                                    ephemeral=True)
+            return
+        url = self.share.begin(interaction.user.id, str(interaction.user))
+        view = discord.ui.View()
+        view.add_item(discord.ui.Button(label="Log in to Spotify", emoji="🔗", url=url))
+        await interaction.response.send_message(
+            "Scan the QR code with your phone, or open the link, and allow **mrmeeseeks** to see what you're playing. "
+            "Only you can see this message. The link works for 10 minutes.\n"
+            "Your Spotify account must be on the app's user allowlist (ask an admin if the login fails).",
+            file=discord.File(io.BytesIO(qr_png(url)), "spotify-login.png"), view=view, ephemeral=True)
+
+    async def on_timeout(self) -> None:
+        for item in self.children:
+            item.disabled = True  # type: ignore[attr-defined]
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except discord.HTTPException:
+                pass
+
+
 # ---------------- Bot 本体 ----------------
 class MeeseeksBot(discord.Client):
     def __init__(self, registry: Registry, analyzer: Analyzer | None, recognizer: Recognizer,
@@ -190,7 +249,7 @@ class MeeseeksBot(discord.Client):
                  wish_channel_id: int | None = None, wish_desk: WishDesk | None = None,
                  wish_plans: WishPlans | None = None, patch_feed: PatchFeed | None = None,
                  regions: RegionStore | None = None, live_watcher: LiveWatcher | None = None,
-                 live_notify_offline: bool = False):
+                 live_notify_offline: bool = False, music: MusicShare | None = None):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents, allowed_mentions=discord.AllowedMentions(everyone=False, roles=False))
@@ -212,6 +271,10 @@ class MeeseeksBot(discord.Client):
         self.live_notify_offline = live_notify_offline
         if live_watcher is not None:
             live_watcher.notify = self._live_notify
+        self.music = music
+        if music is not None:
+            music.notify = self._music_notify
+            music.on_disconnect = self._music_disconnected
         self.wish_channel_id = wish_channel_id
         self.wish_desk = wish_desk
         self.wish_plans = wish_plans
@@ -284,6 +347,10 @@ class MeeseeksBot(discord.Client):
             await self._region(message, arg)
         elif cmd == "live":
             await self._live(message, arg)
+        elif cmd == "share":
+            await self._share(message, arg)
+        elif cmd == "music":
+            await self._music(message, arg)
         elif cmd == "analyze":
             await self._reanalyze(message)
         elif cmd == "label":
@@ -478,6 +545,105 @@ class MeeseeksBot(discord.Client):
         elif self.live_notify_offline:
             await channel.send(f"⚫ **{src.label}** ({src.region.upper()}) ended the stream.",
                                allowed_mentions=discord.AllowedMentions.none())
+
+    # ---------- 音乐分享 ----------
+    async def _music(self, message: discord.Message, arg: str) -> None:
+        share = self.music
+        if share is None:
+            await message.reply("Music sharing is not enabled on this server (SPOTIFY_CLIENT_ID / SPOTIFY_REDIRECT_URI).")
+            return
+        action = arg.strip().lower()
+        if action in ("here", "off"):
+            if not self._can_manage(message):
+                await message.reply("You need Manage Channels permission to change the music channel.")
+                return
+            if action == "here" and not message.channel.permissions_for(message.guild.me).send_messages:
+                await message.reply("I can't send messages in this channel — give me Send Messages permission first.")
+                return
+            share.store.set_channel(message.channel.id if action == "here" else None)
+            await message.reply("✅ Songs people play on Spotify will be shared in this channel. "
+                                "Everyone links their own account with `@mrmeeseeks share music`."
+                                if action == "here" else "Music sharing is turned off (linked accounts are kept).")
+        elif action == "status":
+            where = f"<#{share.store.channel_id}>" if share.store.channel_id else "not set (use `@mrmeeseeks music here`)"
+            lines = [f"Music channel: {where}", f"Spotify app: `{share.cfg.client_id[:8]}…`, "
+                     f"polling every {share.interval:.0f}s, {len(share.store.listeners)} linked account(s)"]
+            for lst in share.store.listeners.values():
+                now = share.last_tracks.get(lst.discord_id)
+                playing = f" · {'▶️' if now.is_playing else '⏸️'} {now.name} — {now.artist}" if now else ""
+                lines.append(f"• <@{lst.discord_id}> → **{lst.spotify_name}**{playing}")
+            if share.last_error:
+                lines.append(f"⚠️ Last poll error: {share.last_error}")
+            await message.reply("\n".join(lines)[:1990], allowed_mentions=discord.AllowedMentions.none())
+        else:
+            await message.reply("Usage: `@mrmeeseeks music here`, `music off` or `music status`.")
+
+    async def _share(self, message: discord.Message, arg: str) -> None:
+        share = self.music
+        words = arg.split()
+        if not words or words[0].lower() != "music":
+            await message.reply(SHARE_USAGE)
+            return
+        if share is None:
+            await message.reply("Music sharing is not enabled on this server.")
+            return
+        action = words[1].lower() if len(words) > 1 else ""
+        uid = message.author.id
+        if action in ("off", "stop", "disconnect"):
+            lst = share.disconnect(uid)
+            await message.reply(f"🔇 Unlinked Spotify account **{lst.spotify_name}**; your songs won't be shared any more."
+                                if lst else "Your Spotify isn't linked.")
+            return
+        if action == "status":
+            lst = share.store.listeners.get(uid)
+            if lst is None:
+                await message.reply("Your Spotify isn't linked. Run `@mrmeeseeks share music` to link it.")
+                return
+            now = share.last_tracks.get(uid)
+            where = f"<#{share.store.channel_id}>" if share.store.channel_id else "⚠️ no music channel yet (`@mrmeeseeks music here`)"
+            await message.reply(f"🎧 Linked to Spotify **{lst.spotify_name}**; songs go to {where}."
+                                + (f"\nLast seen: {'▶️' if now.is_playing else '⏸️'} {now.name} — {now.artist}" if now else ""))
+            return
+        if action:
+            await message.reply(SHARE_USAGE)
+            return
+        lst = share.store.listeners.get(uid)
+        view = SpotifyConnectView(share, uid)
+        intro = (f"You're already linked to **{lst.spotify_name}**. Press the button to link a different account, "
+                 "or `@mrmeeseeks share music off` to stop sharing." if lst else
+                 "Press the button to get your private Spotify login QR code. Once you allow it, every new song you "
+                 "play is shared in " + (f"<#{share.store.channel_id}>." if share.store.channel_id
+                                         else "the music channel (an admin still needs to set one with `@mrmeeseeks music here`)."))
+        view.message = await message.reply(intro, view=view)
+
+    async def _music_notify(self, ev: NowPlaying) -> None:
+        """MusicShare 的回调：换歌了就发到音乐频道。没设频道只记日志。"""
+        channel_id = self.music.store.channel_id if self.music else None
+        if channel_id is None:
+            log.info("No music channel; not sharing %s for %s", ev.track.name, ev.listener.discord_name)
+            return
+        await self.wait_until_ready()
+        channel = await self._channel(channel_id)
+        t = ev.track
+        embed = discord.Embed(title=t.name, url=t.url, description=t.artist + (f" · {t.album}" if t.album else ""),
+                              color=SPOTIFY_GREEN, timestamp=datetime.now(timezone.utc))
+        embed.set_author(name=f"{ev.listener.spotify_name} · Spotify")
+        if t.image:
+            embed.set_thumbnail(url=t.image)
+        if t.duration_ms:
+            embed.set_footer(text=f"{t.duration_ms // 60000}:{t.duration_ms // 1000 % 60:02d}")
+        await channel.send(f"🎵 <@{ev.listener.discord_id}> is listening to **{t.name}** by {t.artist}",
+                           embed=embed, view=play_view(t.url), allowed_mentions=discord.AllowedMentions.none())
+
+    async def _music_disconnected(self, lst: Listener, reason: str) -> None:
+        """授权失效（撤销、移出白名单）被移除后私信本人。"""
+        await self.wait_until_ready()
+        try:
+            user = self.get_user(lst.discord_id) or await self.fetch_user(lst.discord_id)
+            await user.send(f"Your Spotify link (**{lst.spotify_name}**) stopped working and was removed: {reason}\n"
+                            "Run `@mrmeeseeks share music` in the server to link it again.")
+        except discord.HTTPException:
+            log.info("Could not DM %s about the removed Spotify link", lst.discord_name)
 
     async def post_esports(self, channel_id: int, text: str) -> None:
         """推送任务用的发送函数：等 bot 登录完成再发，不 ping 任何人。"""
@@ -796,6 +962,21 @@ async def main() -> None:
     log.info("Regions: %s; %d live room(s) registered", ", ".join(sorted(regions.channels)) or "none",
              len(live_store.sources))
 
+    # 音乐分享：Spotify 应用（开发者后台）的 client id 和回调地址；没配就不启用
+    music = None
+    spotify_id = os.environ.get("SPOTIFY_CLIENT_ID", "").strip()
+    spotify_redirect = os.environ.get("SPOTIFY_REDIRECT_URI", "").strip()
+    if spotify_id and spotify_redirect:
+        music_store = MusicStore(state_dir / "music.json")
+        music_store.load()
+        music = MusicShare(music_store, SpotifyClient(SpotifyConfig(spotify_id, spotify_redirect,
+                                                                     os.environ.get("SPOTIFY_CLIENT_SECRET", "").strip())),
+                           interval=float(os.environ.get("MUSIC_POLL_INTERVAL", "").strip() or MUSIC_POLL_INTERVAL))
+        log.info("Music sharing: %d linked account(s), channel %s, callback path %s", len(music_store.listeners),
+                 music_store.channel_id or "not set", music.cfg.callback_path)
+    elif spotify_id or spotify_redirect:
+        log.warning("Music sharing needs both SPOTIFY_CLIENT_ID and SPOTIFY_REDIRECT_URI; disabled")
+
     # 赛事推送状态和英雄数据放在同一个目录（Docker 里是 herodata 卷）
     esports_feed = EsportsFeed(os.path.join(os.path.dirname(os.path.abspath(store.path)), "esports_state.json"),
                                regions=regions)
@@ -820,13 +1001,14 @@ async def main() -> None:
     registry = Registry()
     bot = MeeseeksBot(registry, analyzer, recognizer, labels, roster, store, hero_qa, esports_feed,
                       int(wish_channel) if wish_channel else None, wish_desk, wish_plans, patch_feed,
-                      regions=regions, live_watcher=live_watcher, live_notify_offline=live_notify_offline)
+                      regions=regions, live_watcher=live_watcher, live_notify_offline=live_notify_offline, music=music)
     patch_feed.icons = HeroEmojis(bot).for_patch     # 补丁摘要里英雄名旁边的头像
     ws = WSServer(
         registry, bot,
         host=os.environ.get("WS_HOST", "0.0.0.0"),
         port=int(os.environ.get("WS_PORT", "8765")),
         min_snapshot_interval=float(os.environ.get("MIN_SNAPSHOT_INTERVAL", "5")),
+        http_routes={music.cfg.callback_path: music.callback} if music else None,
     )
 
     async with bot:
@@ -836,6 +1018,8 @@ async def main() -> None:
                       asyncio.create_task(esports_feed.run(bot.post_esports)),
                       asyncio.create_task(patch_feed.run(bot.post_patches)),
                       asyncio.create_task(live_watcher.run())]
+        if music:
+            refreshers.append(asyncio.create_task(music.run()))
         try:
             await bot.start(token)
         except discord.LoginFailure:

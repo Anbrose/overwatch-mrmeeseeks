@@ -6,3 +6,13 @@
 meeseeks.example.com {
 	reverse_proxy 127.0.0.1:8765
 }
+
+# 音乐分享的 Spotify 回调也走同一个端口（SPOTIFY_REDIRECT_URI=https://meeseeks.example.com/spotify/callback）。
+# 如果服务器上已经有别的站点的 Caddy，只转发回调路径即可：
+#
+# other.example.com {
+#     handle /mrmeeseeks/spotify/* {
+#         reverse_proxy 127.0.0.1:8765
+#     }
+#     ...
+# }

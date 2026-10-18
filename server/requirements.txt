@@ -6,3 +6,4 @@ mwparserfromhell>=0.6
 numpy>=1.26
 rapidocr-onnxruntime==1.4.4  # OCR 参数在这个版本上验证过
 tzdata  # zoneinfo 时区数据，slim 镜像里不一定有
+segno>=1.6  # 音乐分享：Spotify 登录二维码（纯 Python，不需要 Pillow）
