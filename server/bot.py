@@ -73,7 +73,8 @@ HELP_TEXT = (
     "`@mrmeeseeks label` Label portraits I couldn't recognize\n"
     "`@mrmeeseeks disconnect` Unpair the client bound to this channel\n"
     "`@mrmeeseeks esports here` / `esports off` Post OWCS schedule, reminders, results and news in this channel "
-    "(needs Manage Channels); `esports status` shows the current setup\n"
+    "(needs Manage Channels); `esports status` shows the current setup; "
+    "`esports preview` posts sample posts for this channel right now (for testing)\n"
     "`@mrmeeseeks region cn` Make this channel the home of one region (cn, asia, korea, japan, pacific, emea, na, world): "
     "its matches and live alerts go here instead of the esports channel; `region cn off` unbinds, `region` lists\n"
     "`@mrmeeseeks live add <region> <Bilibili room url> [label]` Alert that region's channel when the room goes live; "
@@ -321,8 +322,22 @@ class MeeseeksBot(discord.Client):
                 lines.append(f"• <t:{m['start']}:f> {m['team1']} vs {m['team2']} · {m['label']}"
                              + (f" → <#{dest}>" if dest else ""))
             await message.reply("\n".join(lines)[:1990])
+        elif action == "preview":
+            # 测试入口：立刻在当前频道发一组用真实数据生成的样例，不记账、不影响自动推送的去重
+            if not self._can_manage(message):
+                await message.reply("You need Manage Channels permission to preview esports posts.")
+                return
+            posts = feed.preview(message.channel.id)
+            if not posts:
+                reason = ("match data hasn't been fetched yet — try again in a minute" if feed.matches is None
+                          else "no upcoming or recent official matches are routed here "
+                               "(check `@mrmeeseeks esports status` and `region`)")
+                await message.reply(f"No matches routed to this channel right now: {reason}.")
+                return
+            for text in posts:
+                await message.channel.send(text, allowed_mentions=discord.AllowedMentions.none())
         else:
-            await message.reply("Usage: `@mrmeeseeks esports here`, `esports off` or `esports status`.")
+            await message.reply("Usage: `@mrmeeseeks esports here`, `esports off`, `esports status` or `esports preview`.")
 
     # ---------- 赛区频道 ----------
     def _can_manage(self, message: discord.Message, perm: str = "manage_channels") -> bool:

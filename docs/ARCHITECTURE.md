@@ -103,7 +103,10 @@
 3. **发送**：发送成功后才记账，失败的下一轮重试。没有设置频道时照常记账、不发送。状态保存在英雄数据缓存同一目录的 `esports_state.json`。
 4. **分赛区**：`regions.region_candidates` 把赛事路径里的段按 `REGION_ALIASES` 映射成赛区列表，具体的在前（`…/Asia/Stage 3/Korea/…` → `['korea', 'asia']`；没有赛区的总决赛、季中赛 → `['world']`，世界杯 → `['owwc', 'world']`）。`plan()` 收到赛区 -> 频道的绑定后，每场比赛取列表里第一个绑定了频道的赛区作为 `Post.channel`，都没绑就是 `None`（默认频道）。预告按目标频道分组，每个频道一份只含自己比赛的预告，只有最后一条记 `digest_date`。新闻只发默认频道。绑定用 `@mrmeeseeks region <赛区>` 写进 `STATE_DIR/regions.json`。
 
-已知限制：Liquipedia 汇总页只有最近约 50 场即将进行和 50 场已结束的比赛；官方首页只放 1–2 条精选新闻。
+5. **改期去重**：比赛 ID 是 `赛事路径|开始时间|队1|队2`，Liquipedia 改开赛时间会生成新 ID。`already()` 在 `reminded` / `resulted` 里找同一赛事、同样两队（`match_base`）且开始时间相差不到 `SAME_MATCH_WINDOW`（6 小时）的记录，找到就视为同一场，不再重复提醒或发赛果。
+6. **测试入口**：`@mrmeeseeks esports preview` 调用纯函数 `preview_posts`，只取会路由到当前频道的比赛，立刻发预告、下一场提醒、最近一场赛果的样例；不记账，不影响自动推送的去重。
+
+已知限制：Liquipedia 汇总页只有最近约 50 场即将进行和 50 场已结束的比赛；官方首页只放 1–2 条精选新闻；同一赛段里同样两队 6 小时内重赛，第二场会被改期去重吞掉。
 
 ## 开播通知
 

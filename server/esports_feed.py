@@ -186,6 +186,27 @@ def plan(now: datetime, matches: list[dict[str, Any]] | None, news: list[dict[st
     return posts
 
 
+def preview_posts(now: datetime, matches: list[dict[str, Any]] | None,
+                  routed_here: Callable[[dict[str, Any]], bool]) -> list[str]:
+    """`esports preview` 的样例：路由到当前频道的比赛里，未来 24 小时预告、下一场的提醒、最近一场的赛果。
+
+    纯函数，不读写状态；用真实数据，所以部署到新频道、绑定赛区后可以马上验证分流。
+    """
+    ts = now.timestamp()
+    mine = [m for m in matches or [] if routed_here(m)]
+    upcoming = sorted((m for m in mine if not m["finished"] and m["start"] >= ts), key=lambda m: m["start"])
+    finished = sorted((m for m in mine if m["finished"]), key=lambda m: m["start"])
+    posts: list[str] = []
+    soon = [m for m in upcoming if m["start"] <= ts + DIGEST_WINDOW.total_seconds()]
+    if soon:
+        posts += format_digest(soon)
+    if upcoming:
+        posts.append(format_reminder(upcoming[0]))
+    if finished:
+        posts.append(format_result(finished[-1]))
+    return [f"🧪 Preview\n{p}" for p in posts]
+
+
 # ---------- 运行 ----------
 class EsportsFeed:
     def __init__(self, path: str,
@@ -241,6 +262,11 @@ class EsportsFeed:
     def channel_for(self, m: dict[str, Any]) -> int | None:
         """这场比赛会发到哪个频道（赛区频道，否则默认频道）。"""
         return resolve(self.channels, region_candidates(m.get("tournament") or "")) or self.channel_id
+
+    def preview(self, channel_id: int, now: datetime | None = None) -> list[str]:
+        """当前频道会收到哪些推送的样例（不记账，可重复触发）。"""
+        return preview_posts(now or datetime.now(timezone.utc), self.matches,
+                             lambda m: self.channel_for(m) == channel_id)
 
     async def refresh(self, mono: float) -> None:
         """到点就重新抓；抓取失败保留上一次的数据。"""

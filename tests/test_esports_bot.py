@@ -266,11 +266,55 @@ def _reload_live(path):
     return "bilibili:7734200" in s.sources
 
 
+def test_preview_command():
+    import json
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
+    tour = "Overwatch Champions Series/2026/North America/Stage 3/Regular Season#Week 2"
+
+    def m(hours, t1, t2, finished=False, score=None, tournament=tour):
+        start = int((now + timedelta(hours=hours)).timestamp())
+        return {"id": f"{tournament}|{start}|{t1}|{t2}", "start": start, "tournament": tournament,
+                "label": "OWCS NA Stage 3", "team1": t1, "team2": t2, "best_of": 5, "finished": finished,
+                "score": score, "url": "https://liquipedia.net/x"}
+
+    with tempfile.TemporaryDirectory() as d:
+        regions = RegionStore(None)
+        feed = EsportsFeed(os.path.join(d, "esports_state.json"), regions=regions)
+        b = make_bot(feed)
+        b._can_manage = bot.MeeseeksBot._can_manage.__get__(b)
+
+        msg = FakeMessage(manage=False)
+        asyncio.run(b._esports(msg, "preview"))
+        check("preview 需要管理频道权限", "Manage Channels" in msg.last and msg.channel.sent == [])
+
+        msg = FakeMessage(manage=True)
+        asyncio.run(b._esports(msg, "preview"))
+        check("还没抓到数据时说明原因", "hasn't been fetched" in msg.last)
+
+        feed.matches = [m(1, "Team Liquid", "The Kafe"), m(-3, "NTMR", "Disguised", True, [3, 2])]
+        regions.set("na", 777)
+        msg = FakeMessage(manage=True, channel_id=555)
+        asyncio.run(b._esports(msg, "preview"))
+        check("比赛都分流到别的赛区频道：说明没有比赛路由到这里", "No matches routed to this channel" in msg.last
+              and msg.channel.sent == [])
+
+        before = json.dumps(feed.state, sort_keys=True)
+        msg = FakeMessage(manage=True, channel_id=777)
+        asyncio.run(b._esports(msg, "preview"))
+        sent = [t for t, _, _ in msg.channel.sent]
+        check("在赛区频道里发出预告、提醒、赛果三条样例", len(sent) == 3 and all(t.startswith("🧪 Preview") for t in sent))
+        check("样例不 ping 任何人", all(a is not None and a.everyone is False for _, a, _ in msg.channel.sent))
+        check("preview 不改推送状态", json.dumps(feed.state, sort_keys=True) == before)
+    check("帮助里有 esports preview", "esports preview" in bot.HELP_TEXT)
+
+
 if __name__ == "__main__":
     test_routing()
     test_commands()
     test_post_esports()
     test_region_and_live()
+    test_preview_command()
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")
     sys.exit(0 if passed == len(results) else 1)

@@ -418,6 +418,36 @@ def test_reschedule_dedupe():
     check("旧格式（非 赛事|时间|队1|队2）的 ID 原样比较", ef.match_base("a") == "a")
 
 
+def test_preview():
+    now = at(2026, 10, 17, 20, 0)
+    kr = real(now + timedelta(hours=2), "T1", "ZETA DIVISION",
+              tour="Overwatch Champions Series/2026/Asia/Stage 3/Korea/Regular Season#Week 2")
+    na_next = real(now + timedelta(hours=1))
+    na_done = real(now - timedelta(hours=3), "NTMR", "Disguised", finished=True, score=[3, 2])
+    na_later = real(now + timedelta(hours=30), "Shopify Rebellion", "Team Peps")
+    matches = [kr, na_next, na_done, na_later]
+    route = {kr["id"]: 11}
+    posts = ef.preview_posts(now, matches, lambda m: route.get(m["id"], 99) == 99)
+    check("只包含路由到当前频道的比赛", all("T1 vs" not in p for p in posts))
+    check("依次是预告、下一场提醒、最近一场赛果", [p.split("\n")[1][:1] for p in posts] == ["📅", "🔴", "✅"])
+    check("预告只含 24 小时内", "Shopify Rebellion" not in posts[0] and "Team Liquid" in posts[0])
+    check("提醒是下一场", "Team Liquid vs The Kafe" in posts[1])
+    check("赛果照常剧透遮罩", "||NTMR 3 : 2 Disguised||" in posts[2])
+    check("每条都标明是 Preview", all(p.startswith("🧪 Preview") for p in posts))
+    check("没有路由到这里的比赛：空列表", ef.preview_posts(now, matches, lambda m: False) == [])
+    check("还没抓到数据：空列表", ef.preview_posts(now, None, lambda m: True) == [])
+
+    with tempfile.TemporaryDirectory() as d:
+        feed = ef.EsportsFeed(os.path.join(d, "esports_state.json"))
+        feed.matches = matches
+        feed.set_channel(99)
+        before = json.dumps(feed.state, sort_keys=True)
+        out = feed.preview(99, now)
+        check("EsportsFeed.preview 用默认频道路由", len(out) == 3)
+        check("preview 不改状态（不记账）", json.dumps(feed.state, sort_keys=True) == before)
+        check("可以重复触发", feed.preview(99, now) == out)
+
+
 if __name__ == "__main__":
     test_digest()
     test_digest_dst()
@@ -431,6 +461,7 @@ if __name__ == "__main__":
     test_feed_tick_split_digest_send_failure()
     test_region_routing()
     test_reschedule_dedupe()
+    test_preview()
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")
     sys.exit(0 if passed == len(results) else 1)
