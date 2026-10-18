@@ -33,6 +33,7 @@ REMIND_BEFORE = timedelta(minutes=15)
 REMIND_LATE = timedelta(minutes=5)      # 开赛超过 5 分钟就不再补发提醒
 RESULT_MAX_AGE = timedelta(hours=24)    # 只发最近 24 小时内开始的比赛的赛果
 STATE_KEEP = timedelta(days=14)
+SAME_MATCH_WINDOW = timedelta(hours=6)  # 同一赛事、同样两队、开始时间相差不到 6 小时视为同一场（Liquipedia 改期）
 MATCH_REFRESH = 600              # 比赛每 10 分钟抓一次
 NEWS_REFRESH = 3 * 3600          # 新闻每 3 小时抓一次
 TICK_SECONDS = 60
@@ -65,6 +66,21 @@ def apply_marks(state: dict[str, Any], marks: dict[str, Any]) -> None:
     for flag in ("initialized", "news_initialized"):
         if marks.get(flag):
             state[flag] = True
+
+
+def match_base(match_id: str) -> str:
+    """比赛 ID（赛事路径|开始时间|队1|队2）去掉开始时间：同一场比赛改期后 base 不变。"""
+    parts = match_id.split("|")
+    return "|".join([parts[0], *parts[2:]]) if len(parts) >= 4 else match_id
+
+
+def already(done: dict[str, int], m: dict[str, Any]) -> bool:
+    """这场比赛是否已经处理过：ID 相同，或者同一赛事同样两队、开始时间相差不到 6 小时（改期）。"""
+    if m["id"] in done:
+        return True
+    base = match_base(m["id"])
+    window = SAME_MATCH_WINDOW.total_seconds()
+    return any(match_base(k) == base and abs(v - m["start"]) < window for k, v in done.items())
 
 
 def prune(state: dict[str, Any], now: datetime) -> None:
@@ -154,11 +170,11 @@ def plan(now: datetime, matches: list[dict[str, Any]] | None, news: list[dict[st
             digest[-1].marks = {"digest_date": today}
             posts += digest
         for m in sorted(matches, key=lambda m: m["start"]):
-            if (not m["finished"] and m["id"] not in state["reminded"]
+            if (not m["finished"] and not already(state["reminded"], m)
                     and not (m["team1"] == "TBD" and m["team2"] == "TBD")   # 对阵都没定，不提醒
                     and m["start"] - REMIND_BEFORE.total_seconds() <= ts <= m["start"] + REMIND_LATE.total_seconds()):
                 posts.append(Post(format_reminder(m), {"reminded": {m["id"]: m["start"]}}, target(m)))
-            if (m["finished"] and m["id"] not in state["resulted"]
+            if (m["finished"] and not already(state["resulted"], m)
                     and ts - RESULT_MAX_AGE.total_seconds() <= m["start"] <= ts):
                 posts.append(Post(format_result(m), {"resulted": {m["id"]: m["start"]}}, target(m)))
     if news is not None and not state["news_initialized"]:

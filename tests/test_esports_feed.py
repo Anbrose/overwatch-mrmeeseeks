@@ -388,6 +388,36 @@ def test_region_routing():
               [c for c, _ in sent] == [11] and set(feed.state["reminded"]) == {"kr", "na"})
 
 
+def real(start, t1="Team Liquid", t2="The Kafe", finished=False, score=None,
+         tour="Overwatch Champions Series/2026/North America/Stage 3/Regular Season#Week 2"):
+    """真实格式的比赛 ID：赛事路径|开始时间|队1|队2。"""
+    ts = int(start.timestamp())
+    m = match(f"{tour}|{ts}|{t1}|{t2}", start, finished, score, t1=t1, t2=t2)
+    m["tournament"] = tour
+    return m
+
+
+def test_reschedule_dedupe():
+    """线上 2026-10-17：Liquipedia 把开赛推迟 10 分钟，比赛 ID 变了，同一场收到两条提醒。"""
+    start = at(2026, 10, 17, 21, 30)
+    first, moved = real(start), real(start + timedelta(minutes=10))
+    check("改期前后 base 相同", ef.match_base(first["id"]) == ef.match_base(moved["id"]))
+    state = ready_state(digest_date="2026-10-18")
+    check("改期前 15 分钟提醒一次", len(texts(run_plan(start - timedelta(minutes=15), [first], [], state))) == 1)
+    check("推迟 10 分钟后不再重复提醒", texts(run_plan(start - timedelta(minutes=5), [moved], [], state)) == [])
+    check("改期后的 ID 不需要另外记账（每次都按容差识别）", moved["id"] not in state["reminded"])
+    done_first = real(start, finished=True, score=[3, 1])
+    done_moved = real(start + timedelta(minutes=10), finished=True, score=[3, 1])
+    run_plan(start + timedelta(hours=2), [done_first], [], state)
+    check("赛果也不因改期重复发", texts(run_plan(start + timedelta(hours=2, minutes=1), [done_moved], [], state)) == [])
+    far = real(start + timedelta(hours=7))
+    check("同样两队相隔 6 小时以上算另一场", len(texts(run_plan(start + timedelta(hours=6, minutes=50),
+                                                         [far], [], state))) == 1)
+    other_stage = real(start + timedelta(minutes=20), tour="Overwatch Champions Series/2026/North America/Stage 3/Playoffs")
+    check("不同赛段的同样两队不受影响", len(texts(run_plan(start + timedelta(minutes=8), [other_stage], [], state))) == 1)
+    check("旧格式（非 赛事|时间|队1|队2）的 ID 原样比较", ef.match_base("a") == "a")
+
+
 if __name__ == "__main__":
     test_digest()
     test_digest_dst()
@@ -400,6 +430,7 @@ if __name__ == "__main__":
     test_feed_tick_send_failure_stops_tick()
     test_feed_tick_split_digest_send_failure()
     test_region_routing()
+    test_reschedule_dedupe()
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")
     sys.exit(0 if passed == len(results) else 1)
