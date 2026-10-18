@@ -40,6 +40,7 @@ TICK_SECONDS = 60
 WATCH_URL = "https://www.twitch.tv/ow_esports"
 ATTRIBUTION = "Data: Liquipedia (CC-BY-SA)"
 MAX_MESSAGE = 1990
+PREVIEW_PREFIX = "🧪 Preview\n"
 
 
 def new_state() -> dict[str, Any]:
@@ -74,13 +75,18 @@ def match_base(match_id: str) -> str:
     return "|".join([parts[0], *parts[2:]]) if len(parts) >= 4 else match_id
 
 
-def already(done: dict[str, int], m: dict[str, Any]) -> bool:
-    """这场比赛是否已经处理过：ID 相同，或者同一赛事同样两队、开始时间相差不到 6 小时（改期）。"""
+def already(done: dict[str, int], m: dict[str, Any], listed: set[str] | frozenset[str] = frozenset()) -> bool:
+    """这场比赛是否已经处理过：ID 相同，或者同一赛事同样两队、开始时间相差不到 6 小时（改期）。
+
+    listed 是当前比赛列表里的所有 ID。改期时旧 ID 会从 Liquipedia 消失；旧 ID 还在列表里，
+    说明那是另一场（比如季后赛同一页面里几小时后的重赛），不能当成同一场吞掉。
+    """
     if m["id"] in done:
         return True
     base = match_base(m["id"])
     window = SAME_MATCH_WINDOW.total_seconds()
-    return any(match_base(k) == base and abs(v - m["start"]) < window for k, v in done.items())
+    return any(k not in listed and match_base(k) == base and abs(v - m["start"]) < window
+               for k, v in done.items())
 
 
 def prune(state: dict[str, Any], now: datetime) -> None:
@@ -99,9 +105,9 @@ def _bo(m: dict[str, Any]) -> str:
     return f" · Bo{m['best_of']}" if m.get("best_of") else ""
 
 
-def format_digest(matches: list[dict[str, Any]]) -> list[str]:
+def format_digest(matches: list[dict[str, Any]], limit: int = MAX_MESSAGE) -> list[str]:
     lines = [f"• <t:{m['start']}:t> (<t:{m['start']}:R>) {_vs(m)} · {m['label']}{_bo(m)}" for m in matches]
-    return split_lines(["📅 **Overwatch esports — next 24h**", *lines, ATTRIBUTION])
+    return split_lines(["📅 **Overwatch esports — next 24h**", *lines, ATTRIBUTION], limit)
 
 
 def format_reminder(m: dict[str, Any]) -> str:
@@ -169,12 +175,13 @@ def plan(now: datetime, matches: list[dict[str, Any]] | None, news: list[dict[st
                 digest = [Post(None)]
             digest[-1].marks = {"digest_date": today}
             posts += digest
+        listed = {x["id"] for x in matches}
         for m in sorted(matches, key=lambda m: m["start"]):
-            if (not m["finished"] and not already(state["reminded"], m)
+            if (not m["finished"] and not already(state["reminded"], m, listed)
                     and not (m["team1"] == "TBD" and m["team2"] == "TBD")   # 对阵都没定，不提醒
                     and m["start"] - REMIND_BEFORE.total_seconds() <= ts <= m["start"] + REMIND_LATE.total_seconds()):
                 posts.append(Post(format_reminder(m), {"reminded": {m["id"]: m["start"]}}, target(m)))
-            if (m["finished"] and not already(state["resulted"], m)
+            if (m["finished"] and not already(state["resulted"], m, listed)
                     and ts - RESULT_MAX_AGE.total_seconds() <= m["start"] <= ts):
                 posts.append(Post(format_result(m), {"resulted": {m["id"]: m["start"]}}, target(m)))
     if news is not None and not state["news_initialized"]:
@@ -199,12 +206,13 @@ def preview_posts(now: datetime, matches: list[dict[str, Any]] | None,
     posts: list[str] = []
     soon = [m for m in upcoming if m["start"] <= ts + DIGEST_WINDOW.total_seconds()]
     if soon:
-        posts += format_digest(soon)
-    if upcoming:
-        posts.append(format_reminder(upcoming[0]))
+        posts += format_digest(soon, MAX_MESSAGE - len(PREVIEW_PREFIX))   # 加上前缀后仍不超长
+    remindable = [m for m in upcoming if not (m["team1"] == "TBD" and m["team2"] == "TBD")]   # 和真实推送一致
+    if remindable:
+        posts.append(format_reminder(remindable[0]))
     if finished:
         posts.append(format_result(finished[-1]))
-    return [f"🧪 Preview\n{p}" for p in posts]
+    return [PREVIEW_PREFIX + p for p in posts]
 
 
 # ---------- 运行 ----------

@@ -448,6 +448,33 @@ def test_preview():
         check("可以重复触发", feed.preview(99, now) == out)
 
 
+def test_rematch_not_swallowed():
+    """季后赛同一页面（没有轮次锚点）里两队数小时后重赛：前一场还在比赛列表里，就不是改期，而是另一场。"""
+    tour = "Overwatch Champions Series/2026/North America/Stage 3/Playoffs"
+    t = at(2026, 10, 25, 1, 0)
+    upper = real(t + timedelta(hours=1), tour=tour)
+    grand = real(t + timedelta(hours=5), tour=tour)
+    state = ready_state(digest_date="2026-10-25")
+    run_plan(t + timedelta(minutes=50), [upper, grand], [], state)
+    upper_done = dict(upper, finished=True, score=[3, 1])
+    run_plan(t + timedelta(hours=3), [upper_done, grand], [], state)
+    check("总决赛（同样两队、4 小时后）照常提醒", len(texts(run_plan(t + timedelta(hours=4, minutes=50),
+                                                            [upper_done, grand], [], state))) == 1)
+    grand_done = dict(grand, finished=True, score=[2, 3])
+    check("总决赛的赛果照常发", len(texts(run_plan(t + timedelta(hours=8), [upper_done, grand_done], [], state))) == 1)
+
+
+def test_preview_edges():
+    now = at(2026, 10, 17, 20, 0)
+    many = [real(now + timedelta(hours=1, minutes=i), "X" * 60 + str(i), "Y" * 60) for i in range(40)]
+    posts = ef.preview_posts(now, many, lambda m: True)
+    check("预告样例加上前缀后每条仍不超过 1990 字符", all(len(p) <= ef.MAX_MESSAGE for p in posts))
+    tbd = real(now + timedelta(minutes=30), "TBD", "TBD")
+    nxt = real(now + timedelta(hours=2))
+    posts = ef.preview_posts(now, [tbd, nxt], lambda m: True)
+    check("提醒样例跳过 TBD 对 TBD（和真实推送一致）", "Team Liquid vs The Kafe" in posts[1] and "TBD vs TBD" not in posts[1])
+
+
 if __name__ == "__main__":
     test_digest()
     test_digest_dst()
@@ -462,6 +489,8 @@ if __name__ == "__main__":
     test_region_routing()
     test_reschedule_dedupe()
     test_preview()
+    test_rematch_not_swallowed()
+    test_preview_edges()
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")
     sys.exit(0 if passed == len(results) else 1)
