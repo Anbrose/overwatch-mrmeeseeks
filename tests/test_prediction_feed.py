@@ -150,6 +150,10 @@ def test_reschedule_and_void():
         check("改期 10 分钟：不再发第二条竞猜", sum(1 for _, _, v in discord.sent if v) == 1)
         tick(feed, start + timedelta(minutes=1), discord, mono=1400)
         check("按新的开赛时间截止：原时间不截止", store.find(moved, {moved["id"]})["status"] == pr.OPEN)
+        key = store.find(moved, {moved["id"]})["key"]
+        check("改期后原开赛时间已过、新时间未到：仍可押注",
+              store.pick(key, 5, "Eve", 1, (start + timedelta(minutes=2)).timestamp()).ok
+              and store.get(key)["start"] == moved["start"])
         tick(feed, start + timedelta(minutes=10), discord, mono=2100)
         check("到新的开赛时间截止", store.find(moved, {moved["id"]})["status"] == pr.LOCKED)
 
@@ -160,6 +164,40 @@ def test_reschedule_and_void():
         check("48 小时后作废", store.active() == [] and store.find(moved)["status"] == pr.VOID)
         check("作废时编辑原消息为 Voided", discord.edits[-1][2]["labels"] == ["Voided", "Voided"]
               and discord.edits[-1][2]["disabled"])
+
+
+
+def test_down_across_start_and_finish():
+    start = SYD_10AM_MON + timedelta(hours=3)
+    box = [[match(start)]]
+    with tempfile.TemporaryDirectory() as d:
+        feed, store = make_feed(d, box)
+        feed.state["leaderboard_week"] = "2026-10-26"
+        discord = Discord()
+        tick(feed, SYD_10AM_MON, discord, mono=0)
+        entry = store.find(box[0][0])
+        store.pick(entry["key"], 7, "Alice", 2, start.timestamp() - 60)
+        box[0] = [match(start, finished=True, score=[1, 3])]       # bot 停机期间开赛又打完
+        tick(feed, start + timedelta(hours=2), discord, mono=7200)
+        texts = discord.texts()
+        lock_i = next(i for i, t in enumerate(texts) if t.startswith("🔒"))
+        result_i = next(i for i, t in enumerate(texts) if t.startswith("✅"))
+        check("停机跨过开赛和赛果：先公布名单再揭晓", lock_i < result_i)
+        check("停机跨过开赛和赛果：原消息按钮被禁用", any(mid == entry["message_id"] and v["disabled"]
+                                                    for _, mid, v in discord.edits))
+        check("停机跨过开赛和赛果：照常结算", store.get(entry["key"])["status"] == pr.RESOLVED)
+
+
+def test_long_name_lists():
+    entry = {"team1": "T1", "team2": "ZETA"}
+    names = {1: [f"player_{i:03d}_longname" for i in range(150)], 2: ["Bob"]}
+    text = pf.format_lock(entry, names)
+    check("名单太长时截断：整条消息不超过 2000 字", len(text) < 1900 and "and " in text and " more" in text
+          and "Bob" in text)
+    lines = [pr.ScoreLine(i, f"player_{i:03d}_longname", i % 2 == 0, 1.0) for i in range(200)]
+    line = pf.reveal_line(lines)
+    check("揭晓名单太长时截断，仍在剧透里", len(line) < 1700 and line.startswith("🎯 ||") and line.endswith("||")
+          and " more" in line)
 
 
 def test_draw_and_no_channel_and_tbd():
@@ -255,6 +293,8 @@ def test_pure_helpers():
 if __name__ == "__main__":
     test_lifecycle()
     test_reschedule_and_void()
+    test_down_across_start_and_finish()
+    test_long_name_lists()
     test_draw_and_no_channel_and_tbd()
     test_send_failure_retry()
     test_leaderboard()

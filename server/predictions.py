@@ -144,6 +144,12 @@ class PredictionStore:
             out[r["side"]].append(r["user_name"])
         return out
 
+    def reschedule(self, key: str, start: int) -> None:
+        """改期：还开着的竞猜按新的开赛时间截止。"""
+        self.db.execute("UPDATE matches SET start = ? WHERE key = ? AND status = ? AND start != ?",
+                        (int(start), key, OPEN, int(start)))
+        self.db.commit()
+
     def lock(self, key: str) -> dict[int, list[str]] | None:
         """截止并返回双方押注名单；已经截止过（或不存在）返回 None。"""
         cur = self.db.execute("UPDATE matches SET status = ? WHERE key = ? AND status = ?", (LOCKED, key, OPEN))

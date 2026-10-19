@@ -23,6 +23,7 @@ log = logging.getLogger("mrmeeseeks.predictions")
 
 PICKS_MIN_LEAD = timedelta(minutes=15)    # 离开赛不足 15 分钟就不再发竞猜消息
 VOID_AFTER = timedelta(hours=48)          # 开赛 48 小时后还没结算就作废
+NAMES_MAX_CHARS = 700                     # 名单每段最多这么长，超出写 "and N more"，保证消息不超过 2000 字
 ROSTER_NOTE = "-# Registered event roster — the starting lineup may differ. " + ATTRIBUTION
 
 
@@ -43,9 +44,18 @@ def format_prediction(m: dict[str, Any], roster1: list | None, roster2: list | N
     ])
 
 
+def join_names(names: list[str], limit: int = NAMES_MAX_CHARS) -> str:
+    out: list[str] = []
+    for i, name in enumerate(names):
+        if len(", ".join(out + [name])) > limit:
+            return ", ".join(out) + f" and {len(names) - i} more"
+        out.append(name)
+    return ", ".join(out) or "nobody"
+
+
 def format_lock(entry: dict[str, Any], names: dict[int, list[str]]) -> str:
     def side(n: int) -> str:
-        return ", ".join(names[n]) if names[n] else "nobody"
+        return join_names(names[n])
     return (f"🔒 Picks closed: {entry['team1']} vs {entry['team2']} — "
             f"{entry['team1']}: {side(1)} · {entry['team2']}: {side(2)}")
 
@@ -53,8 +63,8 @@ def format_lock(entry: dict[str, Any], names: dict[int, list[str]]) -> str:
 def reveal_line(lines: list[pr.ScoreLine]) -> str | None:
     if not lines:
         return None
-    hit = ", ".join(f"{s.user_name} +{s.points:g}" for s in lines if s.correct) or "nobody"
-    miss = ", ".join(s.user_name for s in lines if not s.correct) or "nobody"
+    hit = join_names([f"{s.user_name} +{s.points:g}" for s in lines if s.correct])
+    miss = join_names([s.user_name for s in lines if not s.correct])
     return f"🎯 ||Correct: {hit} · Missed: {miss}||"
 
 
@@ -153,6 +163,9 @@ class PredictionFeed:
         roster_map: dict[str, tuple] = {}
         for m in matches or []:
             e = self.store.find(m, listed)
+            if e and e["status"] == pr.OPEN and not m["finished"] and e["start"] != m["start"]:
+                self.store.reschedule(e["key"], m["start"])           # 改期：按新的开赛时间截止
+                e = self.store.get(e["key"])
             if e:
                 e = {**e, "counts": self.store.counts(e["key"])}
                 if m["finished"] and e["status"] in (pr.OPEN, pr.LOCKED) and winner_of(m):
@@ -174,7 +187,9 @@ class PredictionFeed:
     def augment(self, now: datetime, matches: list[dict[str, Any]] | None, posts: list[Post],
                 state: dict[str, Any], channel_for: Callable[[dict[str, Any]], int | None]) -> list[Post]:
         snap = self.snapshot(now, matches)
-        return decorate(posts, snap) + plan_predictions(now, matches, snap, state, channel_for)
+        planned = plan_predictions(now, matches, snap, state, channel_for)
+        closing = [p for p in planned if p.kind in ("lock", "void")]   # 截止先于赛果（停机跨过开赛和赛果时）
+        return closing + decorate(posts, snap) + [p for p in planned if p.kind not in ("lock", "void")]
 
     async def execute(self, post: Post, channel_id: int | None, send: Callable[..., Awaitable[Any]],
                       edit: Callable[..., Awaitable[None]] | None) -> None:

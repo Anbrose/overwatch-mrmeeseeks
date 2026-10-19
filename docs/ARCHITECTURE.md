@@ -120,7 +120,7 @@
 2. **计划**：纯函数 `plan_predictions` 产出 `kind` 为 `prediction`（悉尼 10:00 之后、未来 24 小时、离开赛至少 15 分钟、不是 TBD 对 TBD、还没登记）、`lock`（到开赛时间）、`void`（开赛 48 小时后还没结算）的消息，以及周一 10:00 的周榜；`decorate` 给提醒加上票数和竞猜链接，给赛果加上剧透揭晓并标记"发出后结算"（平局或没有胜负就作废）。
 3. **执行**：`execute` 发带按钮的竞猜消息（发送函数返回消息 ID 和链接后 `register`）；截止时先公布名单、再 `lock`、再把原消息按钮改成禁用；作废时编辑原消息。发送失败照常停在这一轮，下一轮重试；编辑失败只记日志。`after_sent` 在赛果发出后 `resolve`。
 4. **按钮**：`prediction_ui.PredictButton` 是 `DynamicItem`，`setup_hook` 里 `add_dynamic_items` 一次，重启前发的竞猜消息也能点；点击后 `pick`、ephemeral 回复、每 2 秒最多编辑一次票数。
-5. **阵容**：`RosterCache.ensure` 在每次抓到比赛后放到后台跑（Liquipedia `action=parse` 每 30 秒最多 1 次，同一页面 24 小时内不重抓）；生成竞猜消息时只读缓存，拿不到就写 "Roster unavailable"。
+5. **阵容**：`RosterCache.ensure` 在每次抓到比赛后放到后台跑（Liquipedia `action=parse` 每 30 秒最多 1 次，由 `esports.parse_page` 和赛程抓取共用同一个限速；同一页面 24 小时内不重抓）；生成竞猜消息时只读缓存，拿不到就写 "Roster unavailable"。
 
 计分：猜中 `1 + max(0, (0.5 − 押中一方占比) × 4)`，上限 3，参与少于 3 人没有加成。
 

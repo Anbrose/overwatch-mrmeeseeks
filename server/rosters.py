@@ -86,10 +86,7 @@ def format_roster(members: list[dict[str, Any]] | None) -> str:
 
 
 async def _fetch_page(page: str) -> dict[str, list[dict[str, Any]]]:
-    params = {"action": "parse", "page": page, "prop": "text", "format": "json", "formatversion": "2"}
-    async with esports._session() as session, session.get(esports.LIQUIPEDIA_API, params=params) as resp:
-        resp.raise_for_status()
-        data = await resp.json(content_type=None)
+    data = await esports.parse_page(page)        # 和赛程共用 action=parse 限速
     if "error" in data:          # 页面不存在
         return {}
     return parse_rosters((data.get("parse") or {}).get("text") or "")
