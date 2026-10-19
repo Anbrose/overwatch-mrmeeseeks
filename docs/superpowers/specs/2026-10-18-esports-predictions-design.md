@@ -53,6 +53,8 @@
 
 ## 0. 前置：提醒去重修复与测试入口
 
+> **已在 PR #21 上线（2026-10-19）。** 本期只需要在 `esports preview` 里加一条竞猜样例（见 0.2 最后一条），其余内容保留作背景。
+
 ### 0.1 同一场比赛重复提醒（线上 bug，2026-10-17 观察到）
 
 - **现象**：Liquipedia 把开赛时间往后推了 10–15 分钟。比赛 ID（`赛事|开始时间|队1|队2`）随之变化，同一场比赛收到两条开赛提醒。线上记录：
@@ -255,3 +257,33 @@ Starts <t:TS:t> (<t:TS:R>) — picks close at start
   - 票数编辑的节流；
   - `custom_id` 模板解析。
 - **指令测试**：`predictions` 和 `predictions reset` 的路由与权限。
+
+## 实现说明（2026-10-19 写计划时确定）
+
+以下内容是在原型中验证过的实现细节。和上文冲突时，以本节为准。
+
+- **模块划分**：
+  - 竞猜的计划、格式和副作用都放在新模块 `server/prediction_feed.py`（`PredictionFeed`），`esports_feed.py` 只做最小改动：
+    - `Post` 新增 `kind`（默认 `"text"`）和 `data`；
+    - 提醒和赛果的 `Post` 带上 `data={"match": m}`；
+    - 状态新增 `leaderboard_week`；
+    - `EsportsFeed(..., predictions=None)` 在 `tick` 里依次调用 `augment` / `execute` / `after_sent`，抓到比赛后调用 `prepare`（后台准备阵容）；
+    - 新增 `preview_prediction`；
+    - `run(send, edit=None)`。
+  - `esports_feed` 不 import 竞猜模块。
+- **竞猜存储**：
+  - `matches` 表新增 `url`（竞猜消息的链接，提醒里引用）。
+  - 新增 `find(match, listed)`：先按 ID 精确匹配，否则按"同一赛事、同样两队、开始时间相差不到 6 小时、并且旧 ID 已不在当前汇总页"匹配，规则和 `esports_feed.already` 一致。
+  - `predictions.py` 从 `esports_feed` import `match_base` 和 `SAME_MATCH_WINDOW`。
+- **发送函数**：`send(channel_id, text, view=None)` 返回 `(消息 ID, 链接)`；`edit(channel_id, message_id, view)`。按钮在推送模块里只用描述字典 `view_spec` 表示，由 `prediction_ui.build_view` 生成 discord 组件。
+- **截止**：先用 `names()` 公布名单（发送失败就下一轮重试），发送成功后再 `lock()`，最后编辑原消息。截止和作废都按**当前**汇总页上的开赛时间判断；比赛已经从汇总页消失的，用登记时的时间。
+- **结算**：赛果没有胜负（比分相同或缺失）时作废，不计分。
+- **周榜**：周一悉尼 10:00 之后发到默认频道；上周没有得分时不发，但仍记下 `leaderboard_week`。
+- **阵容**：位置还有 `Flex`（全能位，图标 🔀）。
+- **测试文件**：
+  - `test_predictions.py`；
+  - `test_rosters.py`；
+  - `test_prediction_feed.py`：完整流程、改期、作废、平局、无频道、发送失败、周榜、preview；
+  - `test_prediction_ui.py`；
+  - `test_prediction_bot.py`；
+  - 另外，`test_esports_bot.py` 的假 `send` 改为返回消息对象（和 discord.py 一致）。
