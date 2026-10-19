@@ -42,6 +42,8 @@ class FakeChannel:
 
     async def send(self, text, allowed_mentions=None, embed=None):
         self.sent.append((text, allowed_mentions, embed))
+        # 和真实的 discord.py 一样返回发出的消息（post_esports 要用它的 id 和链接）
+        return NS(id=len(self.sent), jump_url=f"https://discord.com/channels/9/{self.id}/{len(self.sent)}")
 
 
 class FakeMessage:

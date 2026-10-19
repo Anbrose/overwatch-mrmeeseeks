@@ -11,8 +11,10 @@ Liquipedia:Matches 的 HTML 里每场比赛是一个 <div class="match-info">：
 """
 from __future__ import annotations
 
+import asyncio
 import html as htmllib
 import re
+import time
 from typing import Any
 from urllib.parse import unquote
 
@@ -22,6 +24,7 @@ LIQUIPEDIA = "https://liquipedia.net"
 LIQUIPEDIA_API = LIQUIPEDIA + "/overwatch/api.php"
 OW_ESPORTS_HOME = "https://esports.overwatch.com/en-us"
 USER_AGENT = "mrmeeseeks-discord-bot/1.0 (https://github.com/Anbrose/overwatch-mrmeeseeks)"
+PARSE_INTERVAL = 30.0            # action=parse 每 30 秒最多 1 次（赛程和阵容共用）
 OFFICIAL_PREFIXES = ("Overwatch Champions Series/", "Overwatch World Cup/")
 
 _BLOCK = '<div class="match-info">'
@@ -100,13 +103,37 @@ def _session() -> aiohttp.ClientSession:
                                  timeout=aiohttp.ClientTimeout(total=30))
 
 
-async def fetch_matches() -> list[dict[str, Any]]:
-    """官方赛事的比赛。页面有内容却一场都解析不出来时视为改版，抛 EsportsUnavailable。"""
-    params = {"action": "parse", "page": "Liquipedia:Matches", "prop": "text",
-              "format": "json", "formatversion": "2"}
+async def _get_json(params: dict[str, str]) -> dict[str, Any]:
     async with _session() as session, session.get(LIQUIPEDIA_API, params=params) as resp:
         resp.raise_for_status()
-        data = await resp.json(content_type=None)
+        return await resp.json(content_type=None)
+
+
+_clock = time.monotonic
+_sleep = asyncio.sleep
+_last_parse = float("-inf")
+_parse_lock: asyncio.Lock | None = None
+
+
+async def parse_page(page: str) -> dict[str, Any]:
+    """Liquipedia action=parse。整个进程共用一个限速：两次请求之间至少隔 PARSE_INTERVAL 秒。"""
+    global _last_parse, _parse_lock
+    if _parse_lock is None:
+        _parse_lock = asyncio.Lock()
+    async with _parse_lock:
+        wait = PARSE_INTERVAL - (_clock() - _last_parse)
+        if wait > 0:
+            await _sleep(wait)
+        try:
+            return await _get_json({"action": "parse", "page": page, "prop": "text",
+                                    "format": "json", "formatversion": "2"})
+        finally:
+            _last_parse = _clock()
+
+
+async def fetch_matches() -> list[dict[str, Any]]:
+    """官方赛事的比赛。页面有内容却一场都解析不出来时视为改版，抛 EsportsUnavailable。"""
+    data = await parse_page("Liquipedia:Matches")
     page_html = (data.get("parse") or {}).get("text") or ""
     matches = parse_matches(page_html)
     if not matches:

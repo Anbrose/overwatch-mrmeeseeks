@@ -105,7 +105,11 @@ def test_fetch_page_changed():
             self.calls.append((url, params))
             return FakeResp(self.payload)
 
-    orig = esports._session
+    orig = esports._session, esports._sleep
+
+    async def no_sleep(s):
+        pass
+    esports._sleep = no_sleep                 # 两次抓取之间的限速等待不需要真的等
     try:
         changed = FakeSession({"parse": {"text": "<div>redesigned page without match blocks</div>"}})
         esports._session = lambda: changed
@@ -122,9 +126,40 @@ def test_fetch_page_changed():
         check("请求 Liquipedia:Matches 的 parse 接口", ok.calls[0][1]["page"] == "Liquipedia:Matches"
               and ok.calls[0][1]["action"] == "parse")
     finally:
-        esports._session = orig
+        esports._session, esports._sleep = orig
     check("User-Agent 带项目地址、不含个人信息", "github.com/Anbrose/overwatch-mrmeeseeks" in esports.USER_AGENT
           and "@" not in esports.USER_AGENT)
+
+
+
+def test_parse_throttle():
+    import rosters
+    t, calls, waits = [1000.0], [], []
+
+    async def fake_get(params):
+        calls.append((t[0], params["page"]))
+        return {"parse": {"text": ""}}
+
+    async def fake_sleep(s):
+        waits.append(s)
+        t[0] += s
+    saved = esports._get_json, esports._clock, esports._sleep, esports._last_parse
+    esports._get_json, esports._clock, esports._sleep = fake_get, lambda: t[0], fake_sleep
+    esports._last_parse = float("-inf")
+    try:
+        async def run():
+            try:
+                await esports.fetch_matches()
+            except esports.EsportsUnavailable:
+                pass
+            t[0] += 5
+            await rosters._fetch_page("Overwatch Champions Series/2026/Asia/Stage 3/Korea")
+        asyncio.run(run())
+        check("赛程和阵容共用 action=parse 限速：两次请求至少隔 30 秒",
+              [p for _, p in calls] == ["Liquipedia:Matches", "Overwatch Champions Series/2026/Asia/Stage 3/Korea"]
+              and calls[1][0] - calls[0][0] >= 30)
+    finally:
+        esports._get_json, esports._clock, esports._sleep, esports._last_parse = saved
 
 
 if __name__ == "__main__":
@@ -132,6 +167,7 @@ if __name__ == "__main__":
     test_official_filter()
     test_parse_news()
     test_fetch_page_changed()
+    test_parse_throttle()
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")
     sys.exit(0 if passed == len(results) else 1)
