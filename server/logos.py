@@ -1,17 +1,21 @@
 """队徽缓存：从 Liquipedia 下载队徽图片，存到磁盘（herodata 卷的 logos/），之后一直用本地文件。
 
 图片不是 API 请求，但同样要客气：两次下载之间至少隔 FETCH_INTERVAL 秒，User-Agent 只带项目地址；
-下载失败的地址 RETRY_AFTER 秒内不再重试。只接受 Liquipedia 上的地址和 PNG / JPEG / GIF / WebP 内容。
+下载失败的地址 RETRY_AFTER 秒内不再重试。只接受 Liquipedia 上的地址（不跟随跳转），
+存盘前用 Pillow 完整解码一次：截断的、不是图片的、像素过多的都不保存。
 """
 from __future__ import annotations
 
 import asyncio
 import hashlib
+import io
 import logging
 import os
 import tempfile
 import time
 from typing import Awaitable, Callable, Iterable
+
+from PIL import Image
 
 import esports
 
@@ -20,21 +24,39 @@ log = logging.getLogger("mrmeeseeks.logos")
 FETCH_INTERVAL = 2.0
 RETRY_AFTER = 6 * 3600
 MAX_BYTES = 2 * 1024 * 1024
+MAX_PIXELS = 2_000_000           # 队徽缩略图 300px 左右，远小于这个数
 ALLOWED_PREFIX = esports.LIQUIPEDIA + "/"
-_MAGIC = (b"\x89PNG\r\n\x1a\n", b"\xff\xd8\xff", b"GIF87a", b"GIF89a")
+FORMATS = ("PNG", "JPEG", "GIF", "WEBP")
 
 
-def _is_image(data: bytes) -> bool:
-    return data.startswith(_MAGIC) or (data[:4] == b"RIFF" and data[8:12] == b"WEBP")
+def check_image(data: bytes) -> None:
+    """完整解码一次；截断、不是图片、像素过多都抛 ValueError。"""
+    try:
+        im = Image.open(io.BytesIO(data))
+        if im.format not in FORMATS:
+            raise ValueError(f"unsupported format {im.format}")
+        if im.width * im.height > MAX_PIXELS:
+            raise ValueError(f"too many pixels: {im.width}x{im.height}")
+        im.load()
+    except ValueError:
+        raise
+    except Exception as e:
+        raise ValueError(f"not a readable image: {e!r}") from e
 
 
 async def _download(url: str) -> bytes:
-    async with esports._session() as session, session.get(url) as resp:
-        resp.raise_for_status()
-        data = await resp.content.read(MAX_BYTES + 1)
-    if len(data) > MAX_BYTES:
-        raise ValueError(f"logo too large: {url}")
-    return data
+    """读完整个响应（分块读，超过 MAX_BYTES 就放弃）；不跟随跳转。"""
+    async with esports._session() as session, session.get(url, allow_redirects=False) as resp:
+        if resp.status != 200:
+            raise ValueError(f"HTTP {resp.status} for {url}")
+        if resp.content_length is not None and resp.content_length > MAX_BYTES:
+            raise ValueError(f"logo too large: {url}")
+        data = bytearray()
+        async for chunk in resp.content.iter_chunked(64 * 1024):
+            data += chunk
+            if len(data) > MAX_BYTES:
+                raise ValueError(f"logo too large: {url}")
+    return bytes(data)
 
 
 class LogoCache:
@@ -69,8 +91,7 @@ class LogoCache:
             self._last_fetch = self.clock()
             try:
                 data = await self.fetch(url)
-                if not _is_image(data):
-                    raise ValueError(f"not an image: {url}")
+                check_image(data)
                 self._save(url, data)
             except Exception:
                 log.exception("Could not download team logo %s", url)

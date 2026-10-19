@@ -23,6 +23,7 @@ NAME_INSET = 130                               # 选手名字离中线的距离
 NAME_MAX = 300                                 # 选手名字最宽
 TEAM_MAX = 420                                 # 队名最宽
 LOGO_AREA, LOGO_MAX_W, LOGO_MAX_H = 140 * 140, 240, 160
+LOGO_MAX_PIXELS = 2_000_000
 BG, PANEL, LINE = (30, 31, 34), (43, 45, 49), (64, 66, 72)
 TEXT, MUTED = (240, 241, 243), (150, 154, 162)
 ROLES = {"tank": ("TANK", (88, 166, 255)), "dps": ("DAMAGE", (255, 107, 107)), "flex": ("FLEX", (255, 196, 87)),
@@ -83,7 +84,10 @@ def initials(name: str) -> str:
 def _logo(path: str | None, team: str) -> Image.Image:
     if path:
         try:
-            im = Image.open(path).convert("RGBA")
+            im = Image.open(path)
+            if im.width * im.height > LOGO_MAX_PIXELS:          # 防止异常大的图片吃光内存
+                raise ValueError(f"logo too large: {im.width}x{im.height}")
+            im = im.convert("RGBA")
             im = im.crop(im.getchannel("A").getbbox() or (0, 0, im.width, im.height))   # 去掉透明留白
             return im.resize(logo_size(im.width, im.height), Image.LANCZOS)
         except Exception:

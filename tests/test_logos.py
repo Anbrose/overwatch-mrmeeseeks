@@ -3,7 +3,9 @@
 运行：python tests/test_logos.py
 """
 import asyncio
+import io
 import os
+import random
 import sys
 import tempfile
 
@@ -11,9 +13,23 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "server"))
 
 import logos  # noqa: E402
+from aiohttp import web  # noqa: E402
+from PIL import Image  # noqa: E402
 
 results = []
-PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+
+
+def real_png(size=(300, 300), noisy=False):
+    im = Image.new("RGBA", size, (230, 20, 40, 255))
+    if noisy:                                       # 噪点让 PNG 压不小（约 150 KB），模拟真实大小的队徽
+        rnd = random.Random(1)
+        im.putdata([(rnd.randrange(256), rnd.randrange(256), rnd.randrange(256), 255) for _ in range(size[0] * size[1])])
+    out = io.BytesIO()
+    im.save(out, "PNG")
+    return out.getvalue()
+
+
+PNG = real_png((8, 8))
 A = "https://liquipedia.net/commons/images/thumb/e/e4/T1_2019_allmode.png/300px-T1_2019_allmode.png"
 B = "https://liquipedia.net/commons/images/thumb/9/95/ZETA_DIVISION_darkmode.png/300px-ZETA_DIVISION_darkmode.png"
 C = "https://liquipedia.net/commons/images/thumb/x/xx/Broken.png/300px-Broken.png"
@@ -91,8 +107,77 @@ def test_only_liquipedia():
         check("只下载 Liquipedia 的图片", calls == [])
 
 
+def test_rejects_broken_images():
+    big = real_png(noisy=True)
+
+    async def truncated(url):
+        return big[:8192]
+
+    async def bomb(url):
+        return real_png((3000, 3000))               # 压得很小，但解码后像素太多
+    with tempfile.TemporaryDirectory() as d:
+        cache = logos.LogoCache(d, truncated, Clock().now, Clock().sleep)
+        asyncio.run(cache.ensure([A]))
+        check("截断的图片（开头是 PNG）不保存", cache.path(A) is None and os.listdir(d) == [])
+        cache = logos.LogoCache(d, bomb, Clock().now, Clock().sleep)
+        asyncio.run(cache.ensure([B]))
+        check("像素过多的图片不保存", cache.path(B) is None)
+
+
+def test_download_real_http():
+    """真的起一个 HTTP 服务，分块发送，确认 _download 读完整个响应；不跟随跳转；超过大小上限放弃。"""
+    big = real_png(noisy=True)
+
+    async def chunked(request):
+        resp = web.StreamResponse()
+        resp.content_type = "image/png"
+        await resp.prepare(request)
+        for i in range(0, len(big), 8192):
+            await resp.write(big[i:i + 8192])
+            await asyncio.sleep(0)
+        await resp.write_eof()
+        return resp
+
+    async def redirect(request):
+        raise web.HTTPFound("/logo.png")
+
+    async def huge(request):
+        return web.Response(body=b"\x89PNG\r\n\x1a\n" + b"\x00" * (logos.MAX_BYTES + 10), content_type="image/png")
+
+    async def run():
+        app = web.Application()
+        app.router.add_get("/logo.png", chunked)
+        app.router.add_get("/moved.png", redirect)
+        app.router.add_get("/huge.png", huge)
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "127.0.0.1", 0)
+        await site.start()
+        port = site._server.sockets[0].getsockname()[1]
+        base = f"http://127.0.0.1:{port}"
+        out = {}
+        try:
+            out["data"] = await logos._download(base + "/logo.png")
+            for name in ("moved", "huge"):
+                try:
+                    await logos._download(f"{base}/{name}.png")
+                    out[name] = "ok"
+                except Exception as e:
+                    out[name] = repr(e)
+        finally:
+            await runner.cleanup()
+        return out
+
+    out = asyncio.run(run())
+    check(f"分块发送的 {len(big) // 1024} KB 队徽完整读到", out["data"] == big)
+    check("不跟随跳转", out["moved"] != "ok")
+    check("超过大小上限放弃", out["huge"] != "ok")
+
+
 if __name__ == "__main__":
     test_cache()
+    test_rejects_broken_images()
+    test_download_real_http()
     test_rejects_non_images()
     test_only_liquipedia()
     passed = sum(r for _, r in results)

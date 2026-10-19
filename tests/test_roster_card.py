@@ -88,6 +88,12 @@ def test_render():
         im2 = png(rc.render_card("T1", "ZETA DIVISION", t["T1"], t["ZETA DIVISION"], broken, None))
         check("队徽损坏或没有队徽：用首字母代替，照样出图", im2.width == rc.WIDTH and im2.height == im.height)
 
+        huge = logo_file(d, "huge.png", (2000, 1100), (230, 20, 40, 255))
+        im5 = png(rc.render_card("T1", "ZETA DIVISION", t["T1"], t["ZETA DIVISION"], huge, white))
+        reds5 = sum(1 for p in im5.crop((0, 0, rc.WIDTH // 2, rc.HEADER)).convert("RGB").getdata()
+                    if p[0] > 200 and p[1] < 60 and p[2] < 80)
+        check("像素过多的队徽不解码，改用首字母", reds5 == 0)
+
         im3 = png(rc.render_card("T1", "Mystery Team", t["T1"], None, red, None))
         check("一队没有阵容：照样出图，按有阵容的一队排", im3.height == rc.height_for(rc.role_rows(t["T1"], None)))
         im4 = png(rc.render_card("TBD", "Mystery Team", None, None, None, None))

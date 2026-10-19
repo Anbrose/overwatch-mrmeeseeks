@@ -5,6 +5,7 @@
 运行：python tests/test_prediction_feed.py
 """
 import asyncio
+import io
 import os
 import sys
 import tempfile
@@ -14,6 +15,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "server"))
 
 import esports_feed as ef  # noqa: E402
+from PIL import Image  # noqa: E402
 import logos as lg  # noqa: E402
 import roster_card as rc  # noqa: E402
 import prediction_feed as pf  # noqa: E402
@@ -352,7 +354,9 @@ def test_prepare_downloads_logos():
 
     async def fetch_logo(url):
         got.append(url)
-        return PNG_MAGIC + b"\x00" * 16
+        out = io.BytesIO()
+        Image.new("RGBA", (30, 12), (230, 20, 40, 255)).save(out, "PNG")
+        return out.getvalue()
 
     async def no_sleep(s):
         pass

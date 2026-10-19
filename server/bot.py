@@ -351,7 +351,8 @@ class MeeseeksBot(discord.Client):
                 return
             for text in posts:
                 await message.channel.send(text, allowed_mentions=discord.AllowedMentions.none())
-            sample = feed.preview_prediction(message.channel.id)   # 开了竞猜时，再发一条按钮禁用的竞猜样例
+            # 开了竞猜时，再发一条按钮禁用的竞猜样例（画对阵图放到线程里，不卡事件循环）
+            sample = await asyncio.to_thread(feed.preview_prediction, message.channel.id)
             if sample:
                 text, spec, card = sample
                 kwargs = {"file": discord.File(io.BytesIO(card), filename="matchup.png")} if card else {}
