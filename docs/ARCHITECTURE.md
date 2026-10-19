@@ -17,6 +17,10 @@
 | `server/matchups.py` | 英雄对位（克制）数据：从 counterwatch.gg 抓取、缓存、每日刷新 |
 | `server/esports.py` | 赛事数据：解析 Liquipedia:Matches（比赛）和 esports.overwatch.com 首页（新闻） |
 | `server/esports_feed.py` | 赛事推送：`plan()` 纯函数决定发什么（含按赛区分频道），`EsportsFeed` 负责抓取、状态持久化和发送 |
+| `server/predictions.py` | 赛事竞猜存储（`STATE_DIR/predictions.db`，SQLite）：押注、截止、结算、作废、计分、周榜和赛季榜 |
+| `server/rosters.py` | 赛事报名阵容：解析 Liquipedia 赛事页面的参赛卡片，缓存到 `rosters.json`，限速抓取 |
+| `server/prediction_feed.py` | 竞猜接入推送：竞猜 / 截止 / 作废 / 周榜消息，给提醒和赛果补充竞猜信息（不依赖 discord） |
+| `server/prediction_ui.py` | 竞猜按钮（`DynamicItem`，`pred:<key>:<side>`）：点击押注、只回复本人、节流更新票数 |
 | `server/regions.py` | 赛区 -> 频道的绑定（`regions.json`），以及 Liquipedia 赛事路径 -> 赛区的识别；赛事推送和开播通知共用 |
 | `server/live_watch.py` | 开播通知：手动登记的 B 站直播间（`live_sources.json`）、状态查询、开播/下播判定。不依赖 discord.py |
 | `server/patchnotes.py` | 官方补丁说明：抓取 overwatch.blizzard.com 的当月和上月补丁页，解析成整篇文本 + 按英雄分组的改动 |
@@ -107,6 +111,18 @@
 6. **测试入口**：`@mrmeeseeks esports preview` 调用纯函数 `preview_posts`，只取会路由到当前频道的比赛，立刻发预告、下一场提醒、最近一场赛果的样例；不记账，不影响自动推送的去重。
 
 已知限制：Liquipedia 汇总页只有最近约 50 场即将进行和 50 场已结束的比赛；官方首页只放 1–2 条精选新闻；同一赛段里同样两队 6 小时内重赛、且前一场已经不在 Liquipedia 汇总页上时，第二场会被改期去重吞掉。
+
+## 赛事竞猜
+
+开了竞猜时，`EsportsFeed.tick` 在 `plan()` 之后调用 `PredictionFeed.augment`：
+
+1. **快照**：`snapshot()` 从 `PredictionStore` 读出每场比赛已登记的竞猜（`find`：ID 相同，或者同一赛事同样两队、开始时间相差不到 6 小时并且旧 ID 已经不在汇总页上——和改期去重同一规则）、票数、赛果揭晓的预览（`score_preview`，只读）、阵容缓存和上周榜。
+2. **计划**：纯函数 `plan_predictions` 产出 `kind` 为 `prediction`（悉尼 10:00 之后、未来 24 小时、离开赛至少 15 分钟、不是 TBD 对 TBD、还没登记）、`lock`（到开赛时间）、`void`（开赛 48 小时后还没结算）的消息，以及周一 10:00 的周榜；`decorate` 给提醒加上票数和竞猜链接，给赛果加上剧透揭晓并标记"发出后结算"（平局或没有胜负就作废）。
+3. **执行**：`execute` 发带按钮的竞猜消息（发送函数返回消息 ID 和链接后 `register`）；截止时先公布名单、再 `lock`、再把原消息按钮改成禁用；作废时编辑原消息。发送失败照常停在这一轮，下一轮重试；编辑失败只记日志。`after_sent` 在赛果发出后 `resolve`。
+4. **按钮**：`prediction_ui.PredictButton` 是 `DynamicItem`，`setup_hook` 里 `add_dynamic_items` 一次，重启前发的竞猜消息也能点；点击后 `pick`、ephemeral 回复、每 2 秒最多编辑一次票数。
+5. **阵容**：`RosterCache.ensure` 在每次抓到比赛后放到后台跑（Liquipedia `action=parse` 每 30 秒最多 1 次，同一页面 24 小时内不重抓）；生成竞猜消息时只读缓存，拿不到就写 "Roster unavailable"。
+
+计分：猜中 `1 + max(0, (0.5 − 押中一方占比) × 4)`，上限 3，参与少于 3 人没有加成。
 
 ## 开播通知
 

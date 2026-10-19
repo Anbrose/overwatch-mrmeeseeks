@@ -36,7 +36,11 @@ from dotenv import load_dotenv
 
 import overfast
 import matchups
+import predictions as pr
 from esports_feed import EsportsFeed
+from prediction_feed import PredictionFeed, week_start
+from prediction_ui import PredictButton, PredictionUI, build_view
+from rosters import RosterCache
 from live_watch import (DEFAULT_POLL_INTERVAL, BilibiliClient, LiveError, LiveEvent, LiveStore, LiveWatcher, Source,
                         parse_bilibili_target)
 from regions import KNOWN_REGIONS, RegionError, RegionStore, normalize_region
@@ -75,6 +79,8 @@ HELP_TEXT = (
     "`@mrmeeseeks esports here` / `esports off` Post OWCS schedule, reminders, results and news in this channel "
     "(needs Manage Channels); `esports status` shows the current setup; "
     "`esports preview` posts sample posts for this channel right now (for testing)\n"
+    "`@mrmeeseeks predictions` Prediction leaderboard (this week, season, your rank); "
+    "`predictions reset` starts a new season (needs Manage Server)\n"
     "`@mrmeeseeks region cn` Make this channel the home of one region (cn, asia, korea, japan, pacific, emea, na, world): "
     "its matches and live alerts go here instead of the esports channel; `region cn off` unbinds, `region` lists\n"
     "`@mrmeeseeks live add <region> <Bilibili room url> [label]` Alert that region's channel when the room goes live; "
@@ -87,7 +93,7 @@ HELP_TEXT = (
     "`Tracer HP`, `how many Cassidy headshots kill Mauga at 30m?`"
 )
 COMMANDS = ("connect", "status", "disconnect", "help", "analyze", "label")
-ARG_COMMANDS = ("player", "esports", "patches", "wishes", "region", "live")     # 带参数的指令；参数保留大小写（BattleTag 大小写敏感）
+ARG_COMMANDS = ("player", "esports", "patches", "wishes", "region", "live", "predictions")     # 带参数的指令；参数保留大小写（BattleTag 大小写敏感）
 LIVE_USAGE = ("Usage: `@mrmeeseeks live add <region> <Bilibili room url or id> [label]`, "
               "`live remove <room url or id>` or `live list`. Bind the region's channel first with `@mrmeeseeks region <region>`.")
 ASK_COOLDOWN_SECONDS = 5
@@ -190,7 +196,8 @@ class MeeseeksBot(discord.Client):
                  wish_channel_id: int | None = None, wish_desk: WishDesk | None = None,
                  wish_plans: WishPlans | None = None, patch_feed: PatchFeed | None = None,
                  regions: RegionStore | None = None, live_watcher: LiveWatcher | None = None,
-                 live_notify_offline: bool = False):
+                 live_notify_offline: bool = False, predictions: pr.PredictionStore | None = None,
+                 prediction_ui: PredictionUI | None = None):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents, allowed_mentions=discord.AllowedMentions(everyone=False, roles=False))
@@ -217,6 +224,8 @@ class MeeseeksBot(discord.Client):
         self.wish_plans = wish_plans
         self.wish_view = WishEntryView(wish_desk) if wish_desk else None
         self._wish_entry_ready = False
+        self.predictions = predictions
+        self.prediction_ui = prediction_ui
 
     def hero_name(self, key: str) -> str:
         return self.names.get(key) or overfast.hero_name(key)
@@ -225,6 +234,9 @@ class MeeseeksBot(discord.Client):
         return {c.user_id for c in self.registry.in_channel(channel_id) if c.user_id}
 
     async def setup_hook(self) -> None:
+        if self.prediction_ui:
+            PredictButton.handler = self.prediction_ui
+            self.add_dynamic_items(PredictButton)   # 竞猜按钮：重启前发的竞猜消息照样能点
         if self.wish_view:
             self.add_view(self.wish_view)     # 持久化按钮：重启前发的入口消息照样能点
 
@@ -278,6 +290,8 @@ class MeeseeksBot(discord.Client):
             await self._player(message, arg)
         elif cmd == "esports":
             await self._esports(message, arg)
+        elif cmd == "predictions":
+            await self._predictions(message, arg)
         elif cmd == "patches":
             await self._patches(message, arg)
         elif cmd == "region":
@@ -336,6 +350,10 @@ class MeeseeksBot(discord.Client):
                 return
             for text in posts:
                 await message.channel.send(text, allowed_mentions=discord.AllowedMentions.none())
+            sample = feed.preview_prediction(message.channel.id)   # 开了竞猜时，再发一条按钮禁用的竞猜样例
+            if sample:
+                text, spec = sample
+                await message.channel.send(text, view=build_view(spec), allowed_mentions=discord.AllowedMentions.none())
         else:
             await message.reply("Usage: `@mrmeeseeks esports here`, `esports off`, `esports status` or `esports preview`.")
 
@@ -479,11 +497,44 @@ class MeeseeksBot(discord.Client):
             await channel.send(f"⚫ **{src.label}** ({src.region.upper()}) ended the stream.",
                                allowed_mentions=discord.AllowedMentions.none())
 
-    async def post_esports(self, channel_id: int, text: str) -> None:
-        """推送任务用的发送函数：等 bot 登录完成再发，不 ping 任何人。"""
+    async def post_esports(self, channel_id: int, text: str, view: dict | None = None) -> tuple[int, str]:
+        """推送任务用的发送函数：等 bot 登录完成再发，不 ping 任何人。view 是竞猜按钮的描述（prediction_feed.view_spec）。
+        返回 (消息 ID, 消息链接)，竞猜消息据此登记。"""
         await self.wait_until_ready()
         channel = await self._channel(channel_id)
-        await channel.send(text, allowed_mentions=discord.AllowedMentions.none())
+        kwargs = {"view": build_view(view)} if view else {}
+        msg = await channel.send(text, allowed_mentions=discord.AllowedMentions.none(), **kwargs)
+        return msg.id, msg.jump_url
+
+    async def edit_esports(self, channel_id: int, message_id: int, view: dict) -> None:
+        """竞猜截止 / 作废时更新原消息的按钮。"""
+        await self.wait_until_ready()
+        channel = await self._channel(channel_id)
+        await channel.get_partial_message(message_id).edit(view=build_view(view))
+
+    async def _predictions(self, message: discord.Message, arg: str) -> None:
+        store = self.predictions
+        if store is None:
+            await message.reply("Predictions are not enabled on this server.")
+            return
+        now = time.time()
+        if arg.strip().lower() == "reset":
+            perms = message.channel.permissions_for(message.author) if message.guild else None
+            if perms is None or not perms.manage_guild:
+                await message.reply("You need Manage Server permission to start a new prediction season.")
+                return
+            store.new_season(now)
+            await message.reply("🏁 A new prediction season has started. The weekly leaderboard is unaffected.")
+            return
+        week = week_start(datetime.now(timezone.utc)).timestamp()
+        weekly = store.leaderboard(week, now + 1)
+        season = store.leaderboard(store.season_start(), now + 1)
+        lines = pr.format_board("🏆 **This week**", weekly) + [""] + pr.format_board("🏅 **Season**", season)
+        mine = next((i for i, r in enumerate(season, 1) if r["user_id"] == message.author.id), None)
+        if mine:
+            r = season[mine - 1]
+            lines.append(f"You: #{mine} — {r['points']:g} pts ({r['correct']}/{r['played']})")
+        await message.reply("\n".join(lines)[:1990], allowed_mentions=discord.AllowedMentions.none())
 
     post_patches = post_esports      # 补丁推送用同一个发送函数
 
@@ -797,8 +848,12 @@ async def main() -> None:
              len(live_store.sources))
 
     # 赛事推送状态和英雄数据放在同一个目录（Docker 里是 herodata 卷）
+    # 竞猜：押注和积分存 STATE_DIR（用户产生的数据）；赛事报名阵容缓存和英雄数据放一起（herodata 卷）
+    prediction_store = pr.PredictionStore(state_dir / "predictions.db")
+    roster_cache = RosterCache(os.path.join(os.path.dirname(os.path.abspath(store.path)), "rosters.json"))
+    roster_cache.load()
     esports_feed = EsportsFeed(os.path.join(os.path.dirname(os.path.abspath(store.path)), "esports_state.json"),
-                               regions=regions)
+                               regions=regions, predictions=PredictionFeed(prediction_store, roster_cache))
     esports_feed.load()
 
     wish_channel = os.environ.get("WISH_CHANNEL_ID", "").strip()
@@ -820,7 +875,8 @@ async def main() -> None:
     registry = Registry()
     bot = MeeseeksBot(registry, analyzer, recognizer, labels, roster, store, hero_qa, esports_feed,
                       int(wish_channel) if wish_channel else None, wish_desk, wish_plans, patch_feed,
-                      regions=regions, live_watcher=live_watcher, live_notify_offline=live_notify_offline)
+                      regions=regions, live_watcher=live_watcher, live_notify_offline=live_notify_offline,
+                      predictions=prediction_store, prediction_ui=PredictionUI(prediction_store))
     patch_feed.icons = HeroEmojis(bot).for_patch     # 补丁摘要里英雄名旁边的头像
     ws = WSServer(
         registry, bot,
@@ -833,7 +889,7 @@ async def main() -> None:
         await ws.start()
         refreshers = [asyncio.create_task(refresh_loop(store, refresh_hours)),
                       asyncio.create_task(refresh_loop(matchup_store, refresh_hours, fetch=matchups.fetch_all)),
-                      asyncio.create_task(esports_feed.run(bot.post_esports)),
+                      asyncio.create_task(esports_feed.run(bot.post_esports, bot.edit_esports)),
                       asyncio.create_task(patch_feed.run(bot.post_patches)),
                       asyncio.create_task(live_watcher.run())]
         try:
