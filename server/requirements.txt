@@ -5,4 +5,5 @@ python-dotenv>=1.0
 mwparserfromhell>=0.6
 numpy>=1.26
 rapidocr-onnxruntime==1.4.4  # OCR 参数在这个版本上验证过
+pillow>=10.1  # 竞猜对阵图（roster_card）
 tzdata  # zoneinfo 时区数据，slim 镜像里不一定有

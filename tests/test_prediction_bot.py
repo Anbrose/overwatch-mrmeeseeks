@@ -19,6 +19,7 @@ import prediction_ui as ui  # noqa: E402
 import predictions as pr  # noqa: E402
 from esports_feed import EsportsFeed  # noqa: E402
 from prediction_feed import PredictionFeed  # noqa: E402
+from logos import LogoCache  # noqa: E402
 from rosters import RosterCache  # noqa: E402
 
 results = []
@@ -33,15 +34,16 @@ def check(name, cond):
 
 class FakeChannel:
     def __init__(self, channel_id=555, manage=True):
-        self.id, self.manage, self.sent, self.edited = channel_id, manage, [], []
+        self.id, self.manage, self.sent, self.edited, self.files = channel_id, manage, [], [], []
 
     def permissions_for(self, member):
         if member is BOT_MEMBER:
             return NS(manage_channels=False, manage_guild=False, send_messages=True)
         return NS(manage_channels=self.manage, manage_guild=self.manage, send_messages=True)
 
-    async def send(self, text, allowed_mentions=None, view=None, embed=None):
+    async def send(self, text, allowed_mentions=None, view=None, embed=None, file=None):
         self.sent.append((text, allowed_mentions, view))
+        self.files.append(file)
         return NS(id=9000 + len(self.sent), jump_url=f"https://discord.com/channels/1/{self.id}/{9000 + len(self.sent)}")
 
     def get_partial_message(self, message_id):
@@ -130,6 +132,19 @@ def test_preview_includes_prediction():
         check("preview 最后多一条竞猜样例", sample[0].startswith("🧪 Preview\n🎯 **Who wins?** T1 vs ZETA DIVISION"))
         check("样例的按钮禁用", sample[2] is not None and all(c.item.disabled for c in sample[2].children))
         check("preview 不登记竞猜", store.active() == [])
+        check("没开图片模式：样例不带图片", msg.channel.files[-1] is None)
+
+    with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as logos_dir:
+        store = pr.PredictionStore(":memory:")
+        feed = EsportsFeed(os.path.join(d, "s.json"),
+                           predictions=PredictionFeed(store, RosterCache(None), LogoCache(logos_dir)))
+        feed.matches = [m]
+        feed.set_channel(555)
+        msg = FakeMessage(manage=True)
+        asyncio.run(make_bot(store, feed)._esports(msg, "preview"))
+        f = msg.channel.files[-1]
+        check("图片模式：样例附上对阵图 matchup.png", f is not None and f.filename == "matchup.png"
+              and f.fp.read().startswith(b"\x89PNG"))
 
 
 def test_post_and_edit():
@@ -148,6 +163,9 @@ def test_post_and_edit():
           and channel.sent[0][2] is not None and len(channel.sent[0][2].children) == 2)
     check("不带按钮时照旧（补丁推送共用）", asyncio.run(b.post_esports(777, "plain"))[0] == 9002
           and channel.sent[1][2] is None)
+    mid, _ = asyncio.run(b.post_esports(777, "🎯 card", spec, b"\x89PNG fake"))
+    check("带对阵图发送：附件名 matchup.png", channel.files[-1] is not None and channel.files[-1].filename == "matchup.png"
+          and channel.files[-1].fp.read() == b"\x89PNG fake" and channel.sent[-1][2] is not None)
     asyncio.run(b.edit_esports(777, 9001, dict(spec, disabled=True)))
     check("编辑原消息的按钮", channel.edited[0][0] == 9001 and all(c.item.disabled for c in channel.edited[0][1].children))
 

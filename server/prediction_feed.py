@@ -15,7 +15,9 @@ from dataclasses import replace
 from datetime import datetime, timedelta
 from typing import Any, Awaitable, Callable
 
+import logos as lg
 import predictions as pr
+import roster_card as rc
 import rosters as rs
 from esports_feed import (ATTRIBUTION, DIGEST_HOUR, DIGEST_WINDOW, PREVIEW_PREFIX, TZ, Post, _bo, _vs)
 
@@ -33,10 +35,18 @@ def view_spec(key: str, team1: str, team2: str, counts: tuple[int, int], disable
     return {"key": key, "labels": [team1, team2], "counts": list(counts), "disabled": disabled}
 
 
-def format_prediction(m: dict[str, Any], roster1: list | None, roster2: list | None) -> str:
+def format_header(m: dict[str, Any]) -> str:
+    """竞猜消息的标题和开赛时间；图片模式下只发这两行，阵容在对阵图里。"""
     return "\n".join([
         f"🎯 **Who wins?** {_vs(m)} · {m['label']}{_bo(m)}",
         f"Starts <t:{m['start']}:t> (<t:{m['start']}:R>) — picks close at start",
+    ])
+
+
+def format_prediction(m: dict[str, Any], roster1: list | None, roster2: list | None) -> str:
+    """文字版竞猜消息（没开图片模式或画图失败时用）。"""
+    return "\n".join([
+        format_header(m),
         "",
         f"**{m['team1']}**  {rs.format_roster(roster1)}",
         f"**{m['team2']}**  {rs.format_roster(roster2)}",
@@ -139,8 +149,10 @@ def decorate(posts: list[Post], snap: dict[str, Any]) -> list[Post]:
 
 # ---------- 运行 ----------
 class PredictionFeed:
-    def __init__(self, store: pr.PredictionStore, rosters: rs.RosterCache):
-        self.store, self.rosters = store, rosters
+    """logos 不为 None 时是图片模式：竞猜消息附上对阵图（roster_card），队徽缓存在 logos 里。"""
+
+    def __init__(self, store: pr.PredictionStore, rosters: rs.RosterCache, logos: lg.LogoCache | None = None):
+        self.store, self.rosters, self.logos = store, rosters, logos
         self._roster_task: asyncio.Task | None = None
 
     def prepare(self, matches: list[dict[str, Any]]) -> None:
@@ -153,8 +165,22 @@ class PredictionFeed:
     async def _ensure(self, matches: list[dict[str, Any]]) -> None:
         try:
             await self.rosters.ensure(matches)
+            if self.logos is not None:
+                await self.logos.ensure(url for m in matches for url in self.rosters.logos(m))
         except Exception:
             log.exception("Roster refresh failed")
+
+    def card(self, m: dict[str, Any]) -> bytes | None:
+        """对阵图（PNG）；没开图片模式或画图失败时返回 None，调用方退回文字版。"""
+        if self.logos is None:
+            return None
+        try:
+            r1, r2 = self.rosters.lookup(m)
+            l1, l2 = (self.logos.path(u) for u in self.rosters.logos(m))
+            return rc.render_card(m["team1"], m["team2"], r1, r2, l1, l2)
+        except Exception:
+            log.exception("Could not render roster card for %s", m.get("id"))
+            return None
 
     def snapshot(self, now: datetime, matches: list[dict[str, Any]] | None) -> dict[str, Any]:
         listed = {m["id"] for m in matches or []}
@@ -198,7 +224,11 @@ class PredictionFeed:
             if channel_id is None:
                 return
             m = post.data["match"]
-            sent = await send(channel_id, post.text, post.data["view"])
+            png = await asyncio.to_thread(self.card, m)
+            if png:
+                sent = await send(channel_id, format_header(m), post.data["view"], png)
+            else:
+                sent = await send(channel_id, post.text, post.data["view"])
             message_id, url = sent if sent else (None, None)
             self.store.register(m, channel_id, message_id, url)
         elif post.kind == "lock":
@@ -232,14 +262,17 @@ class PredictionFeed:
             self.store.resolve(key, winner, now.timestamp())
 
     def preview(self, now: datetime, matches: list[dict[str, Any]] | None,
-                routed_here: Callable[[dict[str, Any]], bool]) -> tuple[str, dict] | None:
-        """下一场路由到当前频道的比赛的竞猜消息样例（按钮禁用，不登记）。"""
+                routed_here: Callable[[dict[str, Any]], bool]) -> tuple[str, dict, bytes | None] | None:
+        """下一场路由到当前频道的比赛的竞猜消息样例（按钮禁用，不登记）：(文字, 按钮, 对阵图或 None)。"""
         ts = now.timestamp()
         upcoming = sorted((m for m in matches or [] if routed_here(m) and not m["finished"] and m["start"] >= ts
                            and not (m["team1"] == "TBD" and m["team2"] == "TBD")), key=lambda m: m["start"])
         if not upcoming:
             return None
         m = upcoming[0]
+        spec = view_spec(pr.key_for(m["id"]), m["team1"], m["team2"], (0, 0), disabled=True)
+        png = self.card(m)
+        if png:
+            return PREVIEW_PREFIX + format_header(m), spec, png
         r1, r2 = self.rosters.lookup(m)
-        return (PREVIEW_PREFIX + format_prediction(m, r1, r2),
-                view_spec(pr.key_for(m["id"]), m["team1"], m["team2"], (0, 0), disabled=True))
+        return PREVIEW_PREFIX + format_prediction(m, r1, r2), spec, None

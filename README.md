@@ -371,7 +371,7 @@ python client\client.py --help
 | `@mrmeeseeks announce` | 管理员（「管理服务器」权限）发多语言公告：用一种语言写，bot 翻译成简体中文、繁體中文、English、日本語、한국어，先私下预览再发布。频道里只有一条原文公告，成员点语言按钮私下看到对应版本。见下方「多语言公告」。需要 `ANTHROPIC_API_KEY` |
 | `@mrmeeseeks <问题>` | 英雄问答：数值（血量、子弹体积）、最近的补丁、N 米处几枪击杀。例如 `@mrmeeseeks 卡西迪最近被削了吗`（先查[官方补丁说明](https://overwatch.blizzard.com/en-us/news/patch-notes/)，补丁当天就能答对，再查 Wiki 的历史记录）、`@mrmeeseeks 卡西迪 30 米爆头几枪杀毛加`、`@mrmeeseeks 查莉娅怕谁`。克制关系来自 [counterwatch.gg](https://www.counterwatch.gg) 的对位评分（对决和团战结果，全段位，不是整局胜率）。需要 `ANTHROPIC_API_KEY` |
 | `@mrmeeseeks esports here` / `esports off` / `esports status` / `esports preview` | 赛事推送的默认频道：推送 OWCS 和世界杯的每日赛程预告（悉尼时间 10:00）、开赛前 15 分钟提醒、赛果（比分用剧透遮罩）和官方新闻。绑定了赛区频道的比赛会发到赛区频道（见下方「按赛区分频道」），其余和新闻发到这里。`here`/`off` 需要"管理频道"权限；`status` 显示默认频道、赛区频道和接下来几场比赛各发到哪；`preview` 立刻在当前频道发一组用真实数据生成的样例（预告、下一场提醒、最近一场赛果，以及一条按钮禁用的竞猜消息，标着 🧪 Preview），只含会发到这个频道的比赛，不影响自动推送，部署后或绑定赛区后用来快速验证（需要"管理频道"权限）。比赛数据来自 [Liquipedia](https://liquipedia.net/overwatch)（CC-BY-SA） |
-| `@mrmeeseeks predictions` / `predictions reset` | 赛事竞猜：每天悉尼时间 10:00 预告之后，每场官方比赛在它的赛区频道（或默认频道）发一条竞猜消息，附双方报名阵容，点按钮押胜者，开赛前可以改。开赛时截止并公布谁押了谁，赛果出来后在剧透遮罩里揭晓谁猜中；猜中得 1 分，押冷门猜中最多 3 分。每周一 10:00 在默认频道发上周榜和称号。`predictions` 查看本周榜、赛季榜和自己的排名；`predictions reset` 开新赛季（需要"管理服务器"权限） |
+| `@mrmeeseeks predictions` / `predictions reset` | 赛事竞猜：每天悉尼时间 10:00 预告之后，每场官方比赛在它的赛区频道（或默认频道）发一条竞猜消息，附一张对阵图（双方队徽和按职责排列的报名阵容、教练），点按钮押胜者，开赛前可以改。开赛时截止并公布谁押了谁，赛果出来后在剧透遮罩里揭晓谁猜中；猜中得 1 分，押冷门猜中最多 3 分。每周一 10:00 在默认频道发上周榜和称号。`predictions` 查看本周榜、赛季榜和自己的排名；`predictions reset` 开新赛季（需要"管理服务器"权限） |
 | `@mrmeeseeks region <赛区>` / `region <赛区> off` / `region` | 把当前频道绑定成某个赛区的频道（需要"管理频道"权限）。该赛区的比赛预告、提醒、赛果和开播通知都发到这里。赛区名：`cn`、`asia`、`korea`、`japan`、`pacific`、`emea`、`na`、`world`（总决赛、季中赛）、`owwc`（世界杯）。不带参数列出所有绑定 |
 | `@mrmeeseeks live add <赛区> <B 站直播间链接或房间号> [名字]` / `live remove <链接或房间号>` / `live list` | 开播通知：手动登记 B 站直播间，开播时在该赛区的频道里发一条带标题和封面的消息（需要"管理消息"权限）。短号自动解析；不写名字用主播昵称 |
 | `@mrmeeseeks patches here` / `patches off` / `patches status` | 补丁推送频道：每 3 小时检查一次[官方补丁说明](https://overwatch.blizzard.com/en-us/news/patch-notes/)，有新补丁就发一篇要点式摘要并附原文链接：每个改动的英雄名前有头像，下面固定分 **Basic Info / Abilities / Perks** 三项（没有改动写 None）；改动内容用英文，英雄、武器、技能、威能名写成「英文/简体中文/韩文」（例如 `Roadhog/路霸/로드호그`、`Chain Hook/链钩/사슬 갈고리`），技能名后面标出 PC 默认键位（如 `Shift`），描述里顺带提到的技能也标（来源：补丁原文 > 官方技能名 > Wiki；都没有的写进 `server/keybinds.json` 手动标注，启动日志会列出缺键位的技能），中文取自国服官网、韩文取自韩服官网的同一篇补丁，找不到的语言留空。`here` 设置后会立刻发一次最新的补丁。`here`/`off` 需要"管理频道"权限；摘要需要 `ANTHROPIC_API_KEY`，没有时只列出改动的英雄 |
@@ -462,7 +462,9 @@ python tests/test_esports.py   # Liquipedia 赛程、官方新闻解析
 python tests/test_esports_feed.py # 赛事推送调度：预告、提醒、赛果、新闻、夏令时
 python tests/test_esports_bot.py  # esports / region / live 指令和权限、开播通知发送
 python tests/test_predictions.py   # 竞猜：押注、截止、结算、计分、排行榜
-python tests/test_rosters.py       # 赛事报名阵容：解析、候选页面、缓存与限速
+python tests/test_rosters.py       # 赛事报名阵容：解析（含教练、队徽）、候选页面、缓存与限速
+python tests/test_logos.py         # 队徽缓存：下载、间隔、失败重试、只接受图片
+python tests/test_roster_card.py   # 对阵图：尺寸、队徽大小一致、长队名、没有队徽 / 阵容
 python tests/test_prediction_feed.py # 竞猜接入推送：完整流程、改期、作废、周榜
 python tests/test_prediction_ui.py   # 竞猜按钮：点击、改选、节流
 python tests/test_prediction_bot.py  # predictions 指令、preview 样例、带按钮的发送与编辑
