@@ -190,12 +190,12 @@ class PredictionStore:
         return [dict(r) for r in rows]
 
     def titles(self, since: float, until: float) -> dict[str, Any]:
-        """本周称号：预言家（第一）、冷门猎手（单场最高分）、最惨预言家（至少 3 场、命中率最低）。"""
+        """本周称号：预言家（第一）、冷门猎手（单场最高分）、最惨预言家（至少 3 场、有猜错、命中率最低）。"""
         board = self.leaderboard(since, until)
         best = self.db.execute(
             "SELECT user_name, points FROM scores WHERE resolved_at >= ? AND resolved_at < ? AND correct = 1"
             " ORDER BY points DESC, resolved_at, user_id LIMIT 1", (int(since), int(until))).fetchone()
-        eligible = [r for r in board if r["played"] >= 3]
+        eligible = [r for r in board if r["played"] >= 3 and r["correct"] < r["played"]]   # 全部猜中的不算最惨
         worst = min(eligible, key=lambda r: (r["correct"] / r["played"], -r["played"]), default=None)
         return {"prophet": board[0] if board else None,
                 "underdog": dict(best) if best and best["points"] > 1 else None,

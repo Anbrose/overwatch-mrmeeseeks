@@ -146,6 +146,12 @@ def test_leaderboard_and_titles():
     check("称号文字", pr.format_titles(t) ==
           "🔮 Prophet of the week: u4 · 🎯 Underdog hunter: u4 (+2) · 🙈 Worst prophet: u1 (2/3)")
     check("没有数据时称号为空", pr.format_titles(s.titles(0, 1)) is None)
+    perfect = pr.PredictionStore(":memory:")
+    for mid in ("p", "q", "r"):
+        k = perfect.register(match(mid), 10, 1)
+        perfect.pick(k, 1, "u1", 1, START - 100)
+        perfect.resolve(k, 1, week + 10)
+    check("全部猜中的人不会被评为最惨预言家", perfect.titles(week, week + 1000)["worst"] is None)
     lines = pr.format_board("🏆 Week", board)
     check("榜单文字", lines[1] == "1. u4 — 4 pts (3/3)" and len(lines) == 5)
     check("空榜单提示", pr.format_board("x", []) == ["x", "No resolved predictions yet."])
