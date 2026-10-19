@@ -64,6 +64,7 @@ class PredictionUI:
         self.store, self.clock, self.min_edit_interval = store, clock, min_edit_interval
         self._last_edit: dict[str, float] = {}
         self._pending: dict[str, asyncio.Task] = {}
+        self._dirty: set[str] = set()        # 延后编辑排上之后又有新票，编辑完要再补一次
 
     async def on_pick(self, interaction: discord.Interaction, key: str, side: int) -> None:
         entry = self.store.get(key)
@@ -84,12 +85,19 @@ class PredictionUI:
         wait = self.min_edit_interval - (self.clock() - self._last_edit.get(key, float("-inf")))
         if wait <= 0:
             await self._edit(message, key)
-        elif key not in self._pending or self._pending[key].done():
+        elif key in self._pending and not self._pending[key].done():
+            self._dirty.add(key)
+        else:
             self._pending[key] = asyncio.get_running_loop().create_task(self._edit_later(message, key, wait))
 
     async def _edit_later(self, message: Any, key: str, wait: float) -> None:
         await asyncio.sleep(wait)
-        await self._edit(message, key)
+        while True:
+            self._dirty.discard(key)
+            await self._edit(message, key)
+            if key not in self._dirty:       # 编辑期间没有新票
+                return
+            await asyncio.sleep(self.min_edit_interval)
 
     async def _edit(self, message: Any, key: str) -> None:
         entry = self.store.get(key)

@@ -131,6 +131,34 @@ def test_throttle():
     check("合并后补一次编辑，显示最终票数", len(msg.views) == 2 and labels(msg.views[-1]) == ["T1 · 5", "ZETA DIVISION · 0"])
 
 
+
+def test_click_during_deferred_edit():
+    s, key = store_with_match()
+    handler = ui.PredictionUI(s, Clock(), min_edit_interval=0.05)
+
+    class SlowMessage(FakeMessage):
+        gate = None
+
+        async def edit(self, view=None):
+            if self.gate is not None:
+                await self.gate.wait()                     # 模拟 Discord 编辑还没返回
+            self.views.append(view)
+
+    msg = SlowMessage()
+
+    async def scenario():
+        await handler.on_pick(interaction(1, "u1", msg), key, 1)   # 立即编辑
+        await handler.on_pick(interaction(2, "u2", msg), key, 1)   # 排一次延后编辑
+        msg.gate = asyncio.Event()
+        await asyncio.sleep(0.08)                                   # 延后编辑已读到 2 票，卡在 edit 里
+        await handler.on_pick(interaction(3, "u3", msg), key, 1)   # 这时又来一票
+        msg.gate.set()
+        await asyncio.sleep(0.2)
+
+    asyncio.run(scenario())
+    check("延后编辑进行中又来一票：最终按钮显示 3 票", labels(msg.views[-1]) == ["T1 · 3", "ZETA DIVISION · 0"])
+
+
 def test_edit_failure_and_closed_label():
     s, key = store_with_match()
 
@@ -152,6 +180,7 @@ if __name__ == "__main__":
     test_pick_flow()
     test_button_callback()
     test_throttle()
+    test_click_during_deferred_edit()
     test_edit_failure_and_closed_label()
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")
