@@ -45,7 +45,7 @@ PREVIEW_PREFIX = "🧪 Preview\n"
 
 def new_state() -> dict[str, Any]:
     return {"channel_id": None, "reminded": {}, "resulted": {}, "digest_date": None,
-            "seen_news": [], "initialized": False, "news_initialized": False}
+            "seen_news": [], "initialized": False, "news_initialized": False, "leaderboard_week": None}
 
 
 @dataclass
@@ -53,6 +53,8 @@ class Post:
     text: str | None                      # None 表示只记账、不发消息
     marks: dict[str, Any] = field(default_factory=dict)
     channel: int | None = None            # 赛区频道；None 表示默认频道（state["channel_id"]）
+    kind: str = "text"                    # text 照常发送；其他类型（竞猜、截止、作废）交给竞猜模块执行
+    data: dict[str, Any] = field(default_factory=dict)   # 提醒、赛果带上 {"match": m}，供竞猜模块补充内容
 
 
 def apply_marks(state: dict[str, Any], marks: dict[str, Any]) -> None:
@@ -62,8 +64,9 @@ def apply_marks(state: dict[str, Any], marks: dict[str, Any]) -> None:
     for url in marks.get("seen_news", []):
         if url not in state["seen_news"]:
             state["seen_news"].append(url)
-    if "digest_date" in marks:
-        state["digest_date"] = marks["digest_date"]
+    for key in ("digest_date", "leaderboard_week"):
+        if key in marks:
+            state[key] = marks[key]
     for flag in ("initialized", "news_initialized"):
         if marks.get(flag):
             state[flag] = True
@@ -180,10 +183,12 @@ def plan(now: datetime, matches: list[dict[str, Any]] | None, news: list[dict[st
             if (not m["finished"] and not already(state["reminded"], m, listed)
                     and not (m["team1"] == "TBD" and m["team2"] == "TBD")   # 对阵都没定，不提醒
                     and m["start"] - REMIND_BEFORE.total_seconds() <= ts <= m["start"] + REMIND_LATE.total_seconds()):
-                posts.append(Post(format_reminder(m), {"reminded": {m["id"]: m["start"]}}, target(m)))
+                posts.append(Post(format_reminder(m), {"reminded": {m["id"]: m["start"]}}, target(m),
+                                  data={"match": m}))
             if (m["finished"] and not already(state["resulted"], m, listed)
                     and ts - RESULT_MAX_AGE.total_seconds() <= m["start"] <= ts):
-                posts.append(Post(format_result(m), {"resulted": {m["id"]: m["start"]}}, target(m)))
+                posts.append(Post(format_result(m), {"resulted": {m["id"]: m["start"]}}, target(m),
+                                  data={"match": m}))
     if news is not None and not state["news_initialized"]:
         posts.append(Post(None, {"news_initialized": True, "seen_news": [n["url"] for n in news]}))
     elif news is not None:
@@ -220,8 +225,9 @@ class EsportsFeed:
     def __init__(self, path: str,
                  fetch_matches: Callable[[], Awaitable[list[dict]]] = esports.fetch_matches,
                  fetch_news: Callable[[], Awaitable[list[dict]]] = esports.fetch_news,
-                 regions: RegionStore | None = None):
+                 regions: RegionStore | None = None, predictions: Any = None):
         self.path = path
+        self.predictions = predictions          # prediction_feed.PredictionFeed；None 表示不开竞猜
         self.fetch_matches, self.fetch_news = fetch_matches, fetch_news
         self.regions = regions                  # 赛区 -> 频道，None 表示全部发到默认频道
         self.state = new_state()
@@ -276,6 +282,13 @@ class EsportsFeed:
         return preview_posts(now or datetime.now(timezone.utc), self.matches,
                              lambda m: self.channel_for(m) == channel_id)
 
+    def preview_prediction(self, channel_id: int, now: datetime | None = None) -> tuple[str, dict] | None:
+        """竞猜消息的样例（按钮禁用），没开竞猜或没有比赛时返回 None。"""
+        if self.predictions is None:
+            return None
+        return self.predictions.preview(now or datetime.now(timezone.utc), self.matches,
+                                        lambda m: self.channel_for(m) == channel_id)
+
     async def refresh(self, mono: float) -> None:
         """到点就重新抓；抓取失败保留上一次的数据。"""
         if mono - self._matches_at >= MATCH_REFRESH:
@@ -284,6 +297,8 @@ class EsportsFeed:
                 self.matches = await self.fetch_matches()
             except Exception:
                 log.exception("Esports match fetch failed; keeping previous data")
+            if self.predictions is not None and self.matches is not None:
+                self.predictions.prepare(self.matches)      # 后台准备阵容（限速抓取，不阻塞推送）
         if mono - self._news_at >= NEWS_REFRESH:
             self._news_at = mono
             try:
@@ -291,18 +306,27 @@ class EsportsFeed:
             except Exception:
                 log.exception("Esports news fetch failed; keeping previous data")
 
-    async def tick(self, now: datetime, send: Callable[[int, str], Awaitable[None]], mono: float) -> None:
+    async def tick(self, now: datetime, send: Callable[..., Awaitable[Any]], mono: float,
+                   edit: Callable[..., Awaitable[None]] | None = None) -> None:
         await self.refresh(mono)
         state = copy.deepcopy(self.state)
         changed = False
-        for post in plan(now, self.matches, self.news, state, self.channels):
+        posts = plan(now, self.matches, self.news, state, self.channels)
+        if self.predictions is not None:
+            posts = self.predictions.augment(now, self.matches, posts, state, self.channel_for)
+        for post in posts:
             channel_id = post.channel if post.channel is not None else state["channel_id"]
-            if post.text is not None and channel_id is not None:
-                try:
-                    await send(channel_id, post.text)
-                except Exception:
-                    log.exception("Could not post to esports channel %s; will retry", channel_id)
-                    break   # 停止本 tick，下一轮重试剩余消息
+            try:
+                if post.kind == "text":
+                    if post.text is not None and channel_id is not None:
+                        await send(channel_id, post.text)
+                else:
+                    await self.predictions.execute(post, channel_id, send, edit)
+            except Exception:
+                log.exception("Could not post to esports channel %s; will retry", channel_id)
+                break   # 停止本 tick，下一轮重试剩余消息
+            if self.predictions is not None:
+                self.predictions.after_sent(post, now)      # 赛果发出后才结算
             apply_marks(state, post.marks)
             changed = True
         if changed:
@@ -311,10 +335,10 @@ class EsportsFeed:
             self.state = state
             self.save()
 
-    async def run(self, send: Callable[[int, str], Awaitable[None]]) -> None:
+    async def run(self, send: Callable[..., Awaitable[Any]], edit: Callable[..., Awaitable[None]] | None = None) -> None:
         while True:
             try:
-                await self.tick(datetime.now(timezone.utc), send, time.monotonic())
+                await self.tick(datetime.now(timezone.utc), send, time.monotonic(), edit)
             except Exception:
                 log.exception("Esports feed tick failed")
             await asyncio.sleep(TICK_SECONDS)
