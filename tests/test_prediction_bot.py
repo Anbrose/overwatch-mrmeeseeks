@@ -156,7 +156,7 @@ def test_setup_hook():
     b = bot.MeeseeksBot.__new__(bot.MeeseeksBot)
     added = []
     b.add_dynamic_items = lambda *items: added.extend(items)
-    b.wish_view = None
+    b.wish_view = b.announce_desk = None
     b.prediction_ui = ui.PredictionUI(pr.PredictionStore(":memory:"))
     asyncio.run(b.setup_hook())
     check("启动时注册竞猜按钮并设置 handler", added == [ui.PredictButton] and ui.PredictButton.handler is b.prediction_ui)

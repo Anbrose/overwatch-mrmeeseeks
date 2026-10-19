@@ -9,6 +9,7 @@
   @mrmeeseeks disconnect 解绑当前频道里的客户端
   @mrmeeseeks help       显示帮助
   @mrmeeseeks wishes [游戏] [7d]  管理员导出许愿 CSV（私信发送）
+  @mrmeeseeks announce   管理员发多语言公告（表单 -> 翻译预览 -> 发布），见 announce.py
   @mrmeeseeks patches here|off|status  官方补丁说明推送频道，见 patch_feed.py
   @mrmeeseeks esports here|off|status  赛事推送的默认频道，见 esports_feed.py
   @mrmeeseeks region <赛区> [off]       把当前频道绑定成某赛区的频道（赛事推送和开播通知共用），见 regions.py
@@ -35,6 +36,7 @@ from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
 
 import overfast
+from announce import AnnounceDesk, AnnouncementStore, LangButton, StartView, Translator
 import matchups
 import predictions as pr
 from esports_feed import EsportsFeed
@@ -89,10 +91,12 @@ HELP_TEXT = (
     "(needs Manage Channels); `patches status` shows the latest patch\n"
     "`@mrmeeseeks help` Show this help\n"
     "`@mrmeeseeks wishes [game] [7d]` (admins) Get feature wishes with their votes as a CSV by DM\n"
+    "`@mrmeeseeks announce` (admins) Post an announcement with buttons to read it in "
+    "简体中文 / 繁體中文 / English / 日本語 / 한국어\n"
     "`@mrmeeseeks <question>` Ask about heroes, e.g. `was Cassidy nerfed recently?`, "
     "`Tracer HP`, `how many Cassidy headshots kill Mauga at 30m?`"
 )
-COMMANDS = ("connect", "status", "disconnect", "help", "analyze", "label")
+COMMANDS = ("connect", "status", "disconnect", "help", "analyze", "label", "announce")
 ARG_COMMANDS = ("player", "esports", "patches", "wishes", "region", "live", "predictions")     # 带参数的指令；参数保留大小写（BattleTag 大小写敏感）
 LIVE_USAGE = ("Usage: `@mrmeeseeks live add <region> <Bilibili room url or id> [label]`, "
               "`live remove <room url or id>` or `live list`. Bind the region's channel first with `@mrmeeseeks region <region>`.")
@@ -197,7 +201,7 @@ class MeeseeksBot(discord.Client):
                  wish_plans: WishPlans | None = None, patch_feed: PatchFeed | None = None,
                  regions: RegionStore | None = None, live_watcher: LiveWatcher | None = None,
                  live_notify_offline: bool = False, predictions: pr.PredictionStore | None = None,
-                 prediction_ui: PredictionUI | None = None):
+                 prediction_ui: PredictionUI | None = None, announce_desk: AnnounceDesk | None = None):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents, allowed_mentions=discord.AllowedMentions(everyone=False, roles=False))
@@ -226,6 +230,7 @@ class MeeseeksBot(discord.Client):
         self._wish_entry_ready = False
         self.predictions = predictions
         self.prediction_ui = prediction_ui
+        self.announce_desk = announce_desk
 
     def hero_name(self, key: str) -> str:
         return self.names.get(key) or overfast.hero_name(key)
@@ -239,6 +244,9 @@ class MeeseeksBot(discord.Client):
             self.add_dynamic_items(PredictButton)   # 竞猜按钮：重启前发的竞猜消息照样能点
         if self.wish_view:
             self.add_view(self.wish_view)     # 持久化按钮：重启前发的入口消息照样能点
+        if self.announce_desk:
+            LangButton.handler = self.announce_desk
+            self.add_dynamic_items(LangButton)      # 公告的语言按钮：重启前发的公告照样能点
 
     async def on_ready(self) -> None:
         log.info("Logged in to Discord as %s", self.user)
@@ -304,6 +312,8 @@ class MeeseeksBot(discord.Client):
             await self._label(message)
         elif cmd == "wishes":
             await self._export_wishes(message, arg)
+        elif cmd == "announce":
+            await self._announce(message)
         elif cmd == "help":
             await message.reply(HELP_TEXT)
         else:
@@ -627,6 +637,17 @@ class MeeseeksBot(discord.Client):
             return
         await message.reply(f"📬 Sent you {len(records)} wish(es) as a CSV by DM.")
 
+    async def _announce(self, message: discord.Message) -> None:
+        if self.announce_desk is None:
+            await message.reply("Announcements need ANTHROPIC_API_KEY to be set (for the translations).")
+            return
+        if not self._can_manage(message, "manage_guild"):
+            await message.reply("Only members with **Manage Server** can post announcements.")
+            return
+        await message.reply("Press the button to write your announcement. I'll translate it and show you a "
+                            "preview before anything is posted in this channel.",
+                            view=StartView(self.announce_desk, message.author.id))
+
     async def _ask(self, message: discord.Message, question: str) -> None:
         if self.hero_qa is None:
             await message.reply("Hero Q&A needs ANTHROPIC_API_KEY to be set.")
@@ -872,11 +893,17 @@ async def main() -> None:
         else:
             log.warning("ANTHROPIC_API_KEY not set; wishes will be posted without a plan")
 
+    # 公告的各语言版本存 STATE_DIR（用户产生的数据），语言按钮靠它在重启后继续工作
+    announce_desk = (AnnounceDesk(Translator(AsyncAnthropic(api_key=api_key), model, effort),
+                                  AnnouncementStore(state_dir / "announcements"))
+                     if api_key else None)
+
     registry = Registry()
     bot = MeeseeksBot(registry, analyzer, recognizer, labels, roster, store, hero_qa, esports_feed,
                       int(wish_channel) if wish_channel else None, wish_desk, wish_plans, patch_feed,
                       regions=regions, live_watcher=live_watcher, live_notify_offline=live_notify_offline,
-                      predictions=prediction_store, prediction_ui=PredictionUI(prediction_store))
+                      predictions=prediction_store, prediction_ui=PredictionUI(prediction_store),
+                      announce_desk=announce_desk)
     patch_feed.icons = HeroEmojis(bot).for_patch     # 补丁摘要里英雄名旁边的头像
     ws = WSServer(
         registry, bot,

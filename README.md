@@ -323,7 +323,7 @@ journalctl -u mrmeeseeks -f      # 查看日志
 | `ANTHROPIC_API_KEY` | 否 | 空 | 留空则只识别截图，不给建议 |
 | `CLAUDE_MODEL` | 否 | `claude-sonnet-5` | 给建议用的模型；想更快可换成 `claude-haiku-4-5-20251001`。可用模型见[模型列表](https://platform.claude.com/docs/en/models/overview) |
 | `ADVISE_EFFORT` | 否 | `low` | 给建议时的思考强度（`low`/`medium`/`high`），越高越慢 |
-| `STATE_DIR` | 否 | `state/` | 标注的模板、待标注队列、许愿次数（`wishes.json`）、赛区频道绑定（`regions.json`）、直播源（`live_sources.json`）和赛事竞猜（`predictions.db`）存放位置；Docker 部署时是挂载的 `/state` |
+| `STATE_DIR` | 否 | `state/` | 标注的模板、待标注队列、许愿次数（`wishes.json`）、赛区频道绑定（`regions.json`）、直播源（`live_sources.json`）、赛事竞猜（`predictions.db`）和公告的各语言版本（`announcements/`）存放位置；Docker 部署时是挂载的 `/state` |
 | `WS_HOST` | 否 | `0.0.0.0` | WebSocket 监听地址；用反向代理时改为 `127.0.0.1` |
 | `WS_PORT` | 否 | `8765` | WebSocket 端口 |
 | `MIN_SNAPSHOT_INTERVAL` | 否 | `5` | 同一客户端两次分析的最短间隔（秒） |
@@ -368,6 +368,7 @@ python client\client.py --help
 | `@mrmeeseeks disconnect` | 解绑本频道的客户端 |
 | `@mrmeeseeks help` | 显示帮助 |
 | `@mrmeeseeks wishes [游戏] [7d]` | 管理员（「管理服务器」权限或 `WISH_REVIEWER_ID`）导出许愿 CSV，按 👍 数排序，私信发送。可按游戏（包含匹配，`漫威` 也行）、最近 N 天筛选 |
+| `@mrmeeseeks announce` | 管理员（「管理服务器」权限）发多语言公告：用一种语言写，bot 翻译成简体中文、繁體中文、English、日本語、한국어，先私下预览再发布。频道里只有一条原文公告，成员点语言按钮私下看到对应版本。见下方「多语言公告」。需要 `ANTHROPIC_API_KEY` |
 | `@mrmeeseeks <问题>` | 英雄问答：数值（血量、子弹体积）、最近的补丁、N 米处几枪击杀。例如 `@mrmeeseeks 卡西迪最近被削了吗`（先查[官方补丁说明](https://overwatch.blizzard.com/en-us/news/patch-notes/)，补丁当天就能答对，再查 Wiki 的历史记录）、`@mrmeeseeks 卡西迪 30 米爆头几枪杀毛加`、`@mrmeeseeks 查莉娅怕谁`。克制关系来自 [counterwatch.gg](https://www.counterwatch.gg) 的对位评分（对决和团战结果，全段位，不是整局胜率）。需要 `ANTHROPIC_API_KEY` |
 | `@mrmeeseeks esports here` / `esports off` / `esports status` / `esports preview` | 赛事推送的默认频道：推送 OWCS 和世界杯的每日赛程预告（悉尼时间 10:00）、开赛前 15 分钟提醒、赛果（比分用剧透遮罩）和官方新闻。绑定了赛区频道的比赛会发到赛区频道（见下方「按赛区分频道」），其余和新闻发到这里。`here`/`off` 需要"管理频道"权限；`status` 显示默认频道、赛区频道和接下来几场比赛各发到哪；`preview` 立刻在当前频道发一组用真实数据生成的样例（预告、下一场提醒、最近一场赛果，以及一条按钮禁用的竞猜消息，标着 🧪 Preview），只含会发到这个频道的比赛，不影响自动推送，部署后或绑定赛区后用来快速验证（需要"管理频道"权限）。比赛数据来自 [Liquipedia](https://liquipedia.net/overwatch)（CC-BY-SA） |
 | `@mrmeeseeks predictions` / `predictions reset` | 赛事竞猜：每天悉尼时间 10:00 预告之后，每场官方比赛在它的赛区频道（或默认频道）发一条竞猜消息，附双方报名阵容，点按钮押胜者，开赛前可以改。开赛时截止并公布谁押了谁，赛果出来后在剧透遮罩里揭晓谁猜中；猜中得 1 分，押冷门猜中最多 3 分。每周一 10:00 在默认频道发上周榜和称号。`predictions` 查看本周榜、赛季榜和自己的排名；`predictions reset` 开新赛季（需要"管理服务器"权限） |
@@ -423,6 +424,17 @@ bot 启动时会在频道里发一条带「Make a wish」按钮的置顶消息�
 
 bot 每 30 秒查一次 B 站公开接口（不需要登录），直播间从未开播变成直播中时，在该赛区的频道里发一条带标题和封面的消息。bot 启动或新加直播间时只记录当前状态，不补发。目前只支持 B 站；OWCS 亚洲、EMEA、北美的官方流在 Twitch / YouTube，暂时只能登记 B 站上的转播间。绑定和直播源存在 `STATE_DIR`（`regions.json`、`live_sources.json`），重启不丢。
 
+### 多语言公告
+
+一份公告只写一次，大家各看各的语言：
+
+1. 在要发公告的频道里 `@mrmeeseeks announce`，点 bot 回复里的 **Write announcement**（只有发指令的人能点）
+2. 表单里选原文语言，填标题（选填）和正文（最多 4000 字，Discord 格式如粗体、列表、emoji 会保留）
+3. bot 把原文翻译成另外 4 种语言，每种语言私下发你一份预览。英雄、技能和地图名用官方译名（简体用国服、繁体用台服），`@mrmeeseeks help` 这类指令原样保留
+4. 确认没问题点 **Publish**；某种语言翻译失败时 **Publish** 不可用，点 **Retry** 只重翻失败的语言。预览 15 分钟内不发布就作废
+
+发布后频道里是一条原文公告，下面有 `简体中文` `繁體中文` `English` `日本語` `한국어` 五个按钮，点了只有自己能看到对应版本。翻译在发布前一次做完并存在 `STATE_DIR/announcements/`，点按钮不调用 API，bot 重启后按钮照样能用。公告不会 @ 任何人；要改内容就删掉重发。
+
 ### 配对规则
 
 - 配对码 5 分钟内有效，最多输错 5 次，之后自动作废，需要重新 `@mrmeeseeks`
@@ -458,6 +470,7 @@ python tests/test_regions.py      # 赛区映射：Liquipedia 赛事路径 -> �
 python tests/test_live.py         # 开播通知：B 站链接和接口解析、开播/下播判定、直播源文件、轮询循环
 python tests/test_patchnotes.py   # 官方补丁说明解析、推送频道、问答工具、patches 指令
 python tests/test_wishes.py     # 功能许愿：每日限额、存档导出、表单提交、入口消息、方案起草与修改
+python tests/test_announce.py   # 多语言公告：分段、翻译、预览、发布、语言按钮
 ```
 
 每个脚本最后一行显示 `N/N passed`，全部通过时退出码为 0。
