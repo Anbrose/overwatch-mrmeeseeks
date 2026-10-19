@@ -14,6 +14,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "server"))
 
 import esports_feed as ef  # noqa: E402
+import logos as lg  # noqa: E402
+import roster_card as rc  # noqa: E402
 import prediction_feed as pf  # noqa: E402
 import predictions as pr  # noqa: E402
 import rosters as rs  # noqa: E402
@@ -273,12 +275,92 @@ def test_preview():
     preds = pf.PredictionFeed(pr.PredictionStore(":memory:"), roster_cache())
     m = match(start)
     sample = preds.preview(SYD_10AM_MON, [match(start + timedelta(hours=1), "TBD", "TBD"), m], lambda x: True)
-    text, view = sample
+    text, view, card = sample
     check("preview：下一场的竞猜样例，带阵容和 Preview 前缀", text.startswith(ef.PREVIEW_PREFIX + "🎯 **Who wins?** T1 vs ZETA")
           and "DONGHAK" in text)
     check("preview：按钮禁用", view["disabled"] is True and view["counts"] == [0, 0])
     check("preview：不登记", preds.store.active() == [])
+    check("preview：没开图片模式时没有对阵图", card is None)
     check("preview：没有路由到这里的比赛返回 None", preds.preview(SYD_10AM_MON, [m], lambda x: False) is None)
+
+
+PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+
+
+class CardDiscord(Discord):
+    """图片模式的假发送：多收一个对阵图。"""
+    def __init__(self):
+        super().__init__()
+        self.files = []
+
+    async def send(self, channel_id, text, view=None, file=None):
+        self.files.append(file)
+        return await super().send(channel_id, text, view)
+
+
+def card_feed(d, box, logos_dir):
+    feed, store = make_feed(d, box)
+    feed.predictions = pf.PredictionFeed(store, roster_cache(), lg.LogoCache(logos_dir))
+    return feed, store
+
+
+def test_card_mode():
+    start = SYD_10AM_MON + timedelta(hours=3)
+    m = match(start)
+    with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as logos_dir:
+        feed, store = card_feed(d, [[m]], logos_dir)
+        feed.state["leaderboard_week"] = "2026-10-26"
+        discord = CardDiscord()
+        asyncio.run(feed.tick(SYD_10AM_MON, discord.send, 0, discord.edit))
+        i = next(i for i, (_, _, v) in enumerate(discord.sent) if v)
+        text, png = discord.sent[i][1], discord.files[i]
+        check("图片模式：竞猜消息附上对阵图（PNG）", png is not None and png.startswith(PNG_MAGIC))
+        check("图片模式：文字只有标题和开赛时间，阵容在图里", text.startswith("🎯 **Who wins?** T1 vs ZETA DIVISION")
+              and "picks close at start" in text and "DONGHAK" not in text and "Registered event roster" not in text)
+        check("图片模式：照常登记竞猜消息", store.find(m)["message_id"] == discord.next_id)
+
+        sample = feed.predictions.preview(SYD_10AM_MON, [m], lambda x: True)
+        check("图片模式：preview 也附上对阵图", sample[2] is not None and sample[2].startswith(PNG_MAGIC)
+              and sample[0].startswith(ef.PREVIEW_PREFIX + "🎯 **Who wins?**") and "DONGHAK" not in sample[0])
+
+    original = rc.render_card
+
+    def broken(*a, **k):
+        raise RuntimeError("font missing")
+    rc.render_card = broken
+    try:
+        with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as logos_dir:
+            feed, store = card_feed(d, [[m]], logos_dir)
+            feed.state["leaderboard_week"] = "2026-10-26"
+            discord = CardDiscord()
+            asyncio.run(feed.tick(SYD_10AM_MON, discord.send, 0, discord.edit))
+            i = next(i for i, (_, _, v) in enumerate(discord.sent) if v)
+            check("画图失败：退回文字阵容，照常发出并登记", discord.files[i] is None and "DONGHAK" in discord.sent[i][1]
+                  and store.find(m) is not None)
+    finally:
+        rc.render_card = original
+
+
+def test_prepare_downloads_logos():
+    m = match(SYD_10AM_MON + timedelta(hours=3))
+    url1 = "https://liquipedia.net/commons/images/thumb/a/aa/T1.png/300px-T1.png"
+    url2 = "https://liquipedia.net/commons/images/thumb/b/bb/ZETA.png/300px-ZETA.png"
+
+    async def fetch_page(page):
+        return {"teams": {"T1": T1_ROSTER}, "logos": {"T1": url1, "ZETA DIVISION": url2}}
+    got = []
+
+    async def fetch_logo(url):
+        got.append(url)
+        return PNG_MAGIC + b"\x00" * 16
+
+    async def no_sleep(s):
+        pass
+    with tempfile.TemporaryDirectory() as logos_dir:
+        cache = rs.RosterCache(None, fetch_page, sleep=no_sleep)
+        preds = pf.PredictionFeed(pr.PredictionStore(":memory:"), cache, lg.LogoCache(logos_dir, fetch_logo, sleep=no_sleep))
+        asyncio.run(preds._ensure([m]))
+        check("准备阵容之后下载双方队徽", got == [url1, url2] and preds.logos.path(url1) is not None)
 
 
 def test_pure_helpers():
@@ -299,6 +381,8 @@ if __name__ == "__main__":
     test_send_failure_retry()
     test_leaderboard()
     test_preview()
+    test_card_mode()
+    test_prepare_downloads_logos()
     test_pure_helpers()
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")

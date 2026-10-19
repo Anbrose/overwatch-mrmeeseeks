@@ -18,7 +18,9 @@
 | `server/esports.py` | 赛事数据：解析 Liquipedia:Matches（比赛）和 esports.overwatch.com 首页（新闻） |
 | `server/esports_feed.py` | 赛事推送：`plan()` 纯函数决定发什么（含按赛区分频道），`EsportsFeed` 负责抓取、状态持久化和发送 |
 | `server/predictions.py` | 赛事竞猜存储（`STATE_DIR/predictions.db`，SQLite）：押注、截止、结算、作废、计分、周榜和赛季榜 |
-| `server/rosters.py` | 赛事报名阵容：解析 Liquipedia 赛事页面的参赛卡片，缓存到 `rosters.json`，限速抓取 |
+| `server/rosters.py` | 赛事报名阵容：解析 Liquipedia 赛事页面的参赛卡片（选手、教练、队徽地址），缓存到 `rosters.json`，限速抓取 |
+| `server/logos.py` | 队徽缓存：从 Liquipedia 下载队徽到 herodata 卷的 `logos/`，请求间隔 2 秒，失败 6 小时内不重试 |
+| `server/roster_card.py` | 对阵图：两队队徽、队名左右对称，中间按职责（坦克 / 输出 / 全能 / 支援 / 教练）列出双方选手，输出 PNG；字体是 `server/assets/fonts` 里的 Noto Sans（OFL） |
 | `server/prediction_feed.py` | 竞猜接入推送：竞猜 / 截止 / 作废 / 周榜消息，给提醒和赛果补充竞猜信息（不依赖 discord） |
 | `server/prediction_ui.py` | 竞猜按钮（`DynamicItem`，`pred:<key>:<side>`）：点击押注、只回复本人、节流更新票数 |
 | `server/regions.py` | 赛区 -> 频道的绑定（`regions.json`），以及 Liquipedia 赛事路径 -> 赛区的识别；赛事推送和开播通知共用 |
@@ -120,7 +122,7 @@
 2. **计划**：纯函数 `plan_predictions` 产出 `kind` 为 `prediction`（悉尼 10:00 之后、未来 24 小时、离开赛至少 15 分钟、不是 TBD 对 TBD、还没登记）、`lock`（到开赛时间）、`void`（开赛 48 小时后还没结算）的消息，以及周一 10:00 的周榜；`decorate` 给提醒加上票数和竞猜链接，给赛果加上剧透揭晓并标记"发出后结算"（平局或没有胜负就作废）。
 3. **执行**：`execute` 发带按钮的竞猜消息（发送函数返回消息 ID 和链接后 `register`）；截止时先公布名单、再 `lock`、再把原消息按钮改成禁用；作废时编辑原消息。发送失败照常停在这一轮，下一轮重试；编辑失败只记日志。`after_sent` 在赛果发出后 `resolve`。
 4. **按钮**：`prediction_ui.PredictButton` 是 `DynamicItem`，`setup_hook` 里 `add_dynamic_items` 一次，重启前发的竞猜消息也能点；点击后 `pick`、ephemeral 回复、每 2 秒最多编辑一次票数。
-5. **阵容**：`RosterCache.ensure` 在每次抓到比赛后放到后台跑（Liquipedia `action=parse` 每 30 秒最多 1 次，由 `esports.parse_page` 和赛程抓取共用同一个限速；同一页面 24 小时内不重抓）；生成竞猜消息时只读缓存，拿不到就写 "Roster unavailable"。
+5. **阵容**：`RosterCache.ensure` 在每次抓到比赛后放到后台跑（Liquipedia `action=parse` 每 30 秒最多 1 次，由 `esports.parse_page` 和赛程抓取共用同一个限速；同一页面 24 小时内不重抓）；阵容抓完后再下载双方队徽（`LogoCache.ensure`）。发竞猜消息时只读缓存，用 `roster_card.render_card` 画对阵图，消息文字只有标题和开赛时间；拿不到阵容的一方在图里写 "Roster unavailable"，没有队徽就画首字母圆标；画图失败时退回文字版阵容。
 
 计分：猜中 `1 + max(0, (0.5 − 押中一方占比) × 4)`，上限 3，参与少于 3 人没有加成。
 

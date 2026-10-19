@@ -40,6 +40,7 @@ import predictions as pr
 from esports_feed import EsportsFeed
 from prediction_feed import PredictionFeed, week_start
 from prediction_ui import PredictButton, PredictionUI, build_view
+from logos import LogoCache
 from rosters import RosterCache
 from live_watch import (DEFAULT_POLL_INTERVAL, BilibiliClient, LiveError, LiveEvent, LiveStore, LiveWatcher, Source,
                         parse_bilibili_target)
@@ -352,8 +353,10 @@ class MeeseeksBot(discord.Client):
                 await message.channel.send(text, allowed_mentions=discord.AllowedMentions.none())
             sample = feed.preview_prediction(message.channel.id)   # 开了竞猜时，再发一条按钮禁用的竞猜样例
             if sample:
-                text, spec = sample
-                await message.channel.send(text, view=build_view(spec), allowed_mentions=discord.AllowedMentions.none())
+                text, spec, card = sample
+                kwargs = {"file": discord.File(io.BytesIO(card), filename="matchup.png")} if card else {}
+                await message.channel.send(text, view=build_view(spec), allowed_mentions=discord.AllowedMentions.none(),
+                                           **kwargs)
         else:
             await message.reply("Usage: `@mrmeeseeks esports here`, `esports off`, `esports status` or `esports preview`.")
 
@@ -497,12 +500,15 @@ class MeeseeksBot(discord.Client):
             await channel.send(f"⚫ **{src.label}** ({src.region.upper()}) ended the stream.",
                                allowed_mentions=discord.AllowedMentions.none())
 
-    async def post_esports(self, channel_id: int, text: str, view: dict | None = None) -> tuple[int, str]:
-        """推送任务用的发送函数：等 bot 登录完成再发，不 ping 任何人。view 是竞猜按钮的描述（prediction_feed.view_spec）。
-        返回 (消息 ID, 消息链接)，竞猜消息据此登记。"""
+    async def post_esports(self, channel_id: int, text: str, view: dict | None = None,
+                           card: bytes | None = None) -> tuple[int, str]:
+        """推送任务用的发送函数：等 bot 登录完成再发，不 ping 任何人。view 是竞猜按钮的描述（prediction_feed.view_spec），
+        card 是对阵图 PNG。返回 (消息 ID, 消息链接)，竞猜消息据此登记。"""
         await self.wait_until_ready()
         channel = await self._channel(channel_id)
-        kwargs = {"view": build_view(view)} if view else {}
+        kwargs: dict = {"view": build_view(view)} if view else {}
+        if card:
+            kwargs["file"] = discord.File(io.BytesIO(card), filename="matchup.png")
         msg = await channel.send(text, allowed_mentions=discord.AllowedMentions.none(), **kwargs)
         return msg.id, msg.jump_url
 
@@ -848,12 +854,14 @@ async def main() -> None:
              len(live_store.sources))
 
     # 赛事推送状态和英雄数据放在同一个目录（Docker 里是 herodata 卷）
-    # 竞猜：押注和积分存 STATE_DIR（用户产生的数据）；赛事报名阵容缓存和英雄数据放一起（herodata 卷）
+    # 竞猜：押注和积分存 STATE_DIR（用户产生的数据）；赛事报名阵容和队徽缓存和英雄数据放一起（herodata 卷）
     prediction_store = pr.PredictionStore(state_dir / "predictions.db")
-    roster_cache = RosterCache(os.path.join(os.path.dirname(os.path.abspath(store.path)), "rosters.json"))
+    herodata_dir = os.path.dirname(os.path.abspath(store.path))
+    roster_cache = RosterCache(os.path.join(herodata_dir, "rosters.json"))
     roster_cache.load()
-    esports_feed = EsportsFeed(os.path.join(os.path.dirname(os.path.abspath(store.path)), "esports_state.json"),
-                               regions=regions, predictions=PredictionFeed(prediction_store, roster_cache))
+    logo_cache = LogoCache(os.path.join(herodata_dir, "logos"))
+    esports_feed = EsportsFeed(os.path.join(herodata_dir, "esports_state.json"),
+                               regions=regions, predictions=PredictionFeed(prediction_store, roster_cache, logo_cache))
     esports_feed.load()
 
     wish_channel = os.environ.get("WISH_CHANNEL_ID", "").strip()
