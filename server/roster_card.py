@@ -17,7 +17,7 @@ from PIL import Image, ImageDraw, ImageFont
 log = logging.getLogger("mrmeeseeks.roster_card")
 
 FONT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "fonts", "NotoSans.ttf")
-WIDTH, HEADER, ROW, GAP, FOOTER = 1000, 300, 54, 22, 70
+WIDTH, HEADER, ROW, GAP, FOOTER = 1000, 300, 54, 32, 70
 LEFT, CENTER, RIGHT = 270, 500, 730            # 左队、职责、右队的中心 x
 NAME_INSET = 130                               # 选手名字离中线的距离
 NAME_MAX = 300                                 # 选手名字最宽
@@ -25,6 +25,7 @@ TEAM_MAX = 420                                 # 队名最宽
 LOGO_AREA, LOGO_MAX_W, LOGO_MAX_H = 140 * 140, 240, 160
 LOGO_MAX_PIXELS = 2_000_000
 BG, PANEL, LINE = (30, 31, 34), (43, 45, 49), (64, 66, 72)
+DIVIDER_INSET = 90                             # 职责之间的分隔线比表头、表尾的线短一些
 TEXT, MUTED = (240, 241, 243), (150, 154, 162)
 ROLES = {"tank": ("TANK", (88, 166, 255)), "dps": ("DAMAGE", (255, 107, 107)), "flex": ("FLEX", (255, 196, 87)),
          "support": ("SUPPORT", (87, 214, 141)), "coach": ("COACH", (180, 180, 190)), None: ("PLAYER", MUTED)}
@@ -63,6 +64,15 @@ def role_rows(roster1: list[dict[str, Any]] | None, roster2: list[dict[str, Any]
 def height_for(rows: list[tuple[str | None, int]]) -> int:
     body = sum(n * ROW + GAP for _, n in rows) if rows else ROW + GAP     # 没有阵容时一行说明
     return HEADER + body + GAP + FOOTER
+
+
+def divider_ys(rows: list[tuple[str | None, int]]) -> list[float]:
+    """相邻两类职责之间分隔线的 y：画在两组中间的空隙里，一眼看出每个人属于哪一类。"""
+    ys, y = [], HEADER + GAP // 2
+    for _, n in rows[:-1]:
+        y += n * ROW + GAP
+        ys.append(y - GAP / 2)
+    return ys
 
 
 def logo_size(w: int, h: int) -> tuple[int, int]:
@@ -136,6 +146,8 @@ def render_card(team1: str, team2: str, roster1: list[dict[str, Any]] | None, ro
                 name, f = fit_text(player, NAME_MAX, size, weight)
                 d.text((x, y + j * ROW + ROW / 2), name, font=f, fill=fill, anchor=anchor)
         y += n * ROW + GAP
+    for line_y in divider_ys(rows):
+        d.line((DIVIDER_INSET, line_y, WIDTH - DIVIDER_INSET, line_y), fill=LINE, width=2)
     d.line((60, y, WIDTH - 60, y), fill=LINE, width=2)
     note, f = fit_text(FOOTNOTE, WIDTH - 100, 22, 500, min_size=16)
     d.text((CENTER, y + FOOTER / 2), note, font=f, fill=MUTED, anchor="mm")
