@@ -81,6 +81,11 @@ def test_render():
         whites = sum(1 for p in right.getdata() if min(p) > 245)
         check("左队队徽画在左上", reds > 5000)
         check("两个队徽面积接近（按面积统一大小）", 0.7 < reds / max(whites, 1) < 1.3)
+        rows = rc.role_rows(t["T1"], t["ZETA DIVISION"])
+        ys = rc.divider_ys(rows)
+        rgb = im.convert("RGB")
+        check("相邻职责之间各有一条分隔线（最后一类下面不画）", len(ys) == len(rows) - 1
+              and all(rgb.getpixel((rc.CENTER, round(y))) == rc.LINE for y in ys))
 
         broken = os.path.join(d, "broken.png")
         with open(broken, "wb") as f:
