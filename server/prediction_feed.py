@@ -26,6 +26,14 @@ log = logging.getLogger("mrmeeseeks.predictions")
 PICKS_MIN_LEAD = timedelta(minutes=15)    # 离开赛不足 15 分钟就不再发竞猜消息
 VOID_AFTER = timedelta(hours=48)          # 开赛 48 小时后还没结算就作废
 NAMES_MAX_CHARS = 700                     # 名单每段最多这么长，超出写 "and N more"，保证消息不超过 2000 字
+TBD = "TBD"
+
+
+def has_tbd(m: dict[str, Any]) -> bool:
+    """有一方还没定（TBD）：不开竞猜，已经开的作废。"""
+    return TBD in (m["team1"], m["team2"])
+
+
 ROSTER_NOTE = "-# Registered event roster — the starting lineup may differ. " + ATTRIBUTION
 
 
@@ -100,7 +108,7 @@ def plan_predictions(now: datetime, matches: list[dict[str, Any]] | None, snap: 
         candidates = sorted((m for m in matches if not m["finished"]
                              and m["start"] - ts >= PICKS_MIN_LEAD.total_seconds()
                              and m["start"] <= ts + DIGEST_WINDOW.total_seconds()
-                             and not (m["team1"] == "TBD" and m["team2"] == "TBD")
+                             and not has_tbd(m)
                              and snap["entries"].get(m["id"]) is None), key=lambda m: m["start"])
         for m in candidates:
             channel = channel_for(m)
@@ -113,7 +121,7 @@ def plan_predictions(now: datetime, matches: list[dict[str, Any]] | None, snap: 
                      for m in (matches or []) if m["id"] == mid}
     for e in snap["active"]:
         start = current_start.get(e["key"], e["start"])
-        if ts >= start + VOID_AFTER.total_seconds():
+        if ts >= start + VOID_AFTER.total_seconds() or (e["status"] == pr.OPEN and has_tbd(e)):
             posts.append(Post(None, channel=e["channel_id"], kind="void", data={"entry": e}))
         elif e["status"] == pr.OPEN and ts >= start:
             posts.append(Post(None, channel=e["channel_id"], kind="lock", data={"entry": e}))
@@ -266,7 +274,7 @@ class PredictionFeed:
         """下一场路由到当前频道的比赛的竞猜消息样例（按钮禁用，不登记）：(文字, 按钮, 对阵图或 None)。"""
         ts = now.timestamp()
         upcoming = sorted((m for m in matches or [] if routed_here(m) and not m["finished"] and m["start"] >= ts
-                           and not (m["team1"] == "TBD" and m["team2"] == "TBD")), key=lambda m: m["start"])
+                           and not has_tbd(m)), key=lambda m: m["start"])
         if not upcoming:
             return None
         m = upcoming[0]

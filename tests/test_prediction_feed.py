@@ -211,7 +211,7 @@ def test_draw_and_no_channel_and_tbd():
         feed.state["leaderboard_week"] = "2026-10-26"
         discord = Discord()
         tick(feed, SYD_10AM_MON, discord, mono=0)
-        check("TBD 对 TBD 不开竞猜", sum(1 for _, _, v in discord.sent if v) == 1)
+        check("双方都是 TBD 不开竞猜", sum(1 for _, _, v in discord.sent if v) == 1)
         key = pr.key_for(match(start)["id"])
         feed.matches = None
         feed._matches_at = float("-inf")
@@ -225,6 +225,33 @@ def test_draw_and_no_channel_and_tbd():
         discord = Discord()
         tick(feed, SYD_10AM_MON, discord, mono=0)
         check("没有频道：不发也不登记", discord.sent == [] and store.active() == [])
+
+
+def test_one_side_tbd():
+    start = SYD_10AM_MON + timedelta(hours=8)
+    half = match(start, "MURASH GAMING", "TBD")
+    box = [[half]]
+    with tempfile.TemporaryDirectory() as d:
+        feed, store = make_feed(d, box)
+        feed.state["leaderboard_week"] = "2026-10-26"
+        discord = Discord()
+        tick(feed, SYD_10AM_MON, discord, mono=0)
+        check("一方是 TBD：不开竞猜", not any(v for _, _, v in discord.sent) and store.active() == [])
+        box[0] = [match(start, "MURASH GAMING", "VARREL")]
+        tick(feed, SYD_10AM_MON + timedelta(hours=1), discord, mono=700)
+        preds = [t for _, t, v in discord.sent if v]
+        check("TBD 定下来之后再开竞猜", len(preds) == 1 and "MURASH GAMING vs VARREL" in preds[0])
+
+    with tempfile.TemporaryDirectory() as d:                 # 之前已经发出去的 TBD 竞猜
+        feed, store = make_feed(d, [[half]])
+        feed.state["leaderboard_week"] = "2026-10-26"
+        key = store.register(half, 42, 777, "https://discord.com/channels/1/42/777")
+        discord = Discord()
+        tick(feed, SYD_10AM_MON, discord, mono=0)
+        check("已经发出的 TBD 竞猜：作废", store.get(key)["status"] == pr.VOID)
+        check("作废只改原消息按钮为 Voided，不另发消息",
+              not any(t.startswith("🔒") for t in discord.texts())
+              and discord.edits[-1][1] == 777 and discord.edits[-1][2]["labels"] == ["Voided", "Voided"])
 
 
 async def _ret(v):
@@ -284,6 +311,8 @@ def test_preview():
     check("preview：不登记", preds.store.active() == [])
     check("preview：没开图片模式时没有对阵图", card is None)
     check("preview：没有路由到这里的比赛返回 None", preds.preview(SYD_10AM_MON, [m], lambda x: False) is None)
+    nxt = preds.preview(SYD_10AM_MON, [match(start - timedelta(minutes=30), "T1", "TBD"), m], lambda x: True)
+    check("preview：跳过一方是 TBD 的比赛", nxt is not None and "T1 vs ZETA" in nxt[0])
 
 
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
@@ -382,6 +411,7 @@ if __name__ == "__main__":
     test_down_across_start_and_finish()
     test_long_name_lists()
     test_draw_and_no_channel_and_tbd()
+    test_one_side_tbd()
     test_send_failure_retry()
     test_leaderboard()
     test_preview()
