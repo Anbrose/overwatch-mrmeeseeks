@@ -547,6 +547,28 @@ async def test_lifecycle():
     await server.start()
     room = rooms.create(1, 2, "x", yt())
     import aiohttp
+    import logging
+
+    class Grab(logging.Handler):
+        def __init__(self):
+            super().__init__()
+            self.records = []
+
+        def emit(self, record):
+            self.records.append(record)
+    grab = Grab()
+    access = logging.getLogger("aiohttp.access")
+    old_level = access.level
+    access.setLevel(logging.INFO)
+    access.addHandler(grab)
+    try:
+        async with aiohttp.ClientSession() as s:
+            r = await s.get(f"http://127.0.0.1:18766/r/{room.room_id}?k={room.owner_key}")
+            await r.read()
+    finally:
+        access.removeHandler(grab)
+        access.setLevel(old_level)
+    check("没有 access log（不记房主密钥）", r.status == 200 and not grab.records)
     async with aiohttp.ClientSession() as s:
         a = await s.ws_connect(f"http://127.0.0.1:18766/ws/{room.room_id}")
         await a.send_json({"type": "hello", "viewer_id": None, "key": None})

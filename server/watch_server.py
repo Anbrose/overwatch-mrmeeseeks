@@ -131,7 +131,8 @@ class WatchServer:
 
     # ---------------- 生命周期 ----------------
     async def start(self) -> None:
-        self._runner = web.AppRunner(self.app)
+        # 不要 access log：每个转流分片都会记一行，而且房主链接的 ?k= 密钥会被写进日志
+        self._runner = web.AppRunner(self.app, access_log=None)
         await self._runner.setup()
         site = web.TCPSite(self._runner, self.host, self.port)
         await site.start()
