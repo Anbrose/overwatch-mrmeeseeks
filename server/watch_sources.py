@@ -29,6 +29,7 @@ log = logging.getLogger("mrmeeseeks.watch")
 QUALITY_QN = {"1080": 80, "720": 64, "480": 32}
 
 UNAVAILABLE_MSG = "这个视频在海外服务器上无法播放"
+BILI_DOWN_MSG = "B 站暂时无法访问，请稍后再试"
 BILI_REFERER = "https://www.bilibili.com/"
 BILI_ORIGIN = "https://www.bilibili.com"
 SPI_URL = "https://api.bilibili.com/x/frontend/finger/spi"
@@ -100,7 +101,7 @@ def _parse_candidate(raw: str) -> Link | None:
         if path == "/watch":
             vid = query.get("v", [""])[0]
         else:
-            m = re.match(r"^/(?:shorts|embed|live)/([^/]+)", path)
+            m = re.match(r"^/shorts/([^/]+)", path)
             vid = m.group(1) if m else ""
         return Link("youtube", vid) if _YT_ID.match(vid) else None
     return None
@@ -247,8 +248,14 @@ class Sources:
     async def _get_json(self, session, url: str, headers: dict | None = None) -> dict:
         async with session.get(url, headers=headers or {"User-Agent": USER_AGENT}) as r:
             if r.status != 200:
-                return {"code": -r.status, "message": f"HTTP {r.status}"}
-            return await r.json(content_type=None)
+                raise VideoUnavailable(BILI_DOWN_MSG)
+            try:
+                data = await r.json(content_type=None)
+            except ValueError as e:
+                raise VideoUnavailable(BILI_DOWN_MSG) from e
+        if not isinstance(data, dict):
+            raise VideoUnavailable(BILI_DOWN_MSG)
+        return data
 
     async def _ensure_buvid(self, session):
         if self._buvid is not None:
@@ -256,10 +263,12 @@ class Sources:
         try:
             resp = await self._get_json(session, SPI_URL, {"User-Agent": USER_AGENT, "Referer": BILI_REFERER})
             d = resp.get("data") or {}
-            self._buvid = (d.get("b_3", ""), d.get("b_4", ""))
-        except Exception as e:
-            log.warning("取 buvid 失败：%s", e)
-            self._buvid = ("", "")
+            if d.get("b_3") and d.get("b_4"):
+                self._buvid = (d["b_3"], d["b_4"])    # 只缓存有效值，失败下次再取
+            else:
+                log.warning("取 buvid 失败：返回里没有 b_3/b_4")
+        except (VideoUnavailable, aiohttp.ClientError, TimeoutError) as e:
+            log.warning("取 buvid 失败：%s", type(e).__name__)
 
     async def _ensure_wbi(self, session, force: bool = False) -> str:
         if not force and self._wbi and time.time() - self._wbi[1] < WBI_TTL:
@@ -269,7 +278,10 @@ class Sources:
 
         def stem(u):
             return (u or "").rsplit("/", 1)[-1].split(".")[0]
-        key = mixin_key(stem(img.get("img_url")), stem(img.get("sub_url")))
+        img_key, sub_key = stem(img.get("img_url")), stem(img.get("sub_url"))
+        if not img_key or not sub_key or len(img_key + sub_key) < 64:
+            raise VideoUnavailable(BILI_DOWN_MSG)
+        key = mixin_key(img_key, sub_key)
         self._wbi = (key, time.time())
         return key
 
@@ -287,9 +299,11 @@ class Sources:
     async def _expand_short(self, session, code: str) -> Link | None:
         async with session.get(f"https://b23.tv/{code}", allow_redirects=False,
                                headers={"User-Agent": USER_AGENT}) as r:
+            if not 300 <= r.status < 400:
+                return None
             loc = r.headers.get("Location", "")
         link = find_link(loc)
-        return link if link and not link.short else None
+        return link if link and link.source == "bilibili" and not link.short else None
 
     # -- 对外 --
     async def resolve(self, text: str) -> Video:
@@ -311,13 +325,16 @@ class Sources:
                 async with session.get(f"{OEMBED_URL}?{query}", headers={"User-Agent": USER_AGENT}) as r:
                     if r.status != 200:
                         raise VideoUnavailable("这个 YouTube 视频不允许嵌入播放")
-                    data = await r.json(content_type=None)
+                    try:
+                        data = await r.json(content_type=None)
+                    except ValueError as e:
+                        raise VideoUnavailable("这个 YouTube 视频不允许嵌入播放") from e
                 return Video("youtube", link.id, 1, data.get("title", ""), None, watch)
         except VideoUnavailable:
             raise
         except (aiohttp.ClientError, TimeoutError) as e:
             log.warning("解析视频失败：%s", type(e).__name__)
-            raise VideoUnavailable("连不上视频网站，稍后再试") from e
+            raise VideoUnavailable(BILI_DOWN_MSG) from e
 
     async def bili_streams(self, video: Video) -> DashStreams:
         try:
@@ -329,4 +346,4 @@ class Sources:
                 return parse_playurl(resp, self.max_qn, time.time())
         except (aiohttp.ClientError, TimeoutError) as e:
             log.warning("取播放地址失败：%s", type(e).__name__)
-            raise VideoUnavailable("连不上视频网站，稍后再试") from e
+            raise VideoUnavailable(BILI_DOWN_MSG) from e

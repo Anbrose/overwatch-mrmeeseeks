@@ -47,6 +47,10 @@ def test_find_link():
     check("其他网站拒绝", ws.find_link("https://evil.example.com/video/BV1xx411c7mD") is None)
     check("假域名拒绝", ws.find_link("https://evilbilibili.com/video/BV1xx411c7mD") is None)
     check("参数里的域名拒绝", ws.find_link("https://evil.com/?u=bilibili.com/video/BV1xx411c7mD") is None)
+    check("userinfo 伪装拒绝", ws.find_link("https://bilibili.com@evil.com/video/BV1xx411c7mD") is None)
+    check("子域伪装拒绝", ws.find_link("https://bilibili.com.evil.com/video/BV1xx411c7mD") is None)
+    check("不支持 embed/live", ws.find_link("https://www.youtube.com/embed/dQw4w9WgXcQ") is None
+          and ws.find_link("https://www.youtube.com/live/dQw4w9WgXcQ") is None)
     check("没有链接", ws.find_link("一起看") is None)
     check("取第一个", ws.find_link("https://youtu.be/dQw4w9WgXcQ https://b23.tv/x1").source == "youtube")
     check("中文紧贴链接", ws.find_link("看这个https://b23.tv/abc123").id == "abc123")
@@ -64,8 +68,8 @@ def test_wbi_sign():
     params = {"foo": "114", "bar": "514", "zab": 1919810, "x": "a!b'c(d)e*f"}
     q = ws.wbi_sign(params, mixin, now)
     base = "bar=514&foo=114&wts=1700000000&x=abcdef&zab=1919810"
-    expect = base + "&w_rid=" + hashlib.md5((base + mixin).encode()).hexdigest()
-    check("wbi 签名", q == expect)
+    check("mixin 字面值", mixin == "ea1db124af3c7062474693fa704f4ff8")
+    check("wbi 签名", q == base + "&w_rid=54a04a4bcac82f52a9e253933e8f1718")
     check("不改动入参", "wts" not in params and params["x"] == "a!b'c(d)e*f")
     q2 = ws.wbi_sign({"t": "中 文"}, mixin, now)
     check("中文被编码", "%E4%B8%AD" in q2 and q2.startswith("t="))
@@ -97,11 +101,16 @@ def _strip_deadline(resp):
 
 
 # ---------------- 假 session ----------------
+BAD_JSON = object()
+
+
 class FakeResp:
     def __init__(self, status=200, payload=None, headers=None):
         self.status, self._payload, self.headers = status, payload, headers or {}
 
     async def json(self, content_type=None):
+        if self._payload is BAD_JSON:
+            raise ValueError("bad json")
         return self._payload
 
     async def __aenter__(self):
@@ -141,6 +150,14 @@ def bili_routes(**extra):
          ("wbi/view", FakeResp(200, load("bili_view.json"))),
          ("wbi/playurl", FakeResp(200, load("bili_playurl_dash.json")))]
     return list(extra.items()) + r if extra else r
+
+
+async def msg_of(coro):
+    try:
+        await coro
+    except VideoUnavailable as e:
+        return e.message
+    return None
 
 
 def test_resolve():
@@ -189,6 +206,46 @@ def test_resolve():
             check("非法链接", False)
         except VideoUnavailable:
             check("非法链接", True)
+
+        # 短链重定向到非 B 站视频
+        for loc in ("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "https://evil.com/video/BV1xx411c7mD"):
+            fs6 = FakeSession([("b23.tv/abc123", FakeResp(302, headers={"Location": loc}))] + bili_routes())
+            try:
+                await ws.Sources(None, session_factory=lambda: fs6).resolve("https://b23.tv/abc123")
+                check("短链非 B 站拒绝 " + loc[:20], False)
+            except VideoUnavailable:
+                check("短链非 B 站拒绝 " + loc[:20], True)
+        fs7 = FakeSession([("b23.tv/abc123", FakeResp(200, headers={"Location": "https://www.bilibili.com/video/BV1xrnz6gEVD"}))] + bili_routes())
+        check("短链非 3xx 拒绝", await msg_of(ws.Sources(None, session_factory=lambda: fs7).resolve("https://b23.tv/abc123")) is not None)
+
+        # buvid 失败不缓存
+        spi_n = {"c": 0}
+
+        def spi(url):
+            spi_n["c"] += 1
+            return FakeResp(500, {}) if spi_n["c"] == 1 else FakeResp(200, SPI)
+        fs8 = FakeSession([("finger/spi", spi)] + bili_routes())
+        src8 = ws.Sources(None, session_factory=lambda: fs8)
+        await src8.resolve("https://www.bilibili.com/video/BV1xrnz6gEVD")
+        await src8.resolve("https://www.bilibili.com/video/BV1xrnz6gEVD")
+        views = [c for c in fs8.calls if "wbi/view" in c[0]]
+        check("buvid 失败后重试", "Cookie" not in views[0][1]["headers"] and "buvid3=B3-xxx" in views[1][1]["headers"]["Cookie"])
+
+        # 错误信息区分
+        DOWN = "B 站暂时无法访问，请稍后再试"
+        bad_nav = [("web-interface/nav", FakeResp(200, {"code": -101, "data": {}}))]
+        check("nav 缺 key", await msg_of(ws.Sources(None, session_factory=lambda: FakeSession(bad_nav + bili_routes())).resolve("https://www.bilibili.com/video/BV1xrnz6gEVD")) == DOWN)
+        check("nav 非 200", await msg_of(ws.Sources(None, session_factory=lambda: FakeSession([("web-interface/nav", FakeResp(500, {}))] + bili_routes())).resolve("https://www.bilibili.com/video/BV1xrnz6gEVD")) == DOWN)
+        check("view 412", await msg_of(ws.Sources(None, session_factory=lambda: FakeSession([("wbi/view", FakeResp(412, {}))] + bili_routes())).resolve("https://www.bilibili.com/video/BV1xrnz6gEVD")) == DOWN)
+        check("view 坏 JSON", await msg_of(ws.Sources(None, session_factory=lambda: FakeSession([("wbi/view", FakeResp(200, BAD_JSON))] + bili_routes())).resolve("https://www.bilibili.com/video/BV1xrnz6gEVD")) == DOWN)
+        import aiohttp
+
+        def boom(url):
+            raise aiohttp.ClientConnectionError("x")
+        check("网络错误", await msg_of(ws.Sources(None, session_factory=lambda: FakeSession([("wbi/view", boom)] + bili_routes())).resolve("https://www.bilibili.com/video/BV1xrnz6gEVD")) == DOWN)
+        check("code≠0 仍是海外提示", await msg_of(ws.Sources(None, session_factory=lambda: FakeSession([("wbi/view", FakeResp(200, load("bili_view_missing.json")))] + bili_routes())).resolve("https://www.bilibili.com/video/BV1xrnz6gEVD")) == "这个视频在海外服务器上无法播放")
+        vid = ws.Video("bilibili", "BV1xrnz6gEVD", 1, "t", 1.0, "u")
+        check("streams nav 缺 key", await msg_of(ws.Sources(None, session_factory=lambda: FakeSession(bad_nav + bili_routes())).bili_streams(vid)) == DOWN)
 
         # -352 触发刷新 key 并重试一次
         n = {"c": 0}
