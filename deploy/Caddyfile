@@ -6,3 +6,11 @@
 meeseeks.example.com {
 	reverse_proxy 127.0.0.1:8765
 }
+
+# 一起看网页（WATCH_PUBLIC_URL=https://watch.pigdogie.com.au）。
+# reverse_proxy 默认支持 WebSocket；flush_interval -1 让视频流边收边发。
+watch.pigdogie.com.au {
+	reverse_proxy 127.0.0.1:8080 {
+		flush_interval -1
+	}
+}
