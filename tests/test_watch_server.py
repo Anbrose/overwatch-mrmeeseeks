@@ -52,6 +52,8 @@ class FakeSources:
 
     async def resolve(self, text):
         self.resolve_calls += 1
+        if "slow" in text:
+            await asyncio.sleep(0.5)
         if "bad" in text:
             raise VideoUnavailable("这个视频在海外服务器上无法播放")
         if "bili" in text:
@@ -292,6 +294,16 @@ async def test_duration_and_change_video():
         s1, s2 = await recv_type(a, "state"), await recv_type(b, "state")
         check("房主换视频两边一起切换", s1 and s2 and s1["video"]["id"] == "abcdefghijk"
               and s2["video"]["version"] == 1 and s2["playing"] is False and s2["position"] == 0)
+
+        await drain(b)
+        await a.send_json({"type": "change_video", "url": "https://youtu.be/slowslowslo"})
+        await a.send_json({"type": "change_video", "url": "https://youtu.be/abcdefghijk"})
+        e = await recv_type(a, "error")
+        s = await recv_type(a, "state")
+        got_b = await drain(b)
+        check("换视频进行中再换 → 提示请稍候", e and e["message"] == "正在换视频，请稍候"
+              and s and s["video"]["version"] == 2 and room.version == 2 and sources.resolve_calls == 2
+              and not any(m["type"] == "error" for m in got_b))
     finally:
         await client.close()
 
@@ -471,6 +483,30 @@ async def test_lifecycle():
         pass
     await server.close()
     check("run 定时 tick", len(ticks) >= 2)
+
+    # 有打开的 WebSocket 时 close() 也要很快结束（docker stop 只给 10 秒）
+    rooms = RoomManager()
+    server = ws_mod.WatchServer(rooms, FakeSources(), "127.0.0.1", 18766)
+    await server.start()
+    room = rooms.create(1, 2, "x", yt())
+    import aiohttp
+    async with aiohttp.ClientSession() as s:
+        a = await s.ws_connect(f"http://127.0.0.1:18766/ws/{room.room_id}")
+        await a.send_json({"type": "hello", "viewer_id": None, "key": None})
+        await recv_type(a, "welcome")
+        pending = await s.ws_connect(f"http://127.0.0.1:18766/ws/{room.room_id}")   # 还没发 hello
+        await asyncio.sleep(0.05)
+        t0 = time.monotonic()
+        await server.close()
+        took = time.monotonic() - t0
+        msg = await a.receive(timeout=2)
+        while msg.type.name == "TEXT":
+            msg = await a.receive(timeout=2)
+        check(f"有打开的 WebSocket 时 close() < 3 秒（{took:.2f}s）", took < 3)
+        check("关闭时客户端连接被断开", msg.type.name in ("CLOSE", "CLOSED", "CLOSING"))
+        check("关闭后成员已断开", room.members and all(m.connections == 0 for m in room.members.values()))
+        await a.close()
+        await pending.close()
 
 
 async def main():

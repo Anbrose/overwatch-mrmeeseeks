@@ -46,6 +46,7 @@ NOT_FOUND_HTML = """<!doctype html>
 background:#0f1115;color:#e6e6e6;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}</style>
 </head><body><p>房间不存在或已经结束</p></body></html>
 """
+CHANGING_MSG = "正在换视频，请稍候"
 ROOMS_FULL_MSG = "B 站房间已满（最多 {limit} 个），请稍后再试或换 YouTube 视频"
 
 
@@ -124,6 +125,8 @@ class WatchServer:
         self.app.router.add_get("/static/{name}", self._static)
         self.app.router.add_get("/ws/{room_id}", self._ws)
         self.app.router.add_get("/bili/{room_id}/{version}/{name}", self._bili)
+        self._sockets: set[web.WebSocketResponse] = set()
+        self.app.on_shutdown.append(self._shutdown)
         self.app.on_cleanup.append(self._cleanup)
 
     # ---------------- 生命周期 ----------------
@@ -136,14 +139,21 @@ class WatchServer:
 
     async def close(self) -> None:
         if self._runner is not None:
-            await self._runner.cleanup()
+            await self._runner.cleanup()     # 依次触发 on_shutdown、等处理函数结束、on_cleanup
             self._runner = None
-        await self._cleanup(self.app)
 
-    async def _cleanup(self, _app) -> None:
+    async def _shutdown(self, _app) -> None:
+        """先关掉所有 WebSocket，否则 AppRunner.cleanup() 会等到 shutdown_timeout 才继续。"""
         for conns in list(self.conns.values()):
             for c in list(conns):
                 c.push(None)
+        sockets = [ws for ws in self._sockets if not ws.closed]
+        if sockets:
+            await asyncio.wait([asyncio.ensure_future(ws.close(code=aiohttp.WSCloseCode.GOING_AWAY,
+                                                               message=b"server shutdown"))
+                                for ws in sockets], timeout=2)
+
+    async def _cleanup(self, _app) -> None:
         if self._session is not None:
             await self._session.close()
             self._session = None
@@ -272,12 +282,19 @@ class WatchServer:
         room_id = request.match_info["room_id"]
         ws = web.WebSocketResponse(heartbeat=30, max_msg_size=64 * 1024)
         await ws.prepare(request)
+        self._sockets.add(ws)
+        try:
+            return await self._ws_session(ws, room_id)
+        finally:
+            self._sockets.discard(ws)
 
+    async def _ws_session(self, ws: web.WebSocketResponse, room_id: str) -> web.WebSocketResponse:
         async def end():
             try:
                 await ws.send_str(json.dumps({"type": "ended"}))
-            finally:
                 await ws.close()
+            except (ConnectionResetError, aiohttp.ClientError):
+                pass   # 客户端已经走了
 
         if self.rooms.get(room_id) is None:
             await end()
@@ -300,16 +317,16 @@ class WatchServer:
         member = self.rooms.connect(room_id, viewer_id if isinstance(viewer_id, str) else None,
                                     key if isinstance(key, str) else None)
         conn = _Conn(ws, room_id, member.viewer_id)
-        self.conns.setdefault(room_id, set()).add(conn)
-        conn.writer = asyncio.get_running_loop().create_task(self._writer(conn))
-        is_host, can_control = self._you(room, member.viewer_id)
-        conn.last_you = (is_host, can_control)
-        conn.push({"type": "welcome", "viewer_id": member.viewer_id, "name": member.name,
-                   "is_host": is_host, "can_control": can_control})
-        conn.push(self._state_msg(room))
-        if is_host:
-            conn.push(self._members_msg(room))
         try:
+            self.conns.setdefault(room_id, set()).add(conn)
+            conn.writer = asyncio.get_running_loop().create_task(self._writer(conn))
+            is_host, can_control = self._you(room, member.viewer_id)
+            conn.last_you = (is_host, can_control)
+            conn.push({"type": "welcome", "viewer_id": member.viewer_id, "name": member.name,
+                       "is_host": is_host, "can_control": can_control})
+            conn.push(self._state_msg(room))
+            if is_host:
+                conn.push(self._members_msg(room))
             async for msg in ws:
                 data = self._parse(msg)
                 if data is not None:
@@ -324,10 +341,11 @@ class WatchServer:
                 conn.busy.cancel()
             conn.push(None)
             self.rooms.disconnect(room_id, member.viewer_id)
-            try:
-                await asyncio.wait_for(conn.writer, timeout=5)
-            except (asyncio.TimeoutError, asyncio.CancelledError):
-                conn.writer.cancel()
+            if conn.writer is not None:
+                try:
+                    await asyncio.wait_for(conn.writer, timeout=5)
+                except (asyncio.TimeoutError, asyncio.CancelledError):
+                    conn.writer.cancel()
         return ws
 
     @staticmethod
@@ -362,8 +380,12 @@ class WatchServer:
         elif kind == "change_video":
             url = data.get("url")
             room = self.rooms.get(rid)
-            if (isinstance(url, str) and 0 < len(url) <= MAX_URL_LEN and room is not None
-                    and room.host_id == vid and (conn.busy is None or conn.busy.done())):
+            if not (isinstance(url, str) and 0 < len(url) <= MAX_URL_LEN and room is not None
+                    and room.host_id == vid):
+                return
+            if conn.busy is not None and not conn.busy.done():
+                conn.push({"type": "error", "message": CHANGING_MSG})
+            else:
                 conn.busy = asyncio.get_running_loop().create_task(self._change_video(conn, url))
 
     async def _change_video(self, conn: _Conn, url: str) -> None:
