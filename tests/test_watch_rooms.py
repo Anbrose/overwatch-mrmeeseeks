@@ -88,7 +88,7 @@ def test_untrusted_key():
     m, r = mk()
     a = m.connect(r.room_id, None, None)
     ok = True
-    for bad in ("é", 123, b"x", "wrong-key"):
+    for bad in ("é", "\ud800", 123, b"x", "wrong-key"):
         try:
             x = m.connect(r.room_id, a.viewer_id, bad)
         except Exception:
@@ -97,7 +97,7 @@ def test_untrusted_key():
         ok = ok and x is a
     check("非法/错误房主链接不抛异常", ok)
     check("非法/错误房主链接不拿房主、链接未作废", r.host_id == a.viewer_id and not r.key_used and r.owner_viewer_id is None)
-    check("连接数正确", a.connections == 5)
+    check("连接数正确", a.connections == 6)
     check("bool 位置被拒绝", not m.control(r.room_id, a.viewer_id, "seek", True))
 
 

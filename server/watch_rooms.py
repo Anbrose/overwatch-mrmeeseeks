@@ -182,7 +182,7 @@ class RoomManager:
         now = self.clock()
         # 先判断房主链接再改状态；key 来自网络，非 str 当作没带，按字节比较避免非 ASCII 抛异常
         claim = (isinstance(key, str) and not room.key_used
-                 and secrets.compare_digest(key.encode(), room.owner_key.encode()))
+                 and secrets.compare_digest(key.encode("utf-8", "surrogatepass"), room.owner_key.encode("utf-8", "surrogatepass")))
         member = room.members.get(viewer_id) if isinstance(viewer_id, str) else None
         if member is None:
             vid = secrets.token_urlsafe(12)
