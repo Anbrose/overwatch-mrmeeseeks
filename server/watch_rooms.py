@@ -180,7 +180,10 @@ class RoomManager:
         if room is None:
             raise KeyError(room_id)
         now = self.clock()
-        member = room.members.get(viewer_id) if viewer_id else None
+        # 先判断房主链接再改状态；key 来自网络，非 str 当作没带，按字节比较避免非 ASCII 抛异常
+        claim = (isinstance(key, str) and not room.key_used
+                 and secrets.compare_digest(key.encode(), room.owner_key.encode()))
+        member = room.members.get(viewer_id) if isinstance(viewer_id, str) else None
         if member is None:
             vid = secrets.token_urlsafe(12)
             name = random_name({m.name for m in room.members.values()})
@@ -188,7 +191,7 @@ class RoomManager:
         member.connections += 1
         member.gone_since = None
         room.empty_since = None
-        if (key and not room.key_used and secrets.compare_digest(key, room.owner_key)):
+        if claim:
             room.key_used = True
             room.owner_viewer_id = member.viewer_id
             room.host_id = member.viewer_id
@@ -212,7 +215,8 @@ class RoomManager:
         member = room.members.get(viewer_id) if room else None
         if member is None or not (member.can_control or self._is_host(room, viewer_id)):
             return False
-        if position is not None and not (isinstance(position, (int, float)) and math.isfinite(position)):
+        if position is not None and (isinstance(position, bool) or not isinstance(position, (int, float))
+                                     or not math.isfinite(position)):
             return False
         now = self.clock()
         pb = room.playback

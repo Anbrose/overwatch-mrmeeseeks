@@ -84,6 +84,23 @@ def test_owner_key_claim_once():
     check("host 事件已通知", any(k == "host" for k, _ in events))
 
 
+def test_untrusted_key():
+    m, r = mk()
+    a = m.connect(r.room_id, None, None)
+    ok = True
+    for bad in ("é", 123, b"x", "wrong-key"):
+        try:
+            x = m.connect(r.room_id, a.viewer_id, bad)
+        except Exception:
+            ok = False
+            break
+        ok = ok and x is a
+    check("非法/错误房主链接不抛异常", ok)
+    check("非法/错误房主链接不拿房主、链接未作废", r.host_id == a.viewer_id and not r.key_used and r.owner_viewer_id is None)
+    check("连接数正确", a.connections == 5)
+    check("bool 位置被拒绝", not m.control(r.room_id, a.viewer_id, "seek", True))
+
+
 def test_grace_and_tabs():
     m, r = mk()
     a = m.connect(r.room_id, None, None)
@@ -201,6 +218,7 @@ if __name__ == "__main__":
     logging.disable(logging.CRITICAL)
     test_defaults_and_permissions()
     test_owner_key_claim_once()
+    test_untrusted_key()
     test_grace_and_tabs()
     test_empty_room_closes()
     test_never_joined_room_closes()
