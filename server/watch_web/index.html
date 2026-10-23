@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>一起看</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <span id="title" class="title">一起看</span>
+      <span id="conn" class="conn" hidden>连接中…</span>
+      <button id="perm-btn" class="perm-btn" type="button" hidden aria-expanded="false" aria-controls="perm-panel">🔑 权限</button>
+    </header>
+
+    <div class="layout">
+      <section id="stage-wrap" class="stage-wrap">
+        <div id="stage" class="stage">
+          <div id="player-host" class="player-host"></div>
+          <div class="shield" aria-hidden="true"></div>
+          <div id="stage-msg" class="stage-msg">连接中…</div>
+          <button id="start" class="start" type="button" hidden>点击开始观看</button>
+        </div>
+
+        <div class="controls">
+          <button id="play" class="ctl" type="button" disabled aria-label="播放">▶</button>
+          <input id="seek" class="seek" type="range" min="0" max="1000" step="1" value="0" disabled aria-label="进度">
+          <span id="time" class="time">0:00 / 0:00</span>
+          <span class="vol">
+            <button id="mute" class="ctl" type="button" aria-label="静音">🔊</button>
+            <input id="volume" class="volume" type="range" min="0" max="100" step="1" value="100" aria-label="音量">
+          </span>
+          <button id="fs" class="ctl" type="button" aria-label="全屏">⛶</button>
+        </div>
+        <div id="me" class="me"></div>
+      </section>
+
+      <aside id="perm-panel" class="perm-panel" hidden>
+        <div class="perm-title">谁能控制播放</div>
+        <ul id="members" class="members"></ul>
+        <form id="change-form" class="change-form">
+          <input id="change-url" class="change-url" type="url" placeholder="B 站或 YouTube 链接" autocomplete="off" required>
+          <button class="change-btn" type="submit">换视频</button>
+        </form>
+      </aside>
+    </div>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="/static/player.js"></script>
+</body>
+</html>
