@@ -51,7 +51,8 @@
   let reconnectTimer = null;
 
   let me = { name: "", isHost: false, canControl: false };
-  let room = null;            // last `state` message
+  let room = null;            // state we sync to (may be an optimistic local edit)
+  let serverState = null;     // last `state` the server actually sent
   let started = false;        // user clicked 点击开始观看
   let player = null;          // current player adapter
   let playerVersion = null;   // state.video.version the player was built for
@@ -78,6 +79,8 @@
     while (clockSamples.length > 5) clockSamples.shift();
     clockOffset = bestClockSample(clockSamples).offset;
   }
+
+  function clockReady() { return clockSamples.length > 0; }
 
   function bestClockSample(samples) {
     return samples.reduce((best, s) => (s.rtt < best.rtt ? s : best));
@@ -115,11 +118,13 @@
 
     const drift = target - player.getTime();
     if (!room.playing) {
-      if (Math.abs(drift) > PAUSED_DRIFT) player.seek(target);
+      // A paused target doesn't depend on the clock, so no pong is needed.
+      if (Math.abs(drift) > PAUSED_DRIFT) player.seek(target, { keepPaused: true });
       player.setRate(1);
       return;
     }
-    if (atEnd) { player.setRate(1); return; }
+    // While playing, the target depends on clock offset: wait for a real sample.
+    if (atEnd || !clockReady()) { player.setRate(1); return; }
     if (Math.abs(drift) > HARD_DRIFT) {
       player.seek(target);
       player.setRate(1);
@@ -200,17 +205,43 @@
   function createYouTubePlayer(videoId, version, onReady) {
     const mount = document.createElement("div");
     ui.host.appendChild(mount);
+    // -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued
+    const notStarted = () => { const s = adapter.yt.getPlayerState(); return s === -1 || s === 5; };
+    let cuedAt = null;      // startSeconds of the last cueVideoById
+    let playCheck = null;   // timer that detects a silently refused playVideo()
     const adapter = {
       source: "youtube",
       ready: false,
       yt: null,
-      getTime: () => (adapter.ready ? adapter.yt.getCurrentTime() || 0 : 0),
+      getTime: () => {
+        if (!adapter.ready) return 0;
+        if (cuedAt !== null && notStarted()) return cuedAt;
+        return adapter.yt.getCurrentTime() || 0;
+      },
       getDuration: () => (adapter.ready ? adapter.yt.getDuration() || 0 : 0),
-      // -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued
       isPaused: () => { const s = adapter.yt.getPlayerState(); return s !== 1 && s !== 3; },
-      play: () => adapter.yt.playVideo(),
+      play: () => {
+        adapter.yt.playVideo();
+        // Outside a user gesture (e.g. iOS) playVideo() can be refused silently,
+        // leaving the player unstarted/cued. Then ask for a tap again.
+        if (playCheck) return;
+        playCheck = setTimeout(() => {
+          playCheck = null;
+          if (player === adapter && room && room.playing && notStarted()) showStartOverlay();
+        }, 2000);
+      },
       pause: () => adapter.yt.pauseVideo(),
-      seek: (t) => adapter.yt.seekTo(t, true),
+      seek: (t, opts) => {
+        // seekTo on an unstarted/cued player starts playback; cue instead when
+        // the room is paused.
+        if (opts && opts.keepPaused && notStarted()) {
+          cuedAt = t;
+          adapter.yt.cueVideoById({ videoId, startSeconds: t });
+        } else {
+          cuedAt = null;
+          adapter.yt.seekTo(t, true);
+        }
+      },
       getRate: () => adapter.yt.getPlaybackRate(),
       setRate: (r) => { if (adapter.yt.getPlaybackRate() !== r) adapter.yt.setPlaybackRate(r); },
       setVolume: (v, m) => {
@@ -219,6 +250,7 @@
         if (m) adapter.yt.mute(); else adapter.yt.unMute();
       },
       destroy: () => {
+        clearTimeout(playCheck);
         try { if (adapter.yt) adapter.yt.destroy(); } catch { /* ignore */ }
         mount.remove();
         ui.host.textContent = "";
@@ -259,6 +291,7 @@
     const token = buildToken;
     playerVersion = video.version;
     setStageMessage("加载中…");
+    renderStartButton();
     try {
       if (video.source === "bilibili") {
         await loadScript(DASH_SRC);
@@ -285,6 +318,7 @@
   function onPlayerReady(p) {
     p.setVolume(volume, muted);
     setStageMessage("");
+    renderStartButton();
     syncTick();
   }
 
@@ -298,6 +332,14 @@
   function showStartOverlay() {
     started = false;
     ui.start.hidden = ended;
+    renderStartButton();
+  }
+
+  // The start tap must reach a ready player so play() runs inside the gesture.
+  function renderStartButton() {
+    const ready = !!(player && player.ready);
+    ui.start.disabled = !ready;
+    ui.start.textContent = ready ? "点击开始观看" : "加载中…";
   }
 
   function formatTime(sec) {
@@ -406,7 +448,8 @@
   function sendControl(action, position) {
     if (!me.canControl || !room) return;
     send({ type: "control", action, position });
-    // Apply optimistically; the server's broadcast `state` will confirm or correct.
+    // Apply optimistically; the server's broadcast `state` confirms it, and an
+    // `error` reverts to serverState (a rejected control gets no state back).
     room = { ...room, playing: action === "play" ? true : action === "pause" ? false : room.playing,
              position, server_time: serverNow() };
     renderControls();
@@ -459,12 +502,15 @@
   });
 
   ui.start.addEventListener("click", () => {
+    if (!player || !player.ready) return; // button is disabled until ready anyway
     started = true;
     ui.start.hidden = true;
     // Call play inside the click handler so the browser counts it as a gesture.
-    if (player && player.ready && room) {
-      player.seek(expectedPosition(room));
-      if (room.playing) player.play();
+    if (room && room.playing) {
+      if (clockReady()) player.seek(expectedPosition(room));
+      player.play();
+    } else if (room) {
+      player.seek(expectedPosition(room), { keepPaused: true });
     }
     syncTick();
   });
@@ -558,6 +604,7 @@
         break;
       case "error":
         toast(String(msg.message || "出错了"));
+        revertOptimistic();
         break;
       case "ended":
         showEnded();
@@ -565,10 +612,18 @@
     }
   }
 
+  function revertOptimistic() {
+    if (!serverState || room === serverState) return;
+    room = serverState;
+    renderControls();
+    syncTick();
+  }
+
   function onState(msg) {
     if (ended || !msg.video) return;
     const firstState = room === null;
     room = msg;
+    serverState = msg;
     const title = msg.video.title || "";
     ui.title.textContent = title;
     document.title = title ? `${title} · 一起看` : "一起看";
@@ -582,6 +637,7 @@
 
   applyVolume();
   renderControls();
+  renderStartButton();
   setInterval(syncTick, SYNC_MS);
   setInterval(renderProgress, 250);
   connect();

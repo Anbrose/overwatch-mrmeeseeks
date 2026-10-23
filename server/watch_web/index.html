@@ -20,7 +20,7 @@
           <div id="player-host" class="player-host"></div>
           <div class="shield" aria-hidden="true"></div>
           <div id="stage-msg" class="stage-msg">连接中…</div>
-          <button id="start" class="start" type="button" hidden>点击开始观看</button>
+          <button id="start" class="start" type="button" hidden disabled>加载中…</button>
         </div>
 
         <div class="controls">
@@ -40,7 +40,7 @@
         <div class="perm-title">谁能控制播放</div>
         <ul id="members" class="members"></ul>
         <form id="change-form" class="change-form">
-          <input id="change-url" class="change-url" type="url" placeholder="B 站或 YouTube 链接" autocomplete="off" required>
+          <input id="change-url" class="change-url" type="text" inputmode="url" placeholder="B 站或 YouTube 链接（可粘贴分享文字）" autocomplete="off">
           <button class="change-btn" type="submit">换视频</button>
         </form>
       </aside>
