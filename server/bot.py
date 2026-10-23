@@ -26,6 +26,7 @@ import io
 import json
 import logging
 import os
+import re
 import time
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -109,6 +110,7 @@ LIVE_USAGE = ("Usage: `@mrmeeseeks live add <region> <Bilibili room url or id> [
               "`live remove <room url or id>` or `live list`. Bind the region's channel first with `@mrmeeseeks region <region>`.")
 ASK_COOLDOWN_SECONDS = 5
 WATCH_USAGE = "用法：@mrmeeseeks 一起看 <B站或YouTube链接>"
+_WATCH_PREFIX = re.compile(r"watch(?=\s|http)", re.IGNORECASE)     # \s 含全角空格
 
 
 def parse_command(text: str, explicit: bool = True) -> tuple[str, str]:
@@ -123,6 +125,12 @@ def parse_command(text: str, explicit: bool = True) -> tuple[str, str]:
         return "connect", ""
     if stripped.lower() in COMMANDS:
         return stripped.lower(), stripped
+    # 一起看：链接可以紧贴指令（`一起看https://…`），也可以用全角空格隔开
+    if stripped.startswith("一起看"):
+        return "一起看", stripped[len("一起看"):].strip()
+    watch = _WATCH_PREFIX.match(stripped)
+    if watch:
+        return "watch", stripped[len("watch"):].strip()
     head, _, rest = stripped.partition(" ")
     if head.lower() in ARG_COMMANDS:
         return head.lower(), rest.strip()
@@ -583,7 +591,7 @@ class MeeseeksBot(discord.Client):
                                        allowed_mentions=discord.AllowedMentions.none())
         except discord.HTTPException:
             log.exception("Could not post the watch card in channel %s", message.channel.id)
-            room.closed = True       # 没有卡片就没人进得来，直接关掉，别占着 B 站名额
+            ui.rooms.close(room.room_id)   # 没有卡片就没人进得来，直接关掉，别占着 B 站名额
             return
         room.message_id = card.id
         ui.cards.add(message.channel.id, card.id)

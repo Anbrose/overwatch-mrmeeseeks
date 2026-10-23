@@ -30,6 +30,8 @@ QUALITY_QN = {"1080": 80, "720": 64, "480": 32}
 
 UNAVAILABLE_MSG = "这个视频在海外服务器上无法播放"
 BILI_DOWN_MSG = "B 站暂时无法访问，请稍后再试"
+YT_DOWN_MSG = "YouTube 暂时无法访问，请稍后再试"
+YT_NO_EMBED_MSG = "这个 YouTube 视频不允许嵌入播放"
 BILI_REFERER = "https://www.bilibili.com/"
 BILI_ORIGIN = "https://www.bilibili.com"
 SPI_URL = "https://api.bilibili.com/x/frontend/finger/spi"
@@ -335,17 +337,20 @@ class Sources:
                 query = urllib.parse.urlencode({"url": watch, "format": "json"})
                 async with session.get(f"{OEMBED_URL}?{query}", headers={"User-Agent": USER_AGENT}) as r:
                     if r.status != 200:
-                        raise VideoUnavailable("这个 YouTube 视频不允许嵌入播放")
+                        raise VideoUnavailable(YT_NO_EMBED_MSG)
                     try:
                         data = await r.json(content_type=None)
                     except ValueError as e:
-                        raise VideoUnavailable("这个 YouTube 视频不允许嵌入播放") from e
-                return Video("youtube", link.id, 1, data.get("title", ""), None, watch)
+                        raise VideoUnavailable(YT_NO_EMBED_MSG) from e
+                if not isinstance(data, dict):
+                    raise VideoUnavailable(YT_NO_EMBED_MSG)
+                title = data.get("title")
+                return Video("youtube", link.id, 1, title if isinstance(title, str) else "", None, watch)
         except VideoUnavailable:
             raise
         except (aiohttp.ClientError, TimeoutError) as e:
             log.warning("解析视频失败：%s", type(e).__name__)
-            raise VideoUnavailable(BILI_DOWN_MSG) from e
+            raise VideoUnavailable(YT_DOWN_MSG if link.source == "youtube" else BILI_DOWN_MSG) from e
 
     async def bili_streams(self, video: Video) -> DashStreams:
         try:

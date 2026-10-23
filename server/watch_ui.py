@@ -65,7 +65,10 @@ def card_text(room: Room, now: float, ended: bool = False, reason: str = "") -> 
     pos = fmt_time(room.playback.position_at(now, duration))
     if duration is not None:
         pos += f" / {fmt_time(duration)}"
-    state = "▶ 播放中" if room.playback.playing else "⏸ 已暂停"
+    if duration and room.playback.position_at(now, duration) >= duration:
+        state = "⏹ 已播完"
+    else:
+        state = "▶ 播放中" if room.playback.playing else "⏸ 已暂停"
     source = SOURCE_LABEL.get(room.video.source, room.video.source)
     return (f"🎬 **一起看**\n"
             f"正在播放：**{title}**（{source}）\n"

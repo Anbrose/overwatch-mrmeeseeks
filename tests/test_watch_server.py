@@ -164,13 +164,18 @@ async def test_ws_flow():
         ma0 = await recv_type(a, "members")
         ma = await recv_type(a, "members")
         check("房主进房先收到空 members", ma0 and ma0["members"] == [])
-        check("members 发给房主且不含房主", ma and [m["viewer_id"] for m in ma["members"]] == [bid]
+        bpub = rooms.get(rid).members[bid].public_id
+        check("members 发给房主且不含房主", ma and [m["id"] for m in ma["members"]] == [bpub]
               and ma["members"][0]["can_control"] is False and ma["members"][0]["name"] == wb["name"])
+        check("members 不泄露 viewer_id", bid not in json.dumps(ma) and wa["viewer_id"] not in json.dumps(ma)
+              and "viewer_id" not in ma["members"][0])
 
-        # 无权限 control → 状态不变、连接仍开着
+        # 无权限 control → 状态不变、只给发送者回一条 state（撤回乐观更新）、连接仍开着
         await b.send_json({"type": "control", "action": "play", "position": 5})
-        got = await drain(a) + await drain(b)
-        check("无权限 control 无效", not any(m["type"] == "state" for m in got) and not room.playback.playing)
+        got_a, got_b = await drain(a), await drain(b)
+        sb = [m for m in got_b if m["type"] == "state"]
+        check("无权限 control 无效", not any(m["type"] == "state" for m in got_a) and not room.playback.playing)
+        check("被拒绝的 control 给发送者回 state", len(sb) == 1 and sb[0]["playing"] is False and sb[0]["position"] == 0)
         await b.send_json({"type": "ping", "t": 1.5})
         pong = await recv_type(b, "pong")
         check("无权限 control 后连接仍开着", pong and pong["t"] == 1.5 and isinstance(pong["server_time"], float))
@@ -185,7 +190,11 @@ async def test_ws_flow():
         check("非 JSON 被忽略", pong and pong["t"] == 2)
 
         # 房主授权
-        await a.send_json({"type": "grant", "target": bid, "allowed": True})
+        await a.send_json({"type": "grant", "target": bid, "allowed": True})     # viewer_id 不是公开 id：无效
+        got = await drain(b)
+        check("grant 用 viewer_id 无效", not any(m["type"] == "you" for m in got)
+              and not rooms.get(rid).members[bid].can_control)
+        await a.send_json({"type": "grant", "target": bpub, "allowed": True})
         yb = await recv_type(b, "you")
         check("被授权者收到 you", yb and yb["can_control"] is True and yb["is_host"] is False)
         ma = await recv_type(a, "members")
@@ -216,7 +225,7 @@ async def test_ws_flow():
         c, wc = await hello(client, rid)
         cid = wc["viewer_id"]
         await drain(c)
-        await c.send_json({"type": "grant", "target": cid, "allowed": True})
+        await c.send_json({"type": "grant", "target": rooms.get(rid).members[cid].public_id, "allowed": True})
         got = await drain(c)
         check("普通观众发 grant 无效", not rooms.get(rid).members[cid].can_control
               and not any(m["type"] == "you" for m in got))
@@ -279,10 +288,13 @@ async def test_duration_and_change_video():
         b, wb = await hello(client, rid)
         await drain(a)
         await drain(b)
-        await b.send_json({"type": "duration", "value": "x"})
-        await b.send_json({"type": "duration", "value": 212.5})
+        await b.send_json({"type": "duration", "value": 99.0})        # 没有控制权：不接受
+        got = await drain(a)
+        check("没有控制权的人报时长无效", room.video.duration is None and not any(m["type"] == "state" for m in got))
+        await a.send_json({"type": "duration", "value": "x"})
+        await a.send_json({"type": "duration", "value": 212.5})
         s = await recv_type(a, "state")
-        check("时长未知时接受 duration", s and s["video"]["duration"] == 212.5 and room.video.duration == 212.5)
+        check("时长未知时接受房主的 duration", s and s["video"]["duration"] == 212.5 and room.video.duration == 212.5)
         await drain(b)
 
         await b.send_json({"type": "change_video", "url": "https://youtu.be/abcdefghijk"})

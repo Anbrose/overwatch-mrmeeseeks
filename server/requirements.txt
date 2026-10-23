@@ -7,3 +7,4 @@ numpy>=1.26
 rapidocr-onnxruntime==1.4.4  # OCR 参数在这个版本上验证过
 pillow>=10.1  # 竞猜对阵图（roster_card）
 tzdata  # zoneinfo 时区数据，slim 镜像里不一定有
+aiohttp>=3.9  # 一起看网页服务；discord.py 也依赖它

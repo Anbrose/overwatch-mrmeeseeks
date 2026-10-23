@@ -245,6 +245,11 @@ def test_resolve():
         def boom(url):
             raise aiohttp.ClientConnectionError("x")
         check("网络错误", await msg_of(ws.Sources(None, session_factory=lambda: FakeSession([("wbi/view", boom)] + bili_routes())).resolve("https://www.bilibili.com/video/BV1xrnz6gEVD")) == DOWN)
+        YT = "https://youtu.be/dQw4w9WgXcQ"
+        check("YouTube 网络错误用 YouTube 提示", await msg_of(ws.Sources(None, session_factory=lambda: FakeSession([("youtube.com/oembed", boom)])).resolve(YT)) == "YouTube 暂时无法访问，请稍后再试")
+        for bad in (["x"], "str", None, 5):
+            check(f"oEmbed 非 dict 拒绝 {bad!r}", await msg_of(ws.Sources(None, session_factory=lambda: FakeSession([("youtube.com/oembed", FakeResp(200, bad))])).resolve(YT)) == "这个 YouTube 视频不允许嵌入播放")
+        check("oEmbed 标题不是字符串时留空", (await ws.Sources(None, session_factory=lambda: FakeSession([("youtube.com/oembed", FakeResp(200, {"title": 3}))])).resolve(YT)).title == "")
         check("code≠0 仍是海外提示", await msg_of(ws.Sources(None, session_factory=lambda: FakeSession([("wbi/view", FakeResp(200, load("bili_view_missing.json")))] + bili_routes())).resolve("https://www.bilibili.com/video/BV1xrnz6gEVD")) == "这个视频在海外服务器上无法播放")
         # view 正常但 playurl 报错（地区限制）：resolve 直接拒绝，不建房
         UNAVAIL = "这个视频在海外服务器上无法播放"

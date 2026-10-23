@@ -10,7 +10,6 @@
 (() => {
   const DASH_SRC = "https://cdnjs.cloudflare.com/ajax/libs/dashjs/4.7.4/dash.all.min.js";
   const YT_SRC = "https://www.youtube.com/iframe_api";
-  const VIEWER_KEY = "watch_viewer_id";
   const PING_MS = 10000;
   const SYNC_MS = 1000;
   const RECONNECT_MS = 2000;
@@ -32,6 +31,7 @@
 
   // ---------------------------------------------------------------- storage
 
+  // One viewer_id per room: it is a credential for that room only.
   function loadViewerId() {
     try { return localStorage.getItem(VIEWER_KEY) || null; } catch { return null; }
   }
@@ -42,6 +42,7 @@
   // ---------------------------------------------------------------- app state
 
   const roomId = location.pathname.split("/").filter(Boolean).pop() || "";
+  const VIEWER_KEY = `watch_viewer_id:${roomId}`;
   let hostKey = new URLSearchParams(location.search).get("k");
   let viewerId = loadViewerId();
 
@@ -287,7 +288,8 @@
 
   function maybeReportDuration(adapter, version) {
     if (!room || room.video.version !== version || room.video.duration != null) return;
-    if (durationSentFor === version) return;
+    // The server only accepts `duration` from the host or someone with control.
+    if (!me.canControl || durationSentFor === version) return;
     const value = adapter.getDuration();
     if (!(value > 0)) return;
     durationSentFor = version;
@@ -437,7 +439,7 @@
       sw.setAttribute("aria-label", `${m.name} 控制播放`);
       sw.textContent = m.can_control ? "● 开" : "○ 关";
       sw.addEventListener("click", () => {
-        send({ type: "grant", target: m.viewer_id, allowed: !m.can_control });
+        send({ type: "grant", target: m.id, allowed: !m.can_control });
       });
       li.append(name, sw);
       ui.members.appendChild(li);
@@ -466,8 +468,8 @@
   function sendControl(action, position) {
     if (!me.canControl || !room) return;
     send({ type: "control", action, position });
-    // Apply optimistically; the server's broadcast `state` confirms it, and an
-    // `error` reverts to serverState (a rejected control gets no state back).
+    // Apply optimistically; the server's broadcast `state` confirms it. A rejected
+    // control gets a fresh `state` sent back to us only, which snaps us back.
     room = { ...room, playing: action === "play" ? true : action === "pause" ? false : room.playing,
              position, server_time: serverNow() };
     renderControls();

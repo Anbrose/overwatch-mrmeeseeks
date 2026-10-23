@@ -46,12 +46,13 @@ class Video:
 
 @dataclass
 class Member:
-    viewer_id: str
+    viewer_id: str       # 凭据：只发给本人（welcome），拿着它就能以这个身份重连
     name: str
     joined_at: float
     can_control: bool = False
     connections: int = 0
     gone_since: float | None = None
+    public_id: str = field(default_factory=lambda: secrets.token_urlsafe(8))   # 公开 id：members 列表、grant 用
 
 
 @dataclass
@@ -235,11 +236,12 @@ class RoomManager:
         self._notify(room, "playback")
         return True
 
-    def set_permission(self, room_id, actor_id, target_id, allowed: bool) -> bool:
+    def set_permission(self, room_id, actor_id, target_public_id, allowed: bool) -> bool:
+        """actor_id 是房主的 viewer_id；目标用公开 id（public_id）指定。"""
         room = self.get(room_id)
         if room is None or not self._is_host(room, actor_id):
             return False
-        target = room.members.get(target_id)
+        target = next((m for m in room.members.values() if m.public_id == target_public_id), None)
         if target is None:
             return False
         target.can_control = bool(allowed)
@@ -285,5 +287,12 @@ class RoomManager:
                 # 从最后一个人宽限期结束的那一刻开始算
                 room.empty_since = max((m.gone_since + GRACE_SECONDS for m in expired), default=now)
             if room.empty_since is not None and now - room.empty_since >= EMPTY_TTL_SECONDS:
-                room.closed = True
-                self._notify(room, "closed")
+                self.close(room.room_id)
+
+    def close(self, room_id: str) -> None:
+        """关闭房间：标记 closed、通知 listener（kind="closed"），并从 rooms 里删掉。"""
+        room = self.rooms.pop(room_id, None)
+        if room is None or room.closed:
+            return
+        room.closed = True
+        self._notify(room, "closed")

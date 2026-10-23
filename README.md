@@ -380,7 +380,7 @@ python client\client.py --help
 | `@mrmeeseeks predictions` / `predictions reset` | 赛事竞猜：每天悉尼时间 10:00 预告之后，每场官方比赛在它的赛区频道（或默认频道）发一条竞猜消息，附一张对阵图（双方队徽和按职责排列的报名阵容、教练），点按钮押胜者，开赛前可以改。开赛时截止并公布谁押了谁，赛果出来后在剧透遮罩里揭晓谁猜中；猜中得 1 分，押冷门猜中最多 3 分。每周一 10:00 在默认频道发上周榜和称号。`predictions` 查看本周榜、赛季榜和自己的排名；`predictions reset` 开新赛季（需要"管理服务器"权限） |
 | `@mrmeeseeks region <赛区>` / `region <赛区> off` / `region` | 把当前频道绑定成某个赛区的频道（需要"管理频道"权限）。该赛区的比赛预告、提醒、赛果和开播通知都发到这里。赛区名：`cn`、`asia`、`korea`、`japan`、`pacific`、`emea`、`na`、`world`（总决赛、季中赛）、`owwc`（世界杯）。不带参数列出所有绑定 |
 | `@mrmeeseeks live add <赛区> <B 站直播间链接或房间号> [名字]` / `live remove <链接或房间号>` / `live list` | 开播通知：手动登记 B 站直播间，开播时在该赛区的频道里发一条带标题和封面的消息（需要"管理消息"权限）。短号自动解析；不写名字用主播昵称 |
-| `@mrmeeseeks 一起看 <B 站或 YouTube 链接>`（或 `watch`） | 一起看：开一个同步观看房间，发房间卡片和网页链接，点卡片上的按钮私下拿房主链接。见上方「一起看」。需要设置 `WATCH_PUBLIC_URL` |
+| `@mrmeeseeks 一起看 <B 站或 YouTube 链接>`（或 `watch`） | 一起看：开一个同步观看房间，发房间卡片和网页链接，点卡片上的按钮私下拿房主链接。见下方「一起看」。需要设置 `WATCH_PUBLIC_URL` |
 | `@mrmeeseeks patches here` / `patches off` / `patches status` | 补丁推送频道：每 3 小时检查一次[官方补丁说明](https://overwatch.blizzard.com/en-us/news/patch-notes/)，有新补丁就发一篇要点式摘要并附原文链接：每个改动的英雄名前有头像，下面固定分 **Basic Info / Abilities / Perks** 三项（没有改动写 None）；改动内容用英文，英雄、武器、技能、威能名写成「英文/简体中文/韩文」（例如 `Roadhog/路霸/로드호그`、`Chain Hook/链钩/사슬 갈고리`），技能名后面标出 PC 默认键位（如 `Shift`），描述里顺带提到的技能也标（来源：补丁原文 > 官方技能名 > Wiki；都没有的写进 `server/keybinds.json` 手动标注，启动日志会列出缺键位的技能），中文取自国服官网、韩文取自韩服官网的同一篇补丁，找不到的语言留空。`here` 设置后会立刻发一次最新的补丁。`here`/`off` 需要"管理频道"权限；摘要需要 `ANTHROPIC_API_KEY`，没有时只列出改动的英雄 |
 
 ### 一起看

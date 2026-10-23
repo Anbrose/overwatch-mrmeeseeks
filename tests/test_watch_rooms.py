@@ -61,8 +61,10 @@ def test_defaults_and_permissions():
     check("没用房主链接时房主显示发起人以外的随机名", r.host_name() == a.name)
     b = m.connect(r.room_id, None, None)
     check("默认没有控制权", b.can_control is False and not m.control(r.room_id, b.viewer_id, "play", None))
-    check("普通观众不能给权限", not m.set_permission(r.room_id, b.viewer_id, b.viewer_id, True))
-    check("房主给权限", m.set_permission(r.room_id, a.viewer_id, b.viewer_id, True) and b.can_control)
+    check("普通观众不能给权限", not m.set_permission(r.room_id, b.viewer_id, b.public_id, True))
+    check("公开 id 和 viewer_id 不同", b.public_id and b.public_id != b.viewer_id and a.public_id != b.public_id)
+    check("用 viewer_id 当目标无效", not m.set_permission(r.room_id, a.viewer_id, b.viewer_id, True) and not b.can_control)
+    check("房主给权限", m.set_permission(r.room_id, a.viewer_id, b.public_id, True) and b.can_control)
     check("有权限能播放", m.control(r.room_id, b.viewer_id, "play", None) and r.playback.playing)
     check("有权限的人不能换视频", not m.change_video(r.room_id, b.viewer_id, yt("x2")))
     check("房主能换视频", m.change_video(r.room_id, a.viewer_id, yt("x2")))
@@ -127,6 +129,23 @@ def test_empty_room_closes():
     check("空房 10 分钟后关闭", m.get(r.room_id) is None and r.closed)
     check("关闭时通知 listener", ("closed", r.room_id) in events)
     check("关闭的房间不在 active 里", r not in m.active())
+    check("关闭的房间从 rooms 里删掉", r.room_id not in m.rooms)
+
+
+def test_close():
+    m, r = mk()
+    m.connect(r.room_id, None, None)
+    events.clear()
+    m.close(r.room_id)
+    check("close 标记关闭并删掉", r.closed and r.room_id not in m.rooms and m.get(r.room_id) is None)
+    check("close 通知 closed", events == [("closed", r.room_id)])
+    m.close(r.room_id)
+    m.close("nope")
+    check("重复 close / 不存在的房间不再通知", events == [("closed", r.room_id)])
+    m2 = RoomManager(clock, max_bili_rooms=1)
+    b = m2.create(1, 9, "小明", bili("BV1"))
+    m2.close(b.room_id)
+    check("close 后释放 B 站名额", m2.create(1, 9, "小明", bili("BV2")) is not None)
 
 
 def test_never_joined_room_closes():
@@ -181,7 +200,7 @@ def test_playback_math_and_seek_clamp():
     check("播放推进夹到时长", r.playback.position_at(now[0], r.video.duration) == 100)
     # 换视频
     b = m.connect(r.room_id, None, None)
-    m.set_permission(r.room_id, h.viewer_id, b.viewer_id, True)
+    m.set_permission(r.room_id, h.viewer_id, b.public_id, True)
     v = r.version
     m.change_video(r.room_id, h.viewer_id, yt("x9"))
     check("换视频后暂停在 0、version + 1", not r.playback.playing and r.playback.position == 0 and r.version == v + 1)
@@ -222,6 +241,7 @@ if __name__ == "__main__":
     test_grace_and_tabs()
     test_empty_room_closes()
     test_never_joined_room_closes()
+    test_close()
     test_bili_limit()
     test_bili_limit_counts_current_video()
     test_playback_math_and_seek_clamp()

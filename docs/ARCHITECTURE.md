@@ -85,7 +85,7 @@
 | `GET /bili/{room_id}/{version}/manifest.mpd` | B 站视频的 DASH 清单，`BaseURL` 指向下面的转流地址 |
 | `GET /bili/{room_id}/{version}/{video\|audio}` | B 站视频流、音频流转发（支持 Range）。`version` 随换视频递增，旧地址失效 |
 
-页面用 `localStorage["watch_viewer_id"]` 保存 `viewer_id`，断线 2 秒后自动重连并带上同一个 `viewer_id`。
+页面用 `localStorage["watch_viewer_id:<room_id>"]`（每个房间一个）保存 `viewer_id`，断线 2 秒后自动重连并带上同一个 `viewer_id`。`viewer_id` 是重连凭据，服务器只在 `welcome` 里发给本人；别人看到的是每个成员的公开 `id`（`members` 列表、`grant.target` 用它）。
 
 **客户端 → 服务器**
 
@@ -93,9 +93,9 @@
 |---|---|---|
 | `hello` | `viewer_id`（或 null）, `key`（房主密钥或 null） | 握手 |
 | `ping` | `t`（`performance.now()`） | 连上后每 10 秒一次，用来估算时钟偏差 |
-| `control` | `action`（`play` / `pause` / `seek`）, `position` | 播放控制，只有房主和被授权的人有效 |
-| `duration` | `value` | YouTube 播放器加载后上报一次视频时长 |
-| `grant` | `target`（viewer_id）, `allowed` | 房主开关某人的控制权限 |
+| `control` | `action`（`play` / `pause` / `seek`）, `position` | 播放控制，只有房主和被授权的人有效；被拒绝时服务器只给发送者回一条 `state`，让它撤回乐观更新 |
+| `duration` | `value` | YouTube 播放器加载后上报一次视频时长；只接受房主和有控制权的人，且只在时长未知时 |
+| `grant` | `target`（成员的公开 `id`）, `allowed` | 房主开关某人的控制权限 |
 | `change_video` | `url` | 房主换视频 |
 
 **服务器 → 客户端**
@@ -106,7 +106,7 @@
 | `pong` | `t`, `server_time` | 回复 `ping` |
 | `state` | `video`（`source`, `id`, `title`, `duration`, `version`, `mpd`）, `playing`, `position`, `server_time` | 房间状态；`mpd` 只对 B 站有值 |
 | `you` | `is_host`, `can_control` | 自己的身份或权限变了 |
-| `members` | `members`（`viewer_id`, `name`, `can_control`） | 只发给房主，不含房主自己 |
+| `members` | `members`（`id`（公开 id，不是 `viewer_id`）, `name`, `can_control`） | 只发给房主，不含房主自己 |
 | `error` | `message` | 提示信息，如 `正在换视频，请稍候`（上一次 `change_video` 还没处理完时） |
 | `ended` | 无 | 房间已结束 |
 

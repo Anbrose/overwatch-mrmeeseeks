@@ -217,8 +217,9 @@ class WatchServer:
         return is_host, bool(is_host or (member is not None and member.can_control))
 
     def _members_msg(self, room: Room) -> dict:
+        """只用公开 id；viewer_id 是重连凭据，只在 welcome 里发给本人。"""
         return {"type": "members", "members": [
-            {"viewer_id": m.viewer_id, "name": m.name, "can_control": m.can_control}
+            {"id": m.public_id, "name": m.name, "can_control": m.can_control}
             for m in room.present() if m.viewer_id != room.host_id]}
 
     def _send_you(self, room: Room, conn: _Conn, force: bool = False) -> None:
@@ -370,9 +371,13 @@ class WatchServer:
         elif kind == "control":
             action, pos = data.get("action"), data.get("position")
             if action in ("play", "pause", "seek") and _finite(pos):
-                self.rooms.control(rid, vid, action, float(pos))
+                if not self.rooms.control(rid, vid, action, float(pos)):
+                    room = self.rooms.get(rid)
+                    if room is not None:
+                        conn.push(self._state_msg(room))     # 被拒绝：让发送者撤回乐观更新
         elif kind == "duration":
-            if _finite(data.get("value")):
+            room = self.rooms.get(rid)
+            if room is not None and self._you(room, vid)[1] and _finite(data.get("value")):
                 self.rooms.set_duration(rid, float(data["value"]))
         elif kind == "grant":
             target, allowed = data.get("target"), data.get("allowed")

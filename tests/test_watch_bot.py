@@ -124,6 +124,14 @@ def test_parse_and_route():
     check("中文指令", bot.parse_command("一起看 https://youtu.be/dQw4w9WgXcQ") == ("一起看", "https://youtu.be/dQw4w9WgXcQ"))
     check("watch 指令", bot.parse_command("watch https://youtu.be/x")[0] == "watch")
     check("watch 不带参数也是指令", bot.parse_command("watch") == ("watch", ""))
+    url = "https://youtu.be/dQw4w9WgXcQ"
+    check("一起看紧贴链接", bot.parse_command("一起看" + url) == ("一起看", url))
+    check("一起看后全角空格", bot.parse_command("一起看\u3000" + url) == ("一起看", url))
+    check("一起看不带参数", bot.parse_command("一起看") == ("一起看", ""))
+    check("一起看 explicit=False 也是指令", bot.parse_command("一起看" + url, explicit=False) == ("一起看", url))
+    check("watch 紧贴链接", bot.parse_command("watch" + url) == ("watch", url))
+    check("watch 后全角空格 / 大小写", bot.parse_command("Watch\u3000" + url) == ("watch", url))
+    check("watch 开头的普通问题不是指令", bot.parse_command("watchpoint genji?") == ("ask", "watchpoint genji?"))
     check("帮助里有一起看", "`@mrmeeseeks 一起看 <Bilibili or YouTube link>` (or `watch`)" in bot.HELP_TEXT)
 
 
@@ -145,6 +153,12 @@ def test_card_text():
     r2.video.duration = 4000.0
     r2.playback.position = 3725.0
     check("超过一小时用 h:mm:ss", "1:02:05 / 1:06:40" in wui.card_text(r2, clock.t))
+    r.playback.playing, r.playback.position, r.playback.at = True, 0.0, clock.t
+    check("播到结尾显示已播完", "⏹ 已播完 3:15 / 3:15" in wui.card_text(r, clock.t + 500))
+    r.playback.playing, r.playback.position = False, 195.0
+    check("暂停在结尾也是已播完", "⏹ 已播完" in wui.card_text(r, clock.t))
+    r.playback.position = 194.0
+    check("没到结尾仍是已暂停", "⏸ 已暂停" in wui.card_text(r, clock.t))
     ended = wui.card_text(r, clock.t, ended=True, reason="服务器重启")
     check("结束文案", ended == "🎬 **一起看** · 已结束\n最后播放：**Never Gonna**\n（服务器重启）")
     check("结束无原因不加行", wui.card_text(r, clock.t, ended=True) == "🎬 **一起看** · 已结束\n最后播放：**Never Gonna**")
@@ -199,6 +213,24 @@ def test_watch_command():
         msg = FakeMessage()
         asyncio.run(make_bot(ui2, FakeSources(bili()))._watch(msg, "https://www.bilibili.com/video/BV1xx411c7mD"))
         check("B 站房间已满提示", msg.replies[0][0] == "B 站房间已满（最多 1 个），请稍后再试或换 YouTube 视频")
+
+        # 卡片发不出去：房间直接关掉并从 rooms 删掉，WatchUI 收到 closed 也不去编辑（没有 message_id）
+        ui3, rooms3, _, edits3 = make_ui(max_bili=1)
+        msg = FakeMessage()
+
+        async def fail_reply(content, view=None, allowed_mentions=None):
+            raise discord.HTTPException(NS(status=403, reason="Forbidden"), "no perms")
+        msg.reply = fail_reply
+        closed = []
+        rooms3.listeners.append(lambda r, k: closed.append(k) if k == "closed" else None)
+
+        async def post_fail():
+            await make_bot(ui3, FakeSources(bili()))._watch(msg, "https://www.bilibili.com/video/BV1xx411c7mD")
+            await drain(ui3)
+        asyncio.run(post_fail())
+        check("卡片发送失败就关房并删掉", rooms3.rooms == {} and closed == ["closed"] and edits3 == []
+              and ui3.cards.all() == [])
+        check("关房后 B 站名额释放", rooms3.create(1, 1, "a", bili()) is not None)
 
 
 def test_card_store_corrupt():
