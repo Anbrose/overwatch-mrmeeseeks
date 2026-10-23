@@ -258,6 +258,37 @@ def test_resolve():
         vid = ws.Video("bilibili", "BV1xrnz6gEVD", 1, "t", 1.0, "u")
         check("streams nav 缺 key", await msg_of(ws.Sources(None, session_factory=lambda: FakeSession(bad_nav + bili_routes())).bili_streams(vid)) == DOWN)
 
+        # SESSDATA 失效报警：nav 说未登录 → warning（不含 SESSDATA 的值）；已登录 / 没配 SESSDATA → 不报
+        import logging
+
+        class Grab(logging.Handler):
+            def __init__(self):
+                super().__init__()
+                self.msgs = []
+
+            def emit(self, record):
+                self.msgs.append((record.levelno, record.getMessage()))
+        grab = Grab()
+        wlog = logging.getLogger("mrmeeseeks.watch")
+        wlog.addHandler(grab)
+        try:
+            await ws.Sources("SECRET-SESS", session_factory=lambda: FakeSession(bili_routes())).resolve(
+                "https://www.bilibili.com/video/BV1xrnz6gEVD")
+            expired = list(grab.msgs)
+            grab.msgs.clear()
+            nav_ok = [("web-interface/nav", FakeResp(200, {"code": 0, "data": dict(NAV["data"], isLogin=True)}))]
+            await ws.Sources("SECRET-SESS", session_factory=lambda: FakeSession(nav_ok + bili_routes())).resolve(
+                "https://www.bilibili.com/video/BV1xrnz6gEVD")
+            await ws.Sources(None, session_factory=lambda: FakeSession(bili_routes())).resolve(
+                "https://www.bilibili.com/video/BV1xrnz6gEVD")
+            quiet = list(grab.msgs)
+        finally:
+            wlog.removeHandler(grab)
+        check("SESSDATA 失效报警一次", [m for m in expired if m == (logging.WARNING, "BILIBILI_SESSDATA 已失效，B 站将使用未登录画质")]
+              and len([m for m in expired if "SESSDATA" in m[1]]) == 1)
+        check("报警不含 SESSDATA 值", not any("SECRET" in m[1] for m in expired))
+        check("已登录 / 未配置不报警", not any("SESSDATA" in m[1] for m in quiet))
+
         # -352 触发刷新 key 并重试一次
         n = {"c": 0}
 

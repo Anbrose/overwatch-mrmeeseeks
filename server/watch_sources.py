@@ -10,7 +10,7 @@ B 站接口在海外服务器上的注意事项（实测）：
 - 大陆限定 / 下架 / 地区封锁：view 或 playurl 返回 code != 0（如 -404、-10403），
   统一报 VideoUnavailable。
 - WBI key 缓存约 6 小时；遇到 -352 / -403 就刷新 key 再试一次。
-- SESSDATA 只放在请求头里，绝不写日志。
+- SESSDATA 只放在请求头里，绝不写日志；nav 显示未登录时在日志里报警（失效了）。
 """
 import hashlib
 import logging
@@ -274,7 +274,11 @@ class Sources:
         if not force and self._wbi and time.time() - self._wbi[1] < WBI_TTL:
             return self._wbi[0]
         resp = await self._get_json(session, NAV_URL, self._bili_headers())
-        img = ((resp.get("data") or {}).get("wbi_img")) or {}
+        data = resp.get("data") or {}
+        if self._sessdata and not data.get("isLogin"):
+            # 每次刷新 key（约 6 小时）最多报一次；不写 SESSDATA 的值
+            log.warning("BILIBILI_SESSDATA 已失效，B 站将使用未登录画质")
+        img = data.get("wbi_img") or {}
 
         def stem(u):
             return (u or "").rsplit("/", 1)[-1].split(".")[0]
