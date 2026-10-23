@@ -14,6 +14,7 @@
   @mrmeeseeks esports here|off|status  赛事推送的默认频道，见 esports_feed.py
   @mrmeeseeks region <赛区> [off]       把当前频道绑定成某赛区的频道（赛事推送和开播通知共用），见 regions.py
   @mrmeeseeks live add|remove|list     按赛区登记 B 站直播间，开播时通知，见 live_watch.py
+  @mrmeeseeks 一起看 <链接>            开一起看房间（B 站 / YouTube 同步播放，也可写 watch），见 watch_ui.py
   @mrmeeseeks <问题>     英雄问答（数值、补丁、几枪击杀），见 hero_qa.py
 
 功能许愿频道（WISH_CHANNEL_ID）只接受表单提交，见 wishes.py；许愿子区里的 @ 用来改方案，见 wish_plan.py。
@@ -63,6 +64,10 @@ from vision.text import load_maps
 from wish_plan import WishPlanner, WishPlans
 from wishes import (WISH_DAILY_LIMIT, WishDesk, WishEntryView, WishLog, WishQuota, ensure_entry, export_csv, parse_export_args,
                     parse_games, select_wishes, vote_count)
+from watch_rooms import RoomManager, RoomsFull
+from watch_server import WatchServer
+from watch_sources import QUALITY_QN, Sources, VideoUnavailable, find_link
+from watch_ui import CardStore, HostButton, WatchUI, card_text, build_view as build_watch_view
 from ws_server import WSServer
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
@@ -90,6 +95,7 @@ HELP_TEXT = (
     "`live remove <url>`, `live list`\n"
     "`@mrmeeseeks patches here` / `patches off` Post a summary of each new official Overwatch patch in this channel "
     "(needs Manage Channels); `patches status` shows the latest patch\n"
+    "`@mrmeeseeks 一起看 <Bilibili or YouTube link>` (or `watch`) Open a watch-together room with synced playback\n"
     "`@mrmeeseeks help` Show this help\n"
     "`@mrmeeseeks wishes [game] [7d]` (admins) Get feature wishes with their votes as a CSV by DM\n"
     "`@mrmeeseeks announce` (admins) Post an announcement with buttons to read it in "
@@ -98,10 +104,11 @@ HELP_TEXT = (
     "`Tracer HP`, `how many Cassidy headshots kill Mauga at 30m?`"
 )
 COMMANDS = ("connect", "status", "disconnect", "help", "analyze", "label", "announce")
-ARG_COMMANDS = ("player", "esports", "patches", "wishes", "region", "live", "predictions")     # 带参数的指令；参数保留大小写（BattleTag 大小写敏感）
+ARG_COMMANDS = ("player", "esports", "patches", "wishes", "region", "live", "predictions", "一起看", "watch")     # 带参数的指令；参数保留大小写（BattleTag 大小写敏感）
 LIVE_USAGE = ("Usage: `@mrmeeseeks live add <region> <Bilibili room url or id> [label]`, "
               "`live remove <room url or id>` or `live list`. Bind the region's channel first with `@mrmeeseeks region <region>`.")
 ASK_COOLDOWN_SECONDS = 5
+WATCH_USAGE = "用法：@mrmeeseeks 一起看 <B站或YouTube链接>"
 
 
 def parse_command(text: str, explicit: bool = True) -> tuple[str, str]:
@@ -194,6 +201,10 @@ class ClientSelectView(discord.ui.View):
 
 # ---------------- Bot 本体 ----------------
 class MeeseeksBot(discord.Client):
+    watch_ui: WatchUI | None = None          # 一起看：没设置 WATCH_PUBLIC_URL 时为 None
+    watch_sources: Sources | None = None
+    _watch_ready = False
+
     def __init__(self, registry: Registry, analyzer: Analyzer | None, recognizer: Recognizer,
                  labels: LabelStore, roster: Roster,
                  store: HeroStore | None = None, hero_qa: HeroQA | None = None,
@@ -202,7 +213,8 @@ class MeeseeksBot(discord.Client):
                  wish_plans: WishPlans | None = None, patch_feed: PatchFeed | None = None,
                  regions: RegionStore | None = None, live_watcher: LiveWatcher | None = None,
                  live_notify_offline: bool = False, predictions: pr.PredictionStore | None = None,
-                 prediction_ui: PredictionUI | None = None, announce_desk: AnnounceDesk | None = None):
+                 prediction_ui: PredictionUI | None = None, announce_desk: AnnounceDesk | None = None,
+                 watch_ui: WatchUI | None = None, watch_sources: Sources | None = None):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents, allowed_mentions=discord.AllowedMentions(everyone=False, roles=False))
@@ -232,6 +244,10 @@ class MeeseeksBot(discord.Client):
         self.predictions = predictions
         self.prediction_ui = prediction_ui
         self.announce_desk = announce_desk
+        self.watch_ui = watch_ui
+        self.watch_sources = watch_sources
+        if watch_ui is not None:
+            watch_ui.edit = self.edit_watch
 
     def hero_name(self, key: str) -> str:
         return self.names.get(key) or overfast.hero_name(key)
@@ -248,6 +264,9 @@ class MeeseeksBot(discord.Client):
         if self.announce_desk:
             LangButton.handler = self.announce_desk
             self.add_dynamic_items(LangButton)      # 公告的语言按钮：重启前发的公告照样能点
+        if self.watch_ui:
+            HostButton.handler = self.watch_ui
+            self.add_dynamic_items(HostButton)      # 一起看的「我是房主」按钮
 
     async def on_ready(self) -> None:
         log.info("Logged in to Discord as %s", self.user)
@@ -258,6 +277,10 @@ class MeeseeksBot(discord.Client):
                 await ensure_entry(await self._channel(self.wish_channel_id), self.wish_desk.quota, self.wish_view)
             except discord.HTTPException:
                 log.exception("Could not set up the wish channel %s", self.wish_channel_id)
+        # 房间只在内存里：重启前发的一起看卡片都改成"已结束"，只做一次
+        if self.watch_ui and not self._watch_ready:
+            self._watch_ready = True
+            await self.watch_ui.end_stale()
 
     async def _channel(self, channel_id: int):
         channel = self.get_channel(channel_id)
@@ -315,6 +338,8 @@ class MeeseeksBot(discord.Client):
             await self._export_wishes(message, arg)
         elif cmd == "announce":
             await self._announce(message)
+        elif cmd in ("一起看", "watch"):
+            await self._watch(message, arg)
         elif cmd == "help":
             await message.reply(HELP_TEXT)
         else:
@@ -528,6 +553,40 @@ class MeeseeksBot(discord.Client):
         await self.wait_until_ready()
         channel = await self._channel(channel_id)
         await channel.get_partial_message(message_id).edit(view=build_view(view))
+
+    async def edit_watch(self, channel_id: int, message_id: int, text: str, view: discord.ui.View | None) -> None:
+        """一起看卡片的编辑函数（WatchUI.edit）；view=None 去掉按钮。"""
+        await self.wait_until_ready()
+        channel = await self._channel(channel_id)
+        await channel.get_partial_message(message_id).edit(content=text, view=view,
+                                                           allowed_mentions=discord.AllowedMentions.none())
+
+    async def _watch(self, message: discord.Message, arg: str) -> None:
+        ui, sources = self.watch_ui, self.watch_sources
+        if ui is None or sources is None:
+            await message.reply("一起看功能没有启用。")
+            return
+        if find_link(arg) is None:
+            await message.reply(WATCH_USAGE)
+            return
+        try:
+            video = await sources.resolve(arg)
+            room = ui.rooms.create(message.channel.id, message.author.id, message.author.display_name, video)
+        except VideoUnavailable as e:
+            await message.reply(str(e))
+            return
+        except RoomsFull as e:
+            await message.reply(f"B 站房间已满（最多 {e.limit} 个），请稍后再试或换 YouTube 视频")
+            return
+        try:
+            card = await message.reply(card_text(room, ui.rooms.clock()), view=build_watch_view(room, ui.public_url),
+                                       allowed_mentions=discord.AllowedMentions.none())
+        except discord.HTTPException:
+            log.exception("Could not post the watch card in channel %s", message.channel.id)
+            room.closed = True       # 没有卡片就没人进得来，直接关掉，别占着 B 站名额
+            return
+        room.message_id = card.id
+        ui.cards.add(message.channel.id, card.id)
 
     async def _predictions(self, message: discord.Message, arg: str) -> None:
         store = self.predictions
@@ -907,12 +966,30 @@ async def main() -> None:
                                   AnnouncementStore(state_dir / "announcements"))
                      if api_key else None)
 
+    # 一起看：设置了 WATCH_PUBLIC_URL（网页的公网地址）才启用
+    watch_url = os.environ.get("WATCH_PUBLIC_URL", "").strip().rstrip("/")
+    watch_ui = watch_sources = watch_server = None
+    if watch_url:
+        sessdata = os.environ.get("BILIBILI_SESSDATA", "").strip()
+        if not sessdata:
+            log.warning("BILIBILI_SESSDATA not set; B 站将使用未登录画质")
+        quality = os.environ.get("WATCH_MAX_QUALITY", "").strip() or "1080"
+        if quality not in QUALITY_QN:
+            log.warning("Unknown WATCH_MAX_QUALITY %r (use 1080, 720 or 480); using 1080", quality)
+            quality = "1080"
+        watch_rooms = RoomManager(max_bili_rooms=int(os.environ.get("WATCH_MAX_BILI_ROOMS", "").strip() or "2"))
+        watch_sources = Sources(sessdata or None, QUALITY_QN[quality])
+        watch_server = WatchServer(watch_rooms, watch_sources, host=os.environ.get("WATCH_HOST", "").strip() or "0.0.0.0",
+                                   port=int(os.environ.get("WATCH_PORT", "").strip() or "8080"))
+        watch_ui = WatchUI(watch_rooms, watch_url, CardStore(state_dir / "watch_cards.json"))
+        log.info("Watch together enabled at %s (max quality %s)", watch_url, quality)
+
     registry = Registry()
     bot = MeeseeksBot(registry, analyzer, recognizer, labels, roster, store, hero_qa, esports_feed,
                       int(wish_channel) if wish_channel else None, wish_desk, wish_plans, patch_feed,
                       regions=regions, live_watcher=live_watcher, live_notify_offline=live_notify_offline,
                       predictions=prediction_store, prediction_ui=PredictionUI(prediction_store),
-                      announce_desk=announce_desk)
+                      announce_desk=announce_desk, watch_ui=watch_ui, watch_sources=watch_sources)
     patch_feed.icons = HeroEmojis(bot).for_patch     # 补丁摘要里英雄名旁边的头像
     ws = WSServer(
         registry, bot,
@@ -928,6 +1005,9 @@ async def main() -> None:
                       asyncio.create_task(esports_feed.run(bot.post_esports, bot.edit_esports)),
                       asyncio.create_task(patch_feed.run(bot.post_patches)),
                       asyncio.create_task(live_watcher.run())]
+        if watch_server is not None:
+            await watch_server.start()
+            refreshers.append(asyncio.create_task(watch_server.run()))
         try:
             await bot.start(token)
         except discord.LoginFailure:
@@ -937,6 +1017,8 @@ async def main() -> None:
         finally:
             for task in refreshers:
                 task.cancel()
+            if watch_server is not None:
+                await watch_server.close()
             await ws.close()
 
 
