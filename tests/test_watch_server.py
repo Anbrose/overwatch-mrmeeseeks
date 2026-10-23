@@ -338,6 +338,63 @@ async def test_change_video_errors():
         await client.close()
 
 
+class _Resp:
+    def __init__(self, payload):
+        self.status, self._payload, self.headers = 200, payload, {}
+
+    async def json(self, content_type=None):
+        return self._payload
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *a):
+        return False
+
+
+class _Session:
+    """按 URL 片段返回假响应的 aiohttp.ClientSession 替身（给真的 Sources 用）。"""
+
+    def __init__(self, routes):
+        self.routes = routes
+
+    def get(self, url, **kw):
+        for key, payload in self.routes:
+            if key in url:
+                return _Resp(payload)
+        return _Resp({"code": -404})
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *a):
+        return False
+
+
+async def test_change_video_playurl_rejected():
+    """真的 Sources：view 正常、playurl 报地区限制 → 换视频被拒，原视频不变，提示发给房主。"""
+    from watch_sources import Sources
+    with open(os.path.join(ROOT, "tests", "fixtures", "watch", "bili_view.json"), encoding="utf-8") as f:
+        view = json.load(f)
+    nav = {"code": -101, "data": {"wbi_img": {
+        "img_url": "https://i0.hdslb.com/bfs/wbi/7cd084941338484aae1ad9425b84077c.png",
+        "sub_url": "https://i0.hdslb.com/bfs/wbi/4932caff0ff746eab6f01bf08b70ac45.png"}}}
+    routes = [("finger/spi", {"code": 0, "data": {"b_3": "x", "b_4": "y"}}), ("web-interface/nav", nav),
+              ("wbi/view", view), ("wbi/playurl", {"code": -10403, "message": "地区限制"})]
+    sources = Sources(None, session_factory=lambda: _Session(routes))
+    rooms, sources, server, client = await make(sources=sources)
+    try:
+        room = rooms.create(1, 2, "发起人", yt())
+        a, _ = await hello(client, room.room_id, key=room.owner_key)
+        await drain(a)
+        await a.send_json({"type": "change_video", "url": "https://www.bilibili.com/video/BV1xrnz6gEVD"})
+        e = await recv_type(a, "error")
+        check("playurl 不可用 → 换视频被拒", e and e["message"] == "这个视频在海外服务器上无法播放"
+              and room.video.source == "youtube" and room.version == 0)
+    finally:
+        await client.close()
+
+
 async def test_bili_proxy():
     up = Upstream()
     up_client = TestClient(TestServer(up.app))
@@ -416,7 +473,7 @@ async def test_bili_proxy():
         orig = sources.bili_streams
         sources.bili_streams = boom
         r = await client.get(f"/bili/{rid}/0/manifest.mpd")
-        check("取地址失败 502", r.status == 502)
+        check("取地址失败 502，正文是提示文字", r.status == 502 and (await r.text()) == "B 站暂时无法访问，请稍后再试")
         sources.bili_streams = orig
 
         check("旧版本号 404", (await client.get(f"/bili/{rid}/99/video")).status == 404)
@@ -513,6 +570,7 @@ async def main():
     await test_ws_flow()
     await test_duration_and_change_video()
     await test_change_video_errors()
+    await test_change_video_playurl_rejected()
     await test_bili_proxy()
     await test_pages()
     test_build_mpd()

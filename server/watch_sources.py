@@ -1,7 +1,7 @@
 """一起看：链接解析与视频来源（B 站 / YouTube）。
 
 - find_link：从聊天文本里取第一个合法的 B 站 / YouTube 链接（只认白名单域名）。
-- Sources.resolve：展开 b23.tv 短链，取标题、时长，得到 Video。
+- Sources.resolve：展开 b23.tv 短链，取标题、时长，得到 Video；B 站还会试取一次播放地址，放不了就直接拒绝。
 - Sources.bili_streams：每次都重新请求 DASH 播放地址（CDN 地址带 deadline，会过期）。
 
 B 站接口在海外服务器上的注意事项（实测）：
@@ -305,6 +305,11 @@ class Sources:
         link = find_link(loc)
         return link if link and link.source == "bilibili" and not link.short else None
 
+    async def _playurl(self, session, bvid: str, cid: int) -> DashStreams:
+        resp = await self._bili_api(session, PLAYURL_URL, {
+            "bvid": bvid, "cid": cid, "qn": self.max_qn, "fnval": 16, "fourk": 0})
+        return parse_playurl(resp, self.max_qn, time.time())
+
     # -- 对外 --
     async def resolve(self, text: str) -> Video:
         link = find_link(text)
@@ -318,7 +323,9 @@ class Sources:
                         raise VideoUnavailable("这个短链打不开")
                 if link.source == "bilibili":
                     resp = await self._bili_api(session, VIEW_URL, {"bvid": link.id})
-                    title, _cid, duration = parse_view(resp, link.page)
+                    title, cid, duration = parse_view(resp, link.page)
+                    # view 能取到不代表能播（地区限制常常只在 playurl 上报错），建房 / 换视频前先试一次
+                    await self._playurl(session, link.id, cid)
                     return Video("bilibili", link.id, link.page, title, duration, bili_url(link.id, link.page))
                 watch = f"https://www.youtube.com/watch?v={link.id}"
                 query = urllib.parse.urlencode({"url": watch, "format": "json"})
@@ -341,9 +348,7 @@ class Sources:
             async with self._session_factory() as session:
                 resp = await self._bili_api(session, VIEW_URL, {"bvid": video.id})
                 _t, cid, _d = parse_view(resp, video.page)
-                resp = await self._bili_api(session, PLAYURL_URL, {
-                    "bvid": video.id, "cid": cid, "qn": self.max_qn, "fnval": 16, "fourk": 0})
-                return parse_playurl(resp, self.max_qn, time.time())
+                return await self._playurl(session, video.id, cid)
         except (aiohttp.ClientError, TimeoutError) as e:
             log.warning("取播放地址失败：%s", type(e).__name__)
             raise VideoUnavailable(BILI_DOWN_MSG) from e

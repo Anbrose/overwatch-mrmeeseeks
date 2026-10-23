@@ -175,6 +175,8 @@ def test_resolve():
         check("头和 cookie", h["Referer"] == "https://www.bilibili.com/" and h["Origin"] == "https://www.bilibili.com"
               and "buvid3=B3-xxx" in h["Cookie"] and "SESSDATA=SECRET-SESS" in h["Cookie"])
         spi_calls = [c for c in fs.calls if "finger/spi" in c[0]]
+        check("resolve 试取一次播放地址", len([c for c in fs.calls if "wbi/playurl" in c[0]]) == 1)
+        fs.calls.clear()
         s = await src.bili_streams(v)
         s2 = await src.bili_streams(v)
         check("streams", s.height == 1080 and s2.height == 1080)
@@ -182,8 +184,8 @@ def test_resolve():
         q = urllib.parse.parse_qs(urllib.parse.urlparse(pu[0][0]).query)
         check("playurl 参数", q["cid"] == ["42926145926"] and q["qn"] == ["80"] and q["fnval"] == ["16"] and q["fourk"] == ["0"])
         check("每次重新请求播放地址", len(pu) == 2)
-        check("buvid/nav 只取一次", len([c for c in fs.calls if "finger/spi" in c[0]]) == len(spi_calls) == 1
-              and len([c for c in fs.calls if "web-interface/nav" in c[0]]) == 1)
+        check("buvid/nav 只取一次", len(spi_calls) == 1 and not any("finger/spi" in c[0] for c in fs.calls)
+              and not any("web-interface/nav" in c[0] for c in fs.calls))
 
         fs2 = FakeSession(bili_routes())
         v2 = await ws.Sources(None, session_factory=lambda: fs2).resolve("https://www.bilibili.com/video/BV1xrnz6gEVD?p=1")
@@ -244,6 +246,15 @@ def test_resolve():
             raise aiohttp.ClientConnectionError("x")
         check("网络错误", await msg_of(ws.Sources(None, session_factory=lambda: FakeSession([("wbi/view", boom)] + bili_routes())).resolve("https://www.bilibili.com/video/BV1xrnz6gEVD")) == DOWN)
         check("code≠0 仍是海外提示", await msg_of(ws.Sources(None, session_factory=lambda: FakeSession([("wbi/view", FakeResp(200, load("bili_view_missing.json")))] + bili_routes())).resolve("https://www.bilibili.com/video/BV1xrnz6gEVD")) == "这个视频在海外服务器上无法播放")
+        # view 正常但 playurl 报错（地区限制）：resolve 直接拒绝，不建房
+        UNAVAIL = "这个视频在海外服务器上无法播放"
+        for code in (-10403, -404):
+            fs_pu = FakeSession([("wbi/playurl", FakeResp(200, {"code": code, "message": "x"}))] + bili_routes())
+            check(f"resolve playurl code={code} 拒绝",
+                  await msg_of(ws.Sources(None, session_factory=lambda: fs_pu).resolve("https://www.bilibili.com/video/BV1xrnz6gEVD")) == UNAVAIL)
+        fs_pu = FakeSession([("wbi/playurl", FakeResp(200, {"code": 0, "data": {"dash": {"video": [], "audio": []}}}))] + bili_routes())
+        check("resolve playurl 没有流也拒绝",
+              await msg_of(ws.Sources(None, session_factory=lambda: fs_pu).resolve("https://www.bilibili.com/video/BV1xrnz6gEVD")) == UNAVAIL)
         vid = ws.Video("bilibili", "BV1xrnz6gEVD", 1, "t", 1.0, "u")
         check("streams nav 缺 key", await msg_of(ws.Sources(None, session_factory=lambda: FakeSession(bad_nav + bili_routes())).bili_streams(vid)) == DOWN)
 

@@ -19,6 +19,7 @@
   const CAUGHT_UP = 0.1;     // seconds: nudging done, back to 1x
   const PAUSED_DRIFT = 0.25; // seconds: while paused, re-seek beyond this
   const RATE_STEPS = { bilibili: [0.95, 1.05], youtube: [0.75, 1.25] };
+  const UNPLAYABLE_MSG = "这个视频暂时无法播放";
 
   const $ = (id) => document.getElementById(id);
   const ui = {
@@ -174,11 +175,11 @@
     video.preload = "auto";
     ui.host.appendChild(video);
     const dash = window.dashjs.MediaPlayer().create();
-    dash.initialize(video, mpdUrl, false);
 
-    return {
+    const adapter = {
       source: "bilibili",
       ready: true,
+      failed: false,
       video,
       getTime: () => video.currentTime || 0,
       getDuration: () => (Number.isFinite(video.duration) ? video.duration : 0),
@@ -195,11 +196,26 @@
       setRate: (r) => { if (video.playbackRate !== r) video.playbackRate = r; },
       setVolume: (v, m) => { video.volume = v; video.muted = m; },
       destroy: () => {
+        try { dash.off(window.dashjs.MediaPlayer.events.ERROR, onError); } catch { /* ignore */ }
+        video.removeEventListener("error", onError);
         try { dash.reset(); } catch { /* ignore */ }
         video.removeAttribute("src");
         video.remove();
       },
     };
+    // MPD 502 (B站 refused the stream) or a broken media segment: tell the
+    // viewer instead of leaving a black stage, and stop syncing this player.
+    function onError() {
+      if (player !== adapter || adapter.failed) return;
+      adapter.failed = true;
+      adapter.ready = false;
+      setStageMessage(UNPLAYABLE_MSG);
+      renderStartButton();
+    }
+    dash.on(window.dashjs.MediaPlayer.events.ERROR, onError);
+    video.addEventListener("error", onError);
+    dash.initialize(video, mpdUrl, false);
+    return adapter;
   }
 
   function createYouTubePlayer(videoId, version, onReady) {
@@ -338,8 +354,10 @@
   // The start tap must reach a ready player so play() runs inside the gesture.
   function renderStartButton() {
     const ready = !!(player && player.ready);
+    const failed = !!(player && player.failed);
     ui.start.disabled = !ready;
-    ui.start.textContent = ready ? "点击开始观看" : "加载中…";
+    ui.start.classList.toggle("failed", failed);
+    ui.start.textContent = ready ? "点击开始观看" : failed ? UNPLAYABLE_MSG : "加载中…";
   }
 
   function formatTime(sec) {

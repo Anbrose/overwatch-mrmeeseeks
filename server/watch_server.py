@@ -431,7 +431,7 @@ class WatchServer:
             streams = await self._get_streams(room, version)
         except VideoUnavailable as e:
             log.warning("watch bili streams unavailable (room=%s): %s", room.room_id, e)
-            raise web.HTTPBadGateway()
+            raise web.HTTPBadGateway(text=e.message)
         if name == "manifest.mpd":
             return web.Response(text=build_mpd(streams, room.room_id, version), content_type="application/dash+xml",
                                 headers={"Cache-Control": "no-store"})

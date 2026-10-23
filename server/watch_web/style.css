@@ -113,6 +113,7 @@ button, input { font: inherit; color: inherit; }
 }
 .start:hover:not(:disabled) { color: var(--accent); }
 .start:disabled { cursor: progress; color: var(--muted); }
+.start.failed:disabled { cursor: default; }
 
 /* ---- controls ---- */
 .controls {
