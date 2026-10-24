@@ -10,6 +10,8 @@
 (() => {
   const DASH_SRC = "https://cdnjs.cloudflare.com/ajax/libs/dashjs/4.7.4/dash.all.min.js";
   const YT_SRC = "https://www.youtube.com/iframe_api";
+  const HLS_SRC = "https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.20/hls.min.js";
+  const HLS_MIME = "application/vnd.apple.mpegurl";
   const PING_MS = 10000;
   const SYNC_MS = 1000;
   const RECONNECT_MS = 2000;
@@ -17,8 +19,12 @@
   const SOFT_DRIFT = 0.3;    // seconds: start nudging playbackRate
   const CAUGHT_UP = 0.1;     // seconds: nudging done, back to 1x
   const PAUSED_DRIFT = 0.25; // seconds: while paused, re-seek beyond this
-  const RATE_STEPS = { bilibili: [0.95, 1.05], youtube: [0.75, 1.25] };
+  const RATE_STEPS = { bilibili: [0.95, 1.05], youtube: [0.75, 1.25], vod: [0.95, 1.05] };
   const UNPLAYABLE_MSG = "这个视频暂时无法播放";
+  const VOD_FAILED_MSG = "视频加载失败";
+  const PREPARING_MSG = "正在准备…";
+  const PREPARING_TIMEOUT_MS = 15000;
+  const RESUME_NEAR = 30;    // seconds: resume line hidden this close to the snapshot
 
   const $ = (id) => document.getElementById(id);
   const ui = {
@@ -27,6 +33,8 @@
     play: $("play"), seek: $("seek"), time: $("time"), mute: $("mute"), volume: $("volume"), fs: $("fs"),
     me: $("me"), panel: $("perm-panel"), members: $("members"),
     changeForm: $("change-form"), changeUrl: $("change-url"), toast: $("toast"),
+    resume: $("resume"), vodPanel: $("vod-panel"), episodes: $("episodes"),
+    lineLabel: $("line-label"), nextLine: $("next-line"),
   };
 
   // ---------------------------------------------------------------- storage
@@ -63,6 +71,10 @@
   let seeking = false;        // user is dragging the seek bar
   let volume = 1;
   let muted = false;
+  let stageText = "";         // stage message underneath the 正在准备… indicator
+  let preparing = false;      // host asked for an episode/source switch, awaiting state or error
+  let preparingTimer = null;
+  let episodesKey = null;     // which show/episode count the episode grid was built for
 
   // ---------------------------------------------------------------- clock sync
 
@@ -219,6 +231,68 @@
     return adapter;
   }
 
+  // Searched shows: an HLS playlist served (rewritten) by our server. Native HLS
+  // where the browser has it (Safari/iOS), hls.js elsewhere. Failures are local
+  // only: we show a message and never tell the server.
+  function createVodPlayer(hlsUrl) {
+    const video = document.createElement("video");
+    video.playsInline = true;
+    video.setAttribute("playsinline", "");
+    video.preload = "auto";
+    ui.host.appendChild(video);
+    const native = !!video.canPlayType(HLS_MIME);
+    let hls = null;
+
+    const adapter = {
+      source: "vod",
+      ready: true,
+      failed: false,
+      failMsg: VOD_FAILED_MSG,
+      video,
+      getTime: () => video.currentTime || 0,
+      getDuration: () => (Number.isFinite(video.duration) ? video.duration : 0),
+      isPaused: () => video.paused,
+      play: () => {
+        const p = video.play();
+        if (p && p.catch) {
+          p.catch((err) => { if (err && err.name === "NotAllowedError") showStartOverlay(); });
+        }
+      },
+      pause: () => video.pause(),
+      seek: (t) => { video.currentTime = t; },
+      getRate: () => video.playbackRate,
+      setRate: (r) => { if (video.playbackRate !== r) video.playbackRate = r; },
+      setVolume: (v, m) => { video.volume = v; video.muted = m; },
+      destroy: () => {
+        video.removeEventListener("error", onError);
+        if (hls) { try { hls.destroy(); } catch { /* ignore */ } }
+        video.removeAttribute("src");
+        try { video.load(); } catch { /* ignore */ }  // stop native HLS downloading
+        video.remove();
+      },
+    };
+    function onError() {
+      if (player !== adapter || adapter.failed) return;
+      adapter.failed = true;
+      adapter.ready = false;
+      setStageMessage(VOD_FAILED_MSG);
+      renderStartButton();
+    }
+    video.addEventListener("error", onError);
+    if (native) {
+      video.src = hlsUrl;
+    } else if (window.Hls && window.Hls.isSupported()) {
+      hls = new window.Hls();
+      hls.on(window.Hls.Events.ERROR, (_event, data) => { if (data && data.fatal) onError(); });
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(video);
+    } else {
+      // No way to play HLS here; report once the caller has installed us.
+      Promise.resolve().then(onError);
+    }
+    return adapter;
+  }
+
   function createYouTubePlayer(videoId, version, onReady) {
     const mount = document.createElement("div");
     ui.host.appendChild(mount);
@@ -316,6 +390,13 @@
         if (token !== buildToken) return;
         player = createBiliPlayer(video.mpd);
         onPlayerReady(player);
+      } else if (video.source === "vod") {
+        if (!document.createElement("video").canPlayType(HLS_MIME)) {
+          await loadScript(HLS_SRC);
+          if (token !== buildToken) return;
+        }
+        player = createVodPlayer(video.hls);
+        onPlayerReady(player);
       } else if (video.source === "youtube") {
         await loadYouTubeApi();
         if (token !== buildToken) return;
@@ -343,8 +424,34 @@
   // ---------------------------------------------------------------- UI
 
   function setStageMessage(text) {
+    stageText = text;
+    renderStageMessage();
+  }
+
+  function renderStageMessage() {
+    const text = preparing ? PREPARING_MSG : stageText;
     ui.stageMsg.textContent = text;
     ui.stageMsg.hidden = !text;
+  }
+
+  // Shown on the stage from a vod switch request until ANY state or error
+  // arrives (the server may drop a request silently, e.g. when auto-next won),
+  // or until the timeout.
+  function startPreparing() {
+    preparing = true;
+    clearTimeout(preparingTimer);
+    preparingTimer = setTimeout(stopPreparing, PREPARING_TIMEOUT_MS);
+    renderStageMessage();
+    renderVodPanel();
+  }
+
+  function stopPreparing() {
+    clearTimeout(preparingTimer);
+    preparingTimer = null;
+    if (!preparing) return;
+    preparing = false;
+    renderStageMessage();
+    renderVodPanel();
   }
 
   function showStartOverlay() {
@@ -359,7 +466,7 @@
     const failed = !!(player && player.failed);
     ui.start.disabled = !ready;
     ui.start.classList.toggle("failed", failed);
-    ui.start.textContent = ready ? "点击开始观看" : failed ? UNPLAYABLE_MSG : "加载中…";
+    ui.start.textContent = ready ? "点击开始观看" : failed ? player.failMsg || UNPLAYABLE_MSG : "加载中…";
   }
 
   function formatTime(sec) {
@@ -374,6 +481,7 @@
   function currentDuration() {
     const d = room && room.video && room.video.duration;
     if (d) return d;
+    if (room && room.video && room.video.source === "vod") return 0; // only the server's value
     return player && player.ready ? player.getDuration() : 0;
   }
 
@@ -415,6 +523,70 @@
       ui.permBtn.setAttribute("aria-expanded", "false");
     }
     ui.conn.hidden = connected || ended;
+    renderResume();
+    renderVodPanel();
+  }
+
+  function isVod() {
+    return !!(room && room.video && room.video.source === "vod");
+  }
+
+  // "上次一起看到…": hidden when the room is already at the snapshot.
+  function renderResume() {
+    const r = room && room.resume;
+    const atSnapshot = r && isVod() && room.video.episode === r.episode
+      && Math.abs(expectedPosition(room) - r.position) < RESUME_NEAR;
+    ui.resume.textContent = "";
+    ui.resume.hidden = !r || ended || atSnapshot;
+    if (ui.resume.hidden) return;
+    const text = String(r.text || "");
+    if (me.canControl) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "resume-btn";
+      btn.textContent = text;
+      btn.addEventListener("click", () => {
+        send({ type: "resume" });
+        if (room && room.video.episode !== r.episode) startPreparing();
+      });
+      ui.resume.appendChild(btn);
+    } else {
+      ui.resume.textContent = text;
+    }
+  }
+
+  // Host-only episode list and source switch inside the 🔑 panel.
+  function renderVodPanel() {
+    const vod = me.isHost && !ended && isVod();
+    ui.vodPanel.hidden = !vod;
+    if (!vod) return;
+    const v = room.video;
+    const count = Number(v.episode_count) || 0;
+    const key = `${v.id}\n${count}`;
+    if (key !== episodesKey) {
+      episodesKey = key;
+      ui.episodes.textContent = "";
+      for (let i = 0; i < count; i++) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "ep";
+        btn.textContent = `第 ${i + 1} 集`;
+        btn.addEventListener("click", () => {
+          if (preparing) return;
+          send({ type: "episode", index: i });
+          startPreparing();
+        });
+        ui.episodes.appendChild(btn);
+      }
+    }
+    Array.from(ui.episodes.children).forEach((btn, i) => {
+      const current = i === v.episode;
+      btn.classList.toggle("current", current);
+      if (current) btn.setAttribute("aria-current", "true"); else btn.removeAttribute("aria-current");
+      btn.disabled = preparing;
+    });
+    ui.lineLabel.textContent = `片源：${v.line_name || ""}（共 ${v.line_count || 0} 个）`;
+    ui.nextLine.disabled = preparing;
   }
 
   function renderMembers(members) {
@@ -456,6 +628,7 @@
 
   function showEnded() {
     ended = true;
+    stopPreparing();
     destroyPlayer();
     ui.start.hidden = true;
     setStageMessage("房间已结束");
@@ -541,6 +714,12 @@
     ui.permBtn.setAttribute("aria-expanded", String(open));
   });
 
+  ui.nextLine.addEventListener("click", () => {
+    if (preparing) return;
+    send({ type: "next_line" });
+    startPreparing();
+  });
+
   ui.changeForm.addEventListener("submit", (e) => {
     e.preventDefault();
     const url = ui.changeUrl.value.trim();
@@ -623,6 +802,7 @@
         renderMembers(Array.isArray(msg.members) ? msg.members : []);
         break;
       case "error":
+        stopPreparing();
         toast(String(msg.message || "出错了"));
         revertOptimistic();
         break;
@@ -640,6 +820,7 @@
   }
 
   function onState(msg) {
+    stopPreparing();
     if (ended || !msg.video) return;
     const firstState = room === null;
     room = msg;
