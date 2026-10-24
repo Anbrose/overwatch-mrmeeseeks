@@ -19,3 +19,4 @@ Thumbs.db
 # 服务器端标注数据（本地运行时的默认 STATE_DIR）
 server/state/
 
+.superpowers/

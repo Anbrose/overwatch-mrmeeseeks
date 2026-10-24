@@ -27,6 +27,11 @@
 | `server/live_watch.py` | 开播通知：手动登记的 B 站直播间（`live_sources.json`）、状态查询、开播/下播判定。不依赖 discord.py |
 | `server/patchnotes.py` | 官方补丁说明：抓取 overwatch.blizzard.com 的当月和上月补丁页，解析成整篇文本 + 按英雄分组的改动 |
 | `server/patch_feed.py` | 补丁推送：`PatchFeed` 定时检查、用 `PatchSummarizer`（Claude）写摘要并发到频道；也给英雄问答提供最近的官方补丁 |
+| `server/watch_rooms.py` | 一起看房间：状态（播放/暂停/位置）、观众、控制权限、房主交接、过期；不依赖网络和 Discord |
+| `server/watch_sources.py` | 一起看视频源：解析 B 站 / YouTube 链接，取 B 站 DASH 流地址（buvid3、WBI 签名）和 YouTube 信息 |
+| `server/watch_server.py` | 一起看 HTTP / WebSocket 服务（aiohttp）：房间页、静态文件、同步协议、B 站转流和 MPD |
+| `server/watch_ui.py` | 一起看的 Discord 部分：房间卡片、房主链接按钮（`DynamicItem`）、人数更新 |
+| `server/watch_web/` | 一起看网页：`index.html`、`player.js`（播放器、同步、权限面板）、`style.css` |
 | `client/client.py` | 本地客户端：连接/重连、配对码输入、Tab 监听、两段截图、上传 |
 
 ## 客户端状态
@@ -65,6 +70,47 @@
 | `unpaired` | `reason` | 在 Discord 里被断开 |
 | `info` / `error` | `message` | 提示信息 |
 | `analysis` | `summary` | 分析结论的第一行 |
+
+## 一起看 WebSocket 协议
+
+一起看的网页服务（`WATCH_PORT`，默认 8080）和上面的客户端协议是两套，互不相通。所有消息都是 JSON 文本帧。
+
+**HTTP 路由**
+
+| 路由 | 说明 |
+|---|---|
+| `GET /r/{room_id}` | 房间页（`index.html`）；房主链接带 `?k=<密钥>`，页面连上后会把它从地址栏去掉。房间不存在返回「房间不存在或已经结束」 |
+| `GET /static/{name}` | `player.js`、`style.css` 等静态文件 |
+| `GET /ws/{room_id}` | WebSocket，协议见下 |
+| `GET /bili/{room_id}/{version}/manifest.mpd` | B 站视频的 DASH 清单，`BaseURL` 指向下面的转流地址 |
+| `GET /bili/{room_id}/{version}/{video\|audio}` | B 站视频流、音频流转发（支持 Range）。`version` 随换视频递增，旧地址失效 |
+
+页面用 `localStorage["watch_viewer_id:<room_id>"]`（每个房间一个）保存 `viewer_id`，断线 2 秒后自动重连并带上同一个 `viewer_id`。`viewer_id` 是重连凭据，服务器只在 `welcome` 里发给本人；别人看到的是每个成员的公开 `id`（`members` 列表、`grant.target` 用它）。
+
+**客户端 → 服务器**
+
+| type | 字段 | 说明 |
+|---|---|---|
+| `hello` | `viewer_id`（或 null）, `key`（房主密钥或 null） | 握手 |
+| `ping` | `t`（`performance.now()`） | 连上后每 10 秒一次，用来估算时钟偏差 |
+| `control` | `action`（`play` / `pause` / `seek`）, `position` | 播放控制，只有房主和被授权的人有效；被拒绝时服务器只给发送者回一条 `state`，让它撤回乐观更新 |
+| `duration` | `value` | YouTube 播放器加载后上报一次视频时长；只接受房主和有控制权的人，且只在时长未知时 |
+| `grant` | `target`（成员的公开 `id`）, `allowed` | 房主开关某人的控制权限 |
+| `change_video` | `url` | 房主换视频 |
+
+**服务器 → 客户端**
+
+| type | 字段 | 说明 |
+|---|---|---|
+| `welcome` | `viewer_id`, `name`, `is_host`, `can_control` | 握手回复 |
+| `pong` | `t`, `server_time` | 回复 `ping` |
+| `state` | `video`（`source`, `id`, `title`, `duration`, `version`, `mpd`）, `playing`, `position`, `server_time` | 房间状态；`mpd` 只对 B 站有值 |
+| `you` | `is_host`, `can_control` | 自己的身份或权限变了 |
+| `members` | `members`（`id`（公开 id，不是 `viewer_id`）, `name`, `can_control`） | 只发给房主，不含房主自己 |
+| `error` | `message` | 提示信息，如 `正在换视频，请稍候`（上一次 `change_video` 还没处理完时） |
+| `ended` | 无 | 房间已结束 |
+
+同步：客户端取最近 5 次 ping 里往返最小的一次，`offset = server_time + rtt/2 − 本地时间`；期望位置 = `position + (playing ? 现在的服务器时间 − server_time : 0)`。每秒比较一次，差距超过 2 秒直接跳转，0.3–2 秒微调播放速度。只有用户亲手操作才发 `control`，服务器下发状态引起的播放器事件不回传。
 
 ## 截图限流
 

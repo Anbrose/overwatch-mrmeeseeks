@@ -329,6 +329,12 @@ journalctl -u mrmeeseeks -f      # 查看日志
 | `MIN_SNAPSHOT_INTERVAL` | 否 | `5` | 同一客户端两次分析的最短间隔（秒） |
 | `LIVE_POLL_INTERVAL` | 否 | `30` | 开播通知：轮询 B 站直播间状态的间隔（秒），最低 15 |
 | `LIVE_NOTIFY_OFFLINE` | 否 | 空 | 设为 `1` 时下播也发一条消息，默认只报开播 |
+| `WATCH_PUBLIC_URL` | 否 | 空 | 一起看网页的公网地址，如 `https://watch.pigdogie.com.au`；留空不启用一起看。见下方「一起看」 |
+| `WATCH_HOST` | 否 | `0.0.0.0` | 一起看网页的监听地址；用反向代理时改为 `127.0.0.1`（Docker 部署已在 `compose.yml` 里设好） |
+| `WATCH_PORT` | 否 | `8080` | 一起看网页的端口 |
+| `BILIBILI_SESSDATA` | 否 | 空 | B 站登录 cookie 的 `SESSDATA`，登录后才能拿到高画质。浏览器登录 bilibili.com → F12 → Application → Cookies → `https://www.bilibili.com` → 复制 `SESSDATA` 的值。它等同于账号登录凭证，务必保密，不要发给别人或提交到仓库 |
+| `WATCH_MAX_QUALITY` | 否 | `1080` | B 站视频的画质上限，可选 `1080`、`720`、`480` |
+| `WATCH_MAX_BILI_ROOMS` | 否 | `2` | 同时存在的 B 站房间上限（服务器转流，占出口带宽）；YouTube 房间不限 |
 | `HERO_DATA_PATH` | 否 | `server/herodata/heroes.json` | 英雄数据缓存文件。Docker 部署时位于 `herodata` 卷 |
 | `HERO_REFRESH_HOURS` | 否 | `24` | 每隔多少小时刷新英雄数据（Overwatch Wiki）和对位数据（counterwatch.gg）；对位数据缓存在同一目录的 `matchups.json` |
 | `WISH_CHANNEL_ID` | 否 | 空 | 功能许愿频道的 ID，留空不启用。见下方「功能许愿频道」 |
@@ -374,7 +380,27 @@ python client\client.py --help
 | `@mrmeeseeks predictions` / `predictions reset` | 赛事竞猜：每天悉尼时间 10:00 预告之后，每场官方比赛在它的赛区频道（或默认频道）发一条竞猜消息，附一张对阵图（双方队徽和按职责排列的报名阵容、教练），点按钮押胜者，开赛前可以改。开赛时截止并公布谁押了谁，赛果出来后在剧透遮罩里揭晓谁猜中；猜中得 1 分，押冷门猜中最多 3 分。每周一 10:00 在默认频道发上周榜和称号。`predictions` 查看本周榜、赛季榜和自己的排名；`predictions reset` 开新赛季（需要"管理服务器"权限） |
 | `@mrmeeseeks region <赛区>` / `region <赛区> off` / `region` | 把当前频道绑定成某个赛区的频道（需要"管理频道"权限）。该赛区的比赛预告、提醒、赛果和开播通知都发到这里。赛区名：`cn`、`asia`、`korea`、`japan`、`pacific`、`emea`、`na`、`world`（总决赛、季中赛）、`owwc`（世界杯）。不带参数列出所有绑定 |
 | `@mrmeeseeks live add <赛区> <B 站直播间链接或房间号> [名字]` / `live remove <链接或房间号>` / `live list` | 开播通知：手动登记 B 站直播间，开播时在该赛区的频道里发一条带标题和封面的消息（需要"管理消息"权限）。短号自动解析；不写名字用主播昵称 |
+| `@mrmeeseeks 一起看 <B 站或 YouTube 链接>`（或 `watch`） | 一起看：开一个同步观看房间，发房间卡片和网页链接，点卡片上的按钮私下拿房主链接。见下方「一起看」。需要设置 `WATCH_PUBLIC_URL` |
 | `@mrmeeseeks patches here` / `patches off` / `patches status` | 补丁推送频道：每 3 小时检查一次[官方补丁说明](https://overwatch.blizzard.com/en-us/news/patch-notes/)，有新补丁就发一篇要点式摘要并附原文链接：每个改动的英雄名前有头像，下面固定分 **Basic Info / Abilities / Perks** 三项（没有改动写 None）；改动内容用英文，英雄、武器、技能、威能名写成「英文/简体中文/韩文」（例如 `Roadhog/路霸/로드호그`、`Chain Hook/链钩/사슬 갈고리`），技能名后面标出 PC 默认键位（如 `Shift`），描述里顺带提到的技能也标（来源：补丁原文 > 官方技能名 > Wiki；都没有的写进 `server/keybinds.json` 手动标注，启动日志会列出缺键位的技能），中文取自国服官网、韩文取自韩服官网的同一篇补丁，找不到的语言留空。`here` 设置后会立刻发一次最新的补丁。`here`/`off` 需要"管理频道"权限；摘要需要 `ANTHROPIC_API_KEY`，没有时只列出改动的英雄 |
+
+### 一起看
+
+在频道里发 `@mrmeeseeks 一起看 <B 站或 YouTube 链接>`（也可以写 `watch`），bot 会开一个房间并发一张房间卡片，点链接进网页，大家同步看同一个视频。发起人点卡片上的「我是房主」按钮，bot 私下发给你一个带密钥的链接（只能用一次），用它进房才是房主。房主可以给别人开放播放、暂停、拖动的权限，也可以换视频；房主离开后控制权会交给其他人。所有人离开 10 分钟后房间结束，卡片显示「已结束」。
+
+- **B 站**：服务器自己取流再转发给大家（浏览器直连 B 站会被防盗链拦住），所以占服务器出口带宽：1080p 每个观众约 3 Mbps，默认最多同时 2 个 B 站房间（`WATCH_MAX_BILI_ROOMS`）。部分视频只限大陆观看，在海外服务器上会提示 `这个视频在海外服务器上无法播放`，换 YouTube 链接或别的视频。
+- **YouTube**：观众的浏览器直接播放，不走服务器流量。
+
+**部署步骤**（先把 `compose.yml` 里的端口和下面的 Caddy 配置备好）：
+
+1. 在域名后台加一条 A 记录，如 `watch.pigdogie.com.au` 指向服务器 IP。
+2. 服务器 `.env` 里写 `WATCH_PUBLIC_URL=https://watch.pigdogie.com.au`；要高画质再写 `BILIBILI_SESSDATA`（取法见上表）。
+3. 把 `deploy/Caddyfile` 里 `watch.pigdogie.com.au` 那一段加到实际占用 80/443 的 Caddy 里（Caddy 自动申请证书），重载 Caddy。`flush_interval -1` 让视频流边收边发，不要删。
+4. 运行 `deploy/deploy.sh`，日志里应该能看到 watch server 的监听信息。
+
+**部署备注**（2026-10-23 在生产服务器上实测）：
+
+- 服务器在新加坡。B 站接口需要 buvid3 和 WBI 签名，代码里已经处理。
+- 当前生产机的 80/443 端口被另一个项目的 Caddy 容器占着，所以 `watch.pigdogie.com.au` 的站点块要加到实际服务 80/443 的那个 Caddy 里。如果那个 Caddy 在容器里，它必须能访问到 bot 的 8080 端口，例如加入共用的 docker 网络，或者用宿主机网关地址（此时 `reverse_proxy` 的目标和 `compose.yml` 的端口映射要对应调整）。
 
 ### 功能许愿频道
 
@@ -473,6 +499,10 @@ python tests/test_live.py         # 开播通知：B 站链接和接口解析、
 python tests/test_patchnotes.py   # 官方补丁说明解析、推送频道、问答工具、patches 指令
 python tests/test_wishes.py     # 功能许愿：每日限额、存档导出、表单提交、入口消息、方案起草与修改
 python tests/test_announce.py   # 多语言公告：分段、翻译、预览、发布、语言按钮
+python tests/test_watch_rooms.py   # 一起看：房间状态、权限、房主交接、过期
+python tests/test_watch_sources.py # 一起看：链接解析、B 站取流、YouTube 信息
+python tests/test_watch_server.py  # 一起看：HTTP 路由、WebSocket 协议、B 站转流
+python tests/test_watch_bot.py     # 一起看：指令、房间卡片、房主按钮
 ```
 
 每个脚本最后一行显示 `N/N passed`，全部通过时退出码为 0。
