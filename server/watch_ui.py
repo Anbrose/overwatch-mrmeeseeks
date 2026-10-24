@@ -5,6 +5,8 @@
 - WatchUI.on_change 登记在 RoomManager.listeners 里（同步回调），卡片编辑交给事件循环异步执行：
   同一房间距上次编辑不到 MIN_EDIT_INTERVAL 秒就排一次延后编辑，期间的变化合并（编辑时才读房间状态）。
   closed 立即编辑成"已结束"、去掉按钮，并从 CardStore 删除。
+- 按片名搜索：bot 发出带 PickSelect（DynamicItem，custom_id `watch:pick:<token>`）的结果消息，WatchUI.pending 记着待选项；
+  只有发起人能选，选一次就作废（on_pick 在第一个 await 之前就标记 done），2 分钟没选消息改成"选择已过期"。
 - CardStore（STATE_DIR/watch_cards.json）记下还开着的房间卡片；房间都在内存里，重启后 bot 把这些卡片编辑成
   "已结束（服务器重启）"。
 """
@@ -16,11 +18,14 @@ import logging
 import os
 import re
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Awaitable, Callable
 
 import discord
 
+from vod_search import Show
+from watch_progress import ProgressStore
 from watch_rooms import Room, RoomManager
 
 log = logging.getLogger("mrmeeseeks.watch_ui")
@@ -32,6 +37,12 @@ TITLE_MAX = 200
 NOT_ENABLED = "一起看功能没有启用。"
 NOT_HOST = "你不是这个房间的房主。"
 ROOM_GONE = "这个房间已经结束了。"
+PICK_TEMPLATE = r"watch:pick:(?P<token>[A-Za-z0-9_-]{8,32})"
+PICK_TIMEOUT = 120.0
+PICK_EXPIRED = "选择已过期"
+PICK_GONE = "已过期，请重新搜索"
+PICK_NOT_REQUESTER = "只有发起人能选"
+OPTION_MAX = 100
 
 
 def fmt_time(seconds: float) -> str:
@@ -69,7 +80,11 @@ def card_text(room: Room, now: float, ended: bool = False, reason: str = "") -> 
         state = "⏹ 已播完"
     else:
         state = "▶ 播放中" if room.playback.playing else "⏸ 已暂停"
-    source = SOURCE_LABEL.get(room.video.source, room.video.source)
+    vod = room.video.vod
+    if vod is not None and 0 <= vod.line < len(vod.show.lines):
+        source = f"片源：{vod.show.lines[vod.line].name}"
+    else:
+        source = SOURCE_LABEL.get(room.video.source, room.video.source)
     return (f"🎬 **一起看**\n"
             f"正在播放：**{title}**（{source}）\n"
             f"{state} {pos} · 👥 {room.viewer_count()} 人在看\n"
@@ -105,6 +120,64 @@ def build_view(room: Room, public_url: str) -> discord.ui.View:
     view.add_item(discord.ui.Button(label="进入房间", style=discord.ButtonStyle.link,
                                     url=room_url(public_url, room.room_id)))
     view.add_item(HostButton(room.room_id))
+    return view
+
+
+@dataclass
+class PendingSearch:
+    token: str
+    requester_id: int
+    query: str
+    shows: list[Show]
+    channel_id: int
+    message_id: int | None
+    origin_message: discord.Message
+    created_at: float
+    done: bool = False
+
+
+def option_label(show: Show) -> str:
+    parts = [show.title]
+    if show.year:
+        parts.append(str(show.year))
+    if show.type_name:
+        parts.append(show.type_name)
+    parts.append(f"{show.episode_count} 集")
+    return " · ".join(parts)[:OPTION_MAX]
+
+
+def search_header(query: str, mention: str) -> str:
+    return f"🔎 「{query}」的搜索结果（只有 {mention} 能选，2 分钟内有效）"
+
+
+class PickSelect(discord.ui.DynamicItem[discord.ui.Select], template=PICK_TEMPLATE):
+    handler: "WatchUI | None" = None     # bot 启动时设置
+
+    def __init__(self, token: str, options: list[discord.SelectOption] | None = None):
+        super().__init__(discord.ui.Select(custom_id=f"watch:pick:{token}", placeholder="选一个",
+                                           options=options or []))
+        self.token = token
+
+    @classmethod
+    async def from_custom_id(cls, interaction: discord.Interaction, item: discord.ui.Select,
+                             match: re.Match[str]) -> "PickSelect":
+        return cls(match["token"], item.options)
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if PickSelect.handler is None:
+            await interaction.response.send_message(NOT_ENABLED, ephemeral=True)
+            return
+        await PickSelect.handler.on_pick(interaction, self.token)
+
+
+def build_pick_view(p: PendingSearch, progress: ProgressStore | None) -> discord.ui.View:
+    options = []
+    for i, show in enumerate(p.shows):
+        seen = progress.get(p.channel_id, show.key) if progress is not None else None
+        options.append(discord.SelectOption(label=option_label(show), value=str(i),
+                                            description=f"上次看到第 {seen.episode + 1} 集" if seen else None))
+    view = discord.ui.View(timeout=None)
+    view.add_item(PickSelect(p.token, options))
     return view
 
 
@@ -167,6 +240,8 @@ class WatchUI:
         self.clock = rooms.clock
         self.min_edit_interval, self.sleep = min_edit_interval, sleep
         self.edit: EditFn | None = None          # bot 注入 (channel_id, message_id, text, view)
+        self.create_vod_room: Callable[[PendingSearch, int], Awaitable[None]] | None = None   # bot 注入
+        self.pending: dict[str, PendingSearch] = {}
         self._last_edit: dict[str, float] = {}
         self._pending: dict[str, asyncio.Task] = {}
         self._tasks: set[asyncio.Task] = set()   # 保留引用，避免任务被回收
@@ -188,6 +263,46 @@ class WatchUI:
         await interaction.response.send_message(
             f"你的房主链接（别发给别人，只能用一次）：\n{room_url(self.public_url, room.room_id)}?k={room.owner_key}",
             ephemeral=True)
+
+    # ---------------- 搜索选单 ----------------
+    def add_search(self, p: PendingSearch) -> None:
+        self.pending[p.token] = p
+        self._spawn(self._expire(p))
+
+    async def _expire(self, p: PendingSearch) -> None:
+        await self.sleep(PICK_TIMEOUT)
+        self.pending.pop(p.token, None)
+        if p.done or self.edit is None or p.message_id is None:
+            return
+        p.done = True
+        try:
+            await self.edit(p.channel_id, p.message_id, PICK_EXPIRED, None)
+        except Exception:
+            log.exception("Could not expire search message %s", p.message_id)
+
+    async def on_pick(self, interaction: discord.Interaction, token: str) -> None:
+        p = self.pending.get(token)
+        if p is None or p.done:
+            await interaction.response.send_message(PICK_GONE, ephemeral=True)
+            return
+        if interaction.user.id != p.requester_id:
+            await interaction.response.send_message(PICK_NOT_REQUESTER, ephemeral=True)
+            return
+        try:
+            index = int(interaction.data["values"][0])
+            if not 0 <= index < len(p.shows):
+                raise ValueError(index)
+        except (KeyError, IndexError, TypeError, ValueError):
+            await interaction.response.send_message(PICK_GONE, ephemeral=True)
+            return
+        p.done = True            # 第一个 await 之前就占位：连点只有一次生效
+        await interaction.response.defer()
+        if self.create_vod_room is None:
+            return
+        try:
+            await self.create_vod_room(p, index)
+        except Exception:
+            log.exception("Could not create a vod room for %r", p.query)
 
     # ---------------- 卡片编辑 ----------------
     def _spawn(self, coro) -> asyncio.Task | None:

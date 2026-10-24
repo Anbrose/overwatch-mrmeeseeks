@@ -14,7 +14,7 @@
   @mrmeeseeks esports here|off|status  赛事推送的默认频道，见 esports_feed.py
   @mrmeeseeks region <赛区> [off]       把当前频道绑定成某赛区的频道（赛事推送和开播通知共用），见 regions.py
   @mrmeeseeks live add|remove|list     按赛区登记 B 站直播间，开播时通知，见 live_watch.py
-  @mrmeeseeks 一起看 <链接>            开一起看房间（B 站 / YouTube 同步播放，也可写 watch），见 watch_ui.py
+  @mrmeeseeks 一起看 <链接或片名>      开一起看房间（B 站 / YouTube 链接，或按片名搜影视；也可写 watch），见 watch_ui.py
   @mrmeeseeks <问题>     英雄问答（数值、补丁、几枪击杀），见 hero_qa.py
 
 功能许愿频道（WISH_CHANNEL_ID）只接受表单提交，见 wishes.py；许愿子区里的 @ 用来改方案，见 wish_plan.py。
@@ -27,6 +27,7 @@ import json
 import logging
 import os
 import re
+import secrets
 import time
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -65,10 +66,14 @@ from vision.text import load_maps
 from wish_plan import WishPlanner, WishPlans
 from wishes import (WISH_DAILY_LIMIT, WishDesk, WishEntryView, WishLog, WishQuota, ensure_entry, export_csv, parse_export_args,
                     parse_games, select_wishes, vote_count)
+from vod_playlist import PlaylistError
+from vod_search import SearchUnavailable, VodSearch, parse_sources_env
+from watch_progress import ProgressRecorder, ProgressStore
 from watch_rooms import RoomManager, RoomsFull
 from watch_server import WatchServer
 from watch_sources import QUALITY_QN, Sources, VideoUnavailable, find_link
-from watch_ui import CardStore, HostButton, WatchUI, card_text, build_view as build_watch_view
+from watch_ui import (CardStore, HostButton, PendingSearch, PickSelect, WatchUI, build_pick_view, search_header,
+                      card_text, build_view as build_watch_view)
 from ws_server import WSServer
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
@@ -96,7 +101,7 @@ HELP_TEXT = (
     "`live remove <url>`, `live list`\n"
     "`@mrmeeseeks patches here` / `patches off` Post a summary of each new official Overwatch patch in this channel "
     "(needs Manage Channels); `patches status` shows the latest patch\n"
-    "`@mrmeeseeks 一起看 <Bilibili or YouTube link>` (or `watch`) Open a watch-together room with synced playback\n"
+    "`@mrmeeseeks 一起看 <Bilibili/YouTube link or show name>` (or `watch`) Open a watch-together room with synced playback\n"
     "`@mrmeeseeks help` Show this help\n"
     "`@mrmeeseeks wishes [game] [7d]` (admins) Get feature wishes with their votes as a CSV by DM\n"
     "`@mrmeeseeks announce` (admins) Post an announcement with buttons to read it in "
@@ -109,7 +114,7 @@ ARG_COMMANDS = ("player", "esports", "patches", "wishes", "region", "live", "pre
 LIVE_USAGE = ("Usage: `@mrmeeseeks live add <region> <Bilibili room url or id> [label]`, "
               "`live remove <room url or id>` or `live list`. Bind the region's channel first with `@mrmeeseeks region <region>`.")
 ASK_COOLDOWN_SECONDS = 5
-WATCH_USAGE = "用法：@mrmeeseeks 一起看 <B站或YouTube链接>"
+WATCH_USAGE = "用法：@mrmeeseeks 一起看 <B站或YouTube链接 或 片名>"
 _WATCH_PREFIX = re.compile(r"watch(?=\s|http)", re.IGNORECASE)     # \s 含全角空格
 
 
@@ -211,6 +216,9 @@ class ClientSelectView(discord.ui.View):
 class MeeseeksBot(discord.Client):
     watch_ui: WatchUI | None = None          # 一起看：没设置 WATCH_PUBLIC_URL 时为 None
     watch_sources: Sources | None = None
+    vod_search: VodSearch | None = None
+    watch_server: WatchServer | None = None
+    progress: ProgressStore | None = None
     _watch_ready = False
 
     def __init__(self, registry: Registry, analyzer: Analyzer | None, recognizer: Recognizer,
@@ -222,7 +230,9 @@ class MeeseeksBot(discord.Client):
                  regions: RegionStore | None = None, live_watcher: LiveWatcher | None = None,
                  live_notify_offline: bool = False, predictions: pr.PredictionStore | None = None,
                  prediction_ui: PredictionUI | None = None, announce_desk: AnnounceDesk | None = None,
-                 watch_ui: WatchUI | None = None, watch_sources: Sources | None = None):
+                 watch_ui: WatchUI | None = None, watch_sources: Sources | None = None,
+                 vod_search: VodSearch | None = None, watch_server: WatchServer | None = None,
+                 progress: ProgressStore | None = None):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents, allowed_mentions=discord.AllowedMentions(everyone=False, roles=False))
@@ -254,8 +264,10 @@ class MeeseeksBot(discord.Client):
         self.announce_desk = announce_desk
         self.watch_ui = watch_ui
         self.watch_sources = watch_sources
+        self.vod_search, self.watch_server, self.progress = vod_search, watch_server, progress
         if watch_ui is not None:
             watch_ui.edit = self.edit_watch
+            watch_ui.create_vod_room = self._create_vod_room
 
     def hero_name(self, key: str) -> str:
         return self.names.get(key) or overfast.hero_name(key)
@@ -274,7 +286,9 @@ class MeeseeksBot(discord.Client):
             self.add_dynamic_items(LangButton)      # 公告的语言按钮：重启前发的公告照样能点
         if self.watch_ui:
             HostButton.handler = self.watch_ui
-            self.add_dynamic_items(HostButton)      # 一起看的「我是房主」按钮
+            PickSelect.handler = self.watch_ui
+            self.watch_ui.create_vod_room = self._create_vod_room
+            self.add_dynamic_items(HostButton, PickSelect)      # 一起看的「我是房主」按钮和搜索选单
 
     async def on_ready(self) -> None:
         log.info("Logged in to Discord as %s", self.user)
@@ -575,7 +589,7 @@ class MeeseeksBot(discord.Client):
             await message.reply("一起看功能没有启用。")
             return
         if find_link(arg) is None:
-            await message.reply(WATCH_USAGE)
+            await self._watch_search(message, arg)
             return
         try:
             video = await sources.resolve(arg)
@@ -595,6 +609,52 @@ class MeeseeksBot(discord.Client):
             return
         room.message_id = card.id
         ui.cards.add(message.channel.id, card.id)
+
+    async def _watch_search(self, message: discord.Message, arg: str) -> None:
+        ui, search = self.watch_ui, self.vod_search
+        if search is None or self.watch_server is None:
+            await message.reply("按片名搜索没有启用，请贴 B 站或 YouTube 链接")
+            return
+        if not 1 <= len(arg) <= 50:
+            await message.reply(WATCH_USAGE)
+            return
+        try:
+            shows = await search.search(arg)
+        except SearchUnavailable as e:
+            await message.reply(e.message)
+            return
+        if not shows:
+            await message.reply(f"没找到「{arg}」")
+            return
+        p = PendingSearch(secrets.token_urlsafe(12), message.author.id, arg, shows, message.channel.id, None,
+                          message, ui.clock())
+        sent = await message.reply(search_header(arg, message.author.mention), view=build_pick_view(p, self.progress),
+                                   allowed_mentions=discord.AllowedMentions.none())
+        p.message_id = sent.id
+        ui.add_search(p)
+
+    async def _create_vod_room(self, p: PendingSearch, index: int) -> None:
+        ui, server = self.watch_ui, self.watch_server
+        show = p.shows[index]
+        resume = self.progress.get(p.channel_id, show.key) if self.progress is not None else None
+        try:
+            video, playlist = await server.prepare_vod(show, 0, resume=resume)
+        except PlaylistError as e:
+            await ui.edit(p.channel_id, p.message_id, e.message, None)
+            return
+        room = ui.rooms.create(p.channel_id, p.requester_id, p.origin_message.author.display_name, video)
+        server.attach_playlist(room, playlist)
+        await ui.edit(p.channel_id, p.message_id, f"已选择：{show.title}", None)
+        try:
+            card = await p.origin_message.reply(card_text(room, ui.rooms.clock()),
+                                                view=build_watch_view(room, ui.public_url),
+                                                allowed_mentions=discord.AllowedMentions.none())
+        except discord.HTTPException:
+            log.exception("Could not post the watch card in channel %s", p.channel_id)
+            ui.rooms.close(room.room_id)
+            return
+        room.message_id = card.id
+        ui.cards.add(p.channel_id, card.id)
 
     async def _predictions(self, message: discord.Message, arg: str) -> None:
         store = self.predictions
@@ -976,7 +1036,7 @@ async def main() -> None:
 
     # 一起看：设置了 WATCH_PUBLIC_URL（网页的公网地址）才启用
     watch_url = os.environ.get("WATCH_PUBLIC_URL", "").strip().rstrip("/")
-    watch_ui = watch_sources = watch_server = None
+    watch_ui = watch_sources = watch_server = vod_search = progress = None
     if watch_url:
         sessdata = os.environ.get("BILIBILI_SESSDATA", "").strip()
         if not sessdata:
@@ -987,8 +1047,13 @@ async def main() -> None:
             quality = "1080"
         watch_rooms = RoomManager(max_bili_rooms=int(os.environ.get("WATCH_MAX_BILI_ROOMS", "").strip() or "2"))
         watch_sources = Sources(sessdata or None, QUALITY_QN[quality])
+        vod_sources = parse_sources_env(os.environ.get("WATCH_VOD_SOURCES"))
+        vod_search = VodSearch(vod_sources) if vod_sources else None
+        progress = ProgressStore(state_dir / "watch_progress.json")
+        recorder = ProgressRecorder(watch_rooms, progress)
         watch_server = WatchServer(watch_rooms, watch_sources, host=os.environ.get("WATCH_HOST", "").strip() or "0.0.0.0",
-                                   port=int(os.environ.get("WATCH_PORT", "").strip() or "8080"))
+                                   port=int(os.environ.get("WATCH_PORT", "").strip() or "8080"),
+                                   origin=watch_url, progress=progress, recorder=recorder)
         watch_ui = WatchUI(watch_rooms, watch_url, CardStore(state_dir / "watch_cards.json"))
         log.info("Watch together enabled at %s (max quality %s)", watch_url, quality)
 
@@ -997,7 +1062,8 @@ async def main() -> None:
                       int(wish_channel) if wish_channel else None, wish_desk, wish_plans, patch_feed,
                       regions=regions, live_watcher=live_watcher, live_notify_offline=live_notify_offline,
                       predictions=prediction_store, prediction_ui=PredictionUI(prediction_store),
-                      announce_desk=announce_desk, watch_ui=watch_ui, watch_sources=watch_sources)
+                      announce_desk=announce_desk, watch_ui=watch_ui, watch_sources=watch_sources,
+                      vod_search=vod_search, watch_server=watch_server, progress=progress)
     patch_feed.icons = HeroEmojis(bot).for_patch     # 补丁摘要里英雄名旁边的头像
     ws = WSServer(
         registry, bot,
