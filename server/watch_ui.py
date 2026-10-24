@@ -282,11 +282,14 @@ class WatchUI:
 
     async def on_pick(self, interaction: discord.Interaction, token: str) -> None:
         p = self.pending.get(token)
-        if p is None or p.done:
+        if p is None:
             await interaction.response.send_message(PICK_GONE, ephemeral=True)
             return
         if interaction.user.id != p.requester_id:
             await interaction.response.send_message(PICK_NOT_REQUESTER, ephemeral=True)
+            return
+        if p.done:
+            await interaction.response.send_message(PICK_GONE, ephemeral=True)
             return
         try:
             index = int(interaction.data["values"][0])

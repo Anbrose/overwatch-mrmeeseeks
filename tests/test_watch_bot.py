@@ -571,6 +571,68 @@ def test_pick_twice_unknown_unplayable():
           and len(msg.replies) == 1)
 
 
+def test_pick_failures():
+    # 搜索消息编辑失败：卡片照发、房间保持开着
+    b, ui, rooms, clock, edits, ws, msg = setup_search()
+
+    async def boom(*a):
+        raise discord.HTTPException(NS(status=404, reason="Not Found"), "gone")
+    ui.edit = boom
+
+    async def go(uid=42):
+        it, sent = make_pick_interaction(uid)
+        await ui.on_pick(it, token_of(msg))
+        return sent
+    asyncio.run(go())
+    room = rooms.active()[0] if rooms.active() else None
+    check("搜索消息编辑失败仍发卡片并保持房间", room is not None and len(msg.replies) == 2
+          and room.message_id == 7002 and ui.cards.all() == [(555, 7002)])
+    sent = asyncio.run(go(7))
+    check("选过之后别人点仍提示只有发起人能选", sent.content == "只有发起人能选")
+    sent = asyncio.run(go(42))
+    check("选过之后发起人再点提示已过期", sent.content == "已过期，请重新搜索")
+
+    # 卡片发不出去：关房
+    b, ui, rooms, clock, edits, ws, msg = setup_search()
+
+    async def fail_reply(content, view=None, allowed_mentions=None):
+        raise discord.HTTPException(NS(status=403, reason="Forbidden"), "no perms")
+    msg.reply = fail_reply
+
+    async def go2():
+        it, _ = make_pick_interaction(42)
+        await ui.on_pick(it, token_of_saved)
+    token_of_saved = list(ui.pending)[0]
+    asyncio.run(go2())
+    check("卡片发送失败就关房", rooms.active() == [] and ui.cards.all() == [])
+
+    # 意外错误：搜索消息改成通用提示
+    b, ui, rooms, clock, edits, ws, msg = setup_search(ws=FakeWatchServer(RuntimeError("boom")))
+    tok = token_of(msg)
+
+    async def go3():
+        it, _ = make_pick_interaction(42)
+        await ui.on_pick(it, tok)
+    asyncio.run(go3())
+    check("意外错误给通用提示", rooms.active() == [] and edits == [(555, 7001, "出错了，请稍后再试", None)])
+
+    # 回复的 allowed_mentions
+    ui, rooms, _, _ = make_ui()
+    b = make_bot(ui, FakeSources(yt()), FakeVodSearch([]), FakeWatchServer())
+    msg = FakeMessage()
+    asyncio.run(b._watch(msg, "@everyone"))
+    check("没找到不 ping", msg.replies[0][2] is not None and msg.replies[0][2].everyone is False)
+    b = make_bot(ui, FakeSources(yt()), FakeVodSearch([show()]), FakeWatchServer())
+    msg = FakeMessage()
+    msg.author.mention = "<@1>"
+
+    async def fail_menu(content, view=None, allowed_mentions=None):
+        raise discord.HTTPException(NS(status=403, reason="Forbidden"), "no perms")
+    msg.reply = fail_menu
+    asyncio.run(b._watch(msg, "绝命毒师"))
+    check("选单发不出去就不登记", ui.pending == {})
+
+
 def test_pick_timeout():
     ui, rooms, clock, edits = make_ui()
     b = make_bot(ui, FakeSources(yt()), FakeVodSearch([show()]), FakeWatchServer())
@@ -638,6 +700,7 @@ if __name__ == "__main__":
     test_pick_flow()
     test_pick_resume()
     test_pick_twice_unknown_unplayable()
+    test_pick_failures()
     test_pick_timeout()
     test_pick_select_item()
     test_watch_link_unchanged()

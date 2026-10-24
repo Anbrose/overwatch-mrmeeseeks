@@ -624,12 +624,17 @@ class MeeseeksBot(discord.Client):
             await message.reply(e.message)
             return
         if not shows:
-            await message.reply(f"没找到「{arg}」")
+            await message.reply(f"没找到「{arg}」", allowed_mentions=discord.AllowedMentions.none())
             return
         p = PendingSearch(secrets.token_urlsafe(12), message.author.id, arg, shows, message.channel.id, None,
                           message, ui.clock())
-        sent = await message.reply(search_header(arg, message.author.mention), view=build_pick_view(p, self.progress),
-                                   allowed_mentions=discord.AllowedMentions.none())
+        try:
+            sent = await message.reply(search_header(arg, message.author.mention),
+                                       view=build_pick_view(p, self.progress),
+                                       allowed_mentions=discord.AllowedMentions.none())
+        except discord.HTTPException:
+            log.exception("Could not post the search results in channel %s", message.channel.id)
+            return
         p.message_id = sent.id
         ui.add_search(p)
 
@@ -639,12 +644,15 @@ class MeeseeksBot(discord.Client):
         resume = self.progress.get(p.channel_id, show.key) if self.progress is not None else None
         try:
             video, playlist = await server.prepare_vod(show, 0, resume=resume)
+            room = ui.rooms.create(p.channel_id, p.requester_id, p.origin_message.author.display_name, video)
         except PlaylistError as e:
-            await ui.edit(p.channel_id, p.message_id, e.message, None)
+            await self._edit_search(p, e.message)
             return
-        room = ui.rooms.create(p.channel_id, p.requester_id, p.origin_message.author.display_name, video)
+        except Exception:
+            log.exception("Could not prepare a vod room for %r", show.title)
+            await self._edit_search(p, "出错了，请稍后再试")
+            return
         server.attach_playlist(room, playlist)
-        await ui.edit(p.channel_id, p.message_id, f"已选择：{show.title}", None)
         try:
             card = await p.origin_message.reply(card_text(room, ui.rooms.clock()),
                                                 view=build_watch_view(room, ui.public_url),
@@ -652,9 +660,18 @@ class MeeseeksBot(discord.Client):
         except discord.HTTPException:
             log.exception("Could not post the watch card in channel %s", p.channel_id)
             ui.rooms.close(room.room_id)
+            await self._edit_search(p, "出错了，请稍后再试")
             return
         room.message_id = card.id
         ui.cards.add(p.channel_id, card.id)
+        await self._edit_search(p, f"已选择：{show.title}")
+
+    async def _edit_search(self, p: PendingSearch, text: str) -> None:
+        """改搜索结果消息（去掉选单），尽力而为：失败只记日志。"""
+        try:
+            await self.watch_ui.edit(p.channel_id, p.message_id, text, None)
+        except Exception:
+            log.exception("Could not edit search message %s", p.message_id)
 
     async def _predictions(self, message: discord.Message, arg: str) -> None:
         store = self.predictions
