@@ -3,8 +3,9 @@
 浏览器直接从第三方 CDN 拉 HLS 片段，我们的服务器只负责取 m3u8 文本并改写：
 - fetch_playlist：取 m3u8（master 就再跟进一层最高码率的变体），改写成全绝对 https 地址。
 - rewrite_media：把所有 URI 变成绝对地址，按规则去掉片源中途插入的广告，从保留的 EXTINF 累加时长。
-- probe：像浏览器一样（带 Origin 的 Range 请求）试取第一个片段，确认 CDN 允许跨域且能播。
-- find_playable：从指定片源线路开始，找第一条能播这一集的线路。
+- probe：像浏览器一样（带 Origin 的 Range 请求）试取第一个片段，确认 CDN 允许跨域且能播；不能播返回原因。
+- find_playable：从指定片源线路开始，找第一条能播这一集的线路；每条线路跳过的原因进日志，
+  全都不能播时按线路列在 PlaylistError.detail 里（用户看到「这一集暂时没有能播的片源（线路：原因；…）」）。
 
 广告规则：按 #EXT-X-DISCONTINUITY 切块，总时长最大的块是正片；一个块是广告，当且仅当
 总时长 < AD_MAX_SECONDS，并且（它的 EXTINF 序列在整份列表里作为整块出现不止一次，
@@ -13,6 +14,7 @@
 只认 https：任何改写后不是 https 的地址都当作不能播。allow_http 参数只给测试连本地
 127.0.0.1 用，生产调用方不要传。
 """
+import asyncio
 import logging
 import re
 import urllib.parse
@@ -30,6 +32,7 @@ MAX_PLAYLIST_BYTES = 2 * 1024 * 1024
 NO_PLAYABLE = "这一集暂时没有能播的片源"
 FETCH_TIMEOUT = aiohttp.ClientTimeout(total=10)
 PROBE_TIMEOUT = aiohttp.ClientTimeout(total=8)
+DETAIL_MAX_CHARS = 400
 
 _URI_ATTR = re.compile(r'URI="([^"]*)"')
 _BANDWIDTH = re.compile(r"BANDWIDTH=(\d+)")
@@ -37,11 +40,18 @@ _EXTINF = re.compile(r"#EXTINF:\s*([0-9.]+)")
 
 
 class PlaylistError(Exception):
-    """m3u8 取不到或不能用，message 可直接展示给用户。"""
+    """m3u8 取不到或不能用。message 可直接展示给用户；detail 是具体原因（哪条线路、哪一步、HTTP 码、域名），
+    给排查用，也可以跟在 message 后面展示。"""
 
-    def __init__(self, message: str):
+    def __init__(self, message: str, detail: str = ""):
         super().__init__(message)
         self.message = message
+        self.detail = detail
+
+    @property
+    def text(self) -> str:
+        """message，有 detail 时带括号附上。"""
+        return f"{self.message}（{self.detail}）" if self.detail else self.message
 
 
 @dataclass
@@ -61,6 +71,10 @@ def _absolutize(ref: str, base_url: str) -> str:
 
 def _is_https(url: str) -> bool:
     return urllib.parse.urlsplit(url).scheme == "https"
+
+
+def _host(url: str) -> str:
+    return urllib.parse.urlsplit(url).netloc or url[:60]
 
 
 def _directory(url: str) -> str:
@@ -137,7 +151,7 @@ def rewrite_media(text: str, base_url: str, allow_http: bool = False) -> Playlis
 
     content = [b for b in blocks if b.segments]
     if not content:
-        raise PlaylistError(NO_PLAYABLE)
+        raise PlaylistError(NO_PLAYABLE, "m3u8 里没有片段")
     main = max(content, key=lambda b: b.total)
     main_dir = _directory(main.segments[0].url)
     seen: dict[tuple, int] = {}
@@ -164,13 +178,13 @@ def rewrite_media(text: str, base_url: str, allow_http: bool = False) -> Playlis
             else:
                 out.append(e)
     if not duration > 0:
-        raise PlaylistError(NO_PLAYABLE)    # 没有时长会立刻“播完”，自动下一集会一路跳过
+        raise PlaylistError(NO_PLAYABLE, "m3u8 总时长为 0")    # 没有时长会立刻“播完”，自动下一集会一路跳过
     return Playlist("\n".join(out) + "\n", duration, first, removed)
 
 
 def _checked(url: str, allow_http: bool) -> str:
     if not (_is_https(url) or (allow_http and urllib.parse.urlsplit(url).scheme == "http")):
-        raise PlaylistError(NO_PLAYABLE)
+        raise PlaylistError(NO_PLAYABLE, f"地址不是 https：{_host(url)}")
     return url
 
 
@@ -183,27 +197,35 @@ def _check_redirects(resp, allow_http: bool) -> str:
 
 async def _get_text(session: aiohttp.ClientSession, url: str, allow_http: bool = False) -> tuple[str, str]:
     """取 m3u8 文本，返回 (文本, 跳转后的最终地址)；相对地址要按最终地址解析。"""
+    host = _host(url)
     try:
         async with session.get(url, headers={"User-Agent": USER_AGENT}, timeout=FETCH_TIMEOUT) as resp:
             final_url = _check_redirects(resp, allow_http)
             if resp.status != 200:
-                raise PlaylistError(NO_PLAYABLE)
+                raise PlaylistError(NO_PLAYABLE, f"m3u8 HTTP {resp.status}（{host}）")
             if resp.content_length is not None and resp.content_length > MAX_PLAYLIST_BYTES:
-                raise PlaylistError(NO_PLAYABLE)
+                raise PlaylistError(NO_PLAYABLE, f"m3u8 超过 {MAX_PLAYLIST_BYTES // 1024 // 1024} MB（{host}）")
             body = bytearray()
             async for chunk in resp.content.iter_chunked(65536):
                 body += chunk
                 if len(body) > MAX_PLAYLIST_BYTES:
-                    raise PlaylistError(NO_PLAYABLE)
+                    raise PlaylistError(NO_PLAYABLE, f"m3u8 超过 {MAX_PLAYLIST_BYTES // 1024 // 1024} MB（{host}）")
     except PlaylistError:
         raise
     except Exception as e:
-        log.warning("m3u8 fetch failed: %s", type(e).__name__)
-        raise PlaylistError(NO_PLAYABLE) from e
+        log.warning("m3u8 fetch failed: %s (%s)", _error_name(e), host)
+        raise PlaylistError(NO_PLAYABLE, f"m3u8 取不到：{_error_name(e)}（{host}）") from e
     text = bytes(body).decode("utf-8", errors="replace").lstrip("\ufeff")
     if not text.lstrip().startswith("#EXTM3U"):
-        raise PlaylistError(NO_PLAYABLE)
+        raise PlaylistError(NO_PLAYABLE, f"m3u8 内容不是 M3U 格式（{host}）")
     return text, final_url
+
+
+def _error_name(e: BaseException) -> str:
+    """异常的简短名字；超时最常见，翻成中文。不带 url 之类的细节。"""
+    if isinstance(e, (TimeoutError, asyncio.TimeoutError)):
+        return "超时"
+    return type(e).__name__
 
 
 async def fetch_playlist(session: aiohttp.ClientSession, url: str, allow_http: bool = False) -> Playlist:
@@ -217,36 +239,59 @@ async def fetch_playlist(session: aiohttp.ClientSession, url: str, allow_http: b
     return rewrite_media(text, final, allow_http)
 
 
-async def probe(session: aiohttp.ClientSession, playlist: Playlist, origin: str, allow_http: bool = False) -> bool:
-    """像浏览器一样试取第一个片段：状态 200/206、跳转链全是 https 且 CORS 允许这个 origin。永不抛异常。
-    allow_http 仅供测试。"""
+async def probe(session: aiohttp.ClientSession, playlist: Playlist, origin: str,
+                allow_http: bool = False) -> str | None:
+    """像浏览器一样试取第一个片段：状态 200/206、跳转链全是 https 且 CORS 允许这个 origin。
+    能播返回 None，否则返回原因（给日志和提示用）。永不抛异常。allow_http 仅供测试。"""
+    if not playlist.first_segment:
+        return "m3u8 里没有片段"
+    host = _host(playlist.first_segment)
     try:
-        if not playlist.first_segment:
-            return False
+        _checked(playlist.first_segment, allow_http)
         headers = {"User-Agent": USER_AGENT, "Range": "bytes=0-1023", "Origin": origin}
         async with session.get(playlist.first_segment, headers=headers, timeout=PROBE_TIMEOUT) as resp:
             _check_redirects(resp, allow_http)
             if resp.status not in (200, 206):
-                return False
+                return f"片段 HTTP {resp.status}（{host}）"
             await resp.content.read(1024)
-            return resp.headers.get("Access-Control-Allow-Origin") in ("*", origin)
-    except Exception:
-        return False
+            acao = resp.headers.get("Access-Control-Allow-Origin")
+            if acao in ("*", origin):
+                return None
+            return f"片段不允许跨域（CORS {acao or '无'}，{host}）"
+    except PlaylistError as e:
+        return e.detail
+    except Exception as e:
+        return f"片段取不到：{_error_name(e)}（{host}）"
 
 
 async def find_playable(session: aiohttp.ClientSession, show: Show, episode: int, start_line: int,
                         origin: str, allow_http: bool = False) -> tuple[int, Playlist]:
-    """从 start_line 起绕一圈，找第一条有这一集、m3u8 能取、片段能探测通的线路。"""
+    """从 start_line 起绕一圈，找第一条有这一集、m3u8 能取、片段能探测通的线路。
+    每条线路跳过的原因记进日志；全都不能播时，原因按线路列在 PlaylistError.detail 里。"""
     n = len(show.lines)
+    reasons: list[str] = []
     for k in range(n):
         idx = (start_line + k) % n
-        eps = show.lines[idx].episodes
+        line = show.lines[idx]
+        eps = line.episodes
         if not 0 <= episode < len(eps):
-            continue
-        try:
-            pl = await fetch_playlist(session, eps[episode].url, allow_http)
-        except PlaylistError:
-            continue
-        if await probe(session, pl, origin, allow_http):
-            return idx, pl
-    raise PlaylistError(NO_PLAYABLE)
+            reason = f"没有第 {episode + 1} 集"
+        else:
+            try:
+                pl = await fetch_playlist(session, eps[episode].url, allow_http)
+            except PlaylistError as e:
+                reason = e.detail or "m3u8 不能用"
+            else:
+                reason = await probe(session, pl, origin, allow_http)
+                if reason is None:
+                    log.info("watch vod %r ep %d: line %s playable", show.title, episode + 1, line.name)
+                    return idx, pl
+        log.info("watch vod %r ep %d: line %s skipped: %s", show.title, episode + 1, line.name, reason)
+        reasons.append(f"{line.name}：{reason}")
+    raise PlaylistError(NO_PLAYABLE, join_reasons(reasons))
+
+
+def join_reasons(reasons: list[str], limit: int = DETAIL_MAX_CHARS) -> str:
+    """按线路列出原因，太长就截断（Discord 消息和网页提示都不宜太长）。"""
+    text = "；".join(reasons) if reasons else "没有片源线路"
+    return text if len(text) <= limit else text[:limit - 1] + "…"

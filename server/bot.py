@@ -646,7 +646,7 @@ class MeeseeksBot(discord.Client):
             video, playlist = await server.prepare_vod(show, 0, resume=resume)
             room = ui.rooms.create(p.channel_id, p.requester_id, p.origin_message.author.display_name, video)
         except PlaylistError as e:
-            await self._edit_search(p, e.message)
+            await self._edit_search(p, e.text)      # 带上每条线路不能播的原因
             return
         except Exception:
             log.exception("Could not prepare a vod room for %r", show.title)

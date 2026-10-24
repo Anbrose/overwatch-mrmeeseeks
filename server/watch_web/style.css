@@ -99,6 +99,8 @@ button, input { font: inherit; color: inherit; }
   color: var(--muted);
   text-align: center;
   padding: 0 16px;
+  white-space: pre-line;    /* 失败原因分行显示 */
+  overflow-wrap: anywhere;
   pointer-events: none;
 }
 .start {

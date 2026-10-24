@@ -5,6 +5,7 @@
 """
 import asyncio
 import json
+import logging
 import os
 import sys
 import time
@@ -707,7 +708,9 @@ async def test_vod_playlist_route():
         server._playlists.clear()
         up.dead_lines.add("l0")
         r = await client.get(f"/vod/{rid}/0/index.m3u8")
-        check("重取失败 502 带提示", r.status == 502 and (await r.text()) == "这一集暂时没有能播的片源")
+        body = await r.text()
+        check("重取失败 502 带提示和原因", r.status == 502 and body.startswith("这一集暂时没有能播的片源（")
+              and "HTTP 404" in body and body.endswith("）"))
         up.dead_lines.clear()
 
         bad = vod_show(base)
@@ -719,6 +722,8 @@ async def test_vod_playlist_route():
             raised = e
         check("所有线路都不能播 → prepare_vod 抛 PlaylistError", raised is not None
               and type(raised).__name__ == "PlaylistError" and raised.message == "这一集暂时没有能播的片源")
+        check("PlaylistError 按线路带原因", raised is not None and raised.detail.count("HTTP 404") == 3
+              and raised.detail.count("；") == 2)
         up.dead_lines.clear()
         up.dead_lines.add("l0")
         video, _ = await server.prepare_vod(show, 1, 0)
@@ -967,6 +972,7 @@ async def test_vod_prepare_timeout():
         check(f"片源太慢 → 超时按没有能播的片源（{took:.2f}s）", raised is not None
               and type(raised).__name__ == "PlaylistError" and raised.message == "这一集暂时没有能播的片源"
               and took < 1.5)
+        check("超时的原因说明时限", raised is not None and raised.detail == "0.3 秒内没找到能播的线路，资源站太慢")
 
         # 网页上的选集也走同一个时限
         room = await vod_room(rooms, server, show)
@@ -976,9 +982,51 @@ async def test_vod_prepare_timeout():
         e = await recv_type(a, "error")
         check("选集超时 → 提示没有能播的片源、不换集", e and e["message"] == "这一集暂时没有能播的片源"
               and room.version == 0 and room.video.vod.episode == 0)
+        check("error 消息带 detail", e and e["detail"] == "0.3 秒内没找到能播的线路，资源站太慢")
     finally:
         await client.close()
         await up_client.close()
+
+
+async def test_client_report():
+    """网页端播放失败的回报只进日志：带房间、成员公开 id、视频地址；每个连接最多 MAX_REPORTS 条。"""
+    rooms, sources, server, client = await make()
+    records = []
+
+    class Grab(logging.Handler):
+        def emit(self, record):
+            records.append(record)
+
+    handler = Grab()
+    ws_mod.log.addHandler(handler)
+    try:
+        room = rooms.create(1, 2, "发起人", yt(duration=300.0))
+        rid = room.room_id
+        a, wa = await hello(client, rid)
+        await drain(a)
+        pub = rooms.get(rid).members[wa["viewer_id"]].public_id
+        await a.send_json({"type": "report", "detail": "视频加载失败：片段 HTTP 403 · cdn.example.com [fragLoadError]\n第二行",
+                           "url": "/vod/x/0/index.m3u8"})
+        await a.send_json({"type": "ping", "t": 1})
+        check("回报后连接仍开着", (await recv_type(a, "pong")) is not None)
+        msgs = [r.getMessage() for r in records if r.levelno == logging.WARNING and "playback failed" in r.getMessage()]
+        check("回报记成一条 WARNING，带房间、成员、视频、原因（压成一行）", len(msgs) == 1 and f"room={rid}" in msgs[0]
+              and f"member={pub}" in msgs[0] and "video=https://www.youtube.com/watch?v=dQw4w9WgXcQ" in msgs[0]
+              and "src=/vod/x/0/index.m3u8" in msgs[0] and "片段 HTTP 403 · cdn.example.com [fragLoadError] 第二行" in msgs[0]
+              and wa["viewer_id"] not in msgs[0])
+        check("房间状态没变", rooms.get(rid).version == 0 and not rooms.get(rid).playback.playing)
+        await a.send_json({"type": "report", "detail": 123})
+        await a.send_json({"type": "report"})
+        for i in range(10):
+            await a.send_json({"type": "report", "detail": f"again {i}"})
+        await a.send_json({"type": "ping", "t": 2})
+        await recv_type(a, "pong")
+        n = len([r for r in records if "playback failed" in r.getMessage()])
+        check("非字符串被忽略；每个连接最多记 MAX_REPORTS 条", n == ws_mod.MAX_REPORTS == 5)
+        await a.close()
+    finally:
+        ws_mod.log.removeHandler(handler)
+        await client.close()
 
 
 async def test_vod_auto_next():
