@@ -111,6 +111,11 @@ def rewrite_media(text: str, base_url: str, allow_http: bool = False) -> Playlis
     blocks = [_Block([], None)]
     pending: list[str] = []
     pending_dur = 0.0
+
+    def tag(ln: str) -> str:
+        """标签行里的 URI="..."（KEY / MAP 等）绝对化并检查 https。"""
+        return _URI_ATTR.sub(lambda mm: f'URI="{_checked(_absolutize(mm.group(1), base_url), allow_http)}"', ln)
+
     for raw in text.splitlines():
         ln = raw.strip()
         if not ln:
@@ -122,10 +127,9 @@ def rewrite_media(text: str, base_url: str, allow_http: bool = False) -> Playlis
             if m:
                 pending, pending_dur = [ln], float(m.group(1))
             elif pending:
-                pending.append(ln)          # 夹在 EXTINF 和地址之间的标签（如 BYTERANGE）
+                pending.append(tag(ln))     # 夹在 EXTINF 和地址之间的标签（如 BYTERANGE、KEY）
             else:
-                blocks[-1].entries.append(_URI_ATTR.sub(
-                    lambda mm: f'URI="{_checked(_absolutize(mm.group(1), base_url), allow_http)}"', ln))
+                blocks[-1].entries.append(tag(ln))
         else:
             url = _checked(_absolutize(ln, base_url), allow_http)
             blocks[-1].entries.append(_Segment(pending + [url], pending_dur, url))
@@ -159,6 +163,8 @@ def rewrite_media(text: str, base_url: str, allow_http: bool = False) -> Playlis
                 first = first or e.url
             else:
                 out.append(e)
+    if not duration > 0:
+        raise PlaylistError(NO_PLAYABLE)    # 没有时长会立刻“播完”，自动下一集会一路跳过
     return Playlist("\n".join(out) + "\n", duration, first, removed)
 
 
@@ -168,10 +174,18 @@ def _checked(url: str, allow_http: bool) -> str:
     return url
 
 
-async def _get_text(session: aiohttp.ClientSession, url: str) -> tuple[str, str]:
+def _check_redirects(resp, allow_http: bool) -> str:
+    """跳转链上每一跳和最终地址都必须是 https（allow_http 仅供测试）；返回最终地址。"""
+    for hop in resp.history:
+        _checked(str(hop.url), allow_http)
+    return _checked(str(resp.url), allow_http)
+
+
+async def _get_text(session: aiohttp.ClientSession, url: str, allow_http: bool = False) -> tuple[str, str]:
     """取 m3u8 文本，返回 (文本, 跳转后的最终地址)；相对地址要按最终地址解析。"""
     try:
         async with session.get(url, headers={"User-Agent": USER_AGENT}, timeout=FETCH_TIMEOUT) as resp:
+            final_url = _check_redirects(resp, allow_http)
             if resp.status != 200:
                 raise PlaylistError(NO_PLAYABLE)
             if resp.content_length is not None and resp.content_length > MAX_PLAYLIST_BYTES:
@@ -181,7 +195,6 @@ async def _get_text(session: aiohttp.ClientSession, url: str) -> tuple[str, str]
                 body += chunk
                 if len(body) > MAX_PLAYLIST_BYTES:
                     raise PlaylistError(NO_PLAYABLE)
-            final_url = str(resp.url)
     except PlaylistError:
         raise
     except Exception as e:
@@ -196,21 +209,23 @@ async def _get_text(session: aiohttp.ClientSession, url: str) -> tuple[str, str]
 async def fetch_playlist(session: aiohttp.ClientSession, url: str, allow_http: bool = False) -> Playlist:
     """取 m3u8 并改写；master 只跟进一个变体。allow_http 仅供测试。"""
     _checked(url, allow_http)
-    text, final = await _get_text(session, url)
+    text, final = await _get_text(session, url, allow_http)
     variant = pick_variant(text, final)
     if variant is not None:
         _checked(variant, allow_http)
-        text, final = await _get_text(session, variant)
+        text, final = await _get_text(session, variant, allow_http)
     return rewrite_media(text, final, allow_http)
 
 
-async def probe(session: aiohttp.ClientSession, playlist: Playlist, origin: str) -> bool:
-    """像浏览器一样试取第一个片段：状态 200/206 且 CORS 允许这个 origin。永不抛异常。"""
+async def probe(session: aiohttp.ClientSession, playlist: Playlist, origin: str, allow_http: bool = False) -> bool:
+    """像浏览器一样试取第一个片段：状态 200/206、跳转链全是 https 且 CORS 允许这个 origin。永不抛异常。
+    allow_http 仅供测试。"""
     try:
         if not playlist.first_segment:
             return False
         headers = {"User-Agent": USER_AGENT, "Range": "bytes=0-1023", "Origin": origin}
         async with session.get(playlist.first_segment, headers=headers, timeout=PROBE_TIMEOUT) as resp:
+            _check_redirects(resp, allow_http)
             if resp.status not in (200, 206):
                 return False
             await resp.content.read(1024)
@@ -232,6 +247,6 @@ async def find_playable(session: aiohttp.ClientSession, show: Show, episode: int
             pl = await fetch_playlist(session, eps[episode].url, allow_http)
         except PlaylistError:
             continue
-        if await probe(session, pl, origin):
+        if await probe(session, pl, origin, allow_http):
             return idx, pl
     raise PlaylistError(NO_PLAYABLE)

@@ -7,6 +7,8 @@ import asyncio
 import os
 import sys
 
+from types import SimpleNamespace as NS
+
 import aiohttp
 from aiohttp import web
 from aiohttp.test_utils import TestServer
@@ -116,6 +118,89 @@ def test_rewrite_uris():
         check("没有片段被拒", True)
 
 
+def test_rewrite_tag_between_extinf_and_uri():
+    text = ("#EXTM3U\n#EXTINF:10,\n#EXT-X-KEY:METHOD=AES-128,URI=\"k/key.key\"\na.ts\n"
+            "#EXTINF:10,\n#EXT-X-BYTERANGE:100@0\nb.ts\n#EXT-X-ENDLIST\n")
+    out = vp.rewrite_media(text, "https://h.example.com/p/index.m3u8").text
+    check("EXTINF 和地址之间的 KEY URI 也绝对化", 'URI="https://h.example.com/p/k/key.key"' in out
+          and 'URI="k/key.key"' not in out and "#EXT-X-BYTERANGE:100@0" in out)
+    try:
+        vp.rewrite_media("#EXTM3U\n#EXTINF:10,\n#EXT-X-KEY:METHOD=AES-128,URI=\"http://h.example.com/k.key\"\na.ts\n",
+                         "https://h.example.com/p/index.m3u8")
+        check("EXTINF 和地址之间的 http KEY 被拒", False)
+    except PlaylistError as e:
+        check("EXTINF 和地址之间的 http KEY 被拒", e.message == NO_PLAYABLE)
+
+
+def test_rewrite_zero_duration():
+    for name, text in [("EXTINF 全是 0", "#EXTM3U\n#EXTINF:0,\na.ts\n#EXTINF:0,\nb.ts\n#EXT-X-ENDLIST\n"),
+                       ("没有 EXTINF", "#EXTM3U\na.ts\nb.ts\n#EXT-X-ENDLIST\n")]:
+        try:
+            vp.rewrite_media(text, "https://h.example.com/p/index.m3u8")
+            check(name + " → 不能播", False)
+        except PlaylistError as e:
+            check(name + " → 不能播", e.message == NO_PLAYABLE)
+
+
+class _FakeResp:
+    def __init__(self, url, history=(), status=200, body=b"#EXTM3U\n#EXTINF:5,\na.ts\n", headers=None):
+        from yarl import URL
+        self.url = URL(url)
+        self.history = tuple(NS(url=URL(h)) for h in history)   # 跳转链上之前每一跳的地址
+        self.status = status
+        self.content_length = len(body)
+        self.headers = headers or {"Access-Control-Allow-Origin": "*"}
+        self._body = body
+        resp = self
+
+        class _Content:
+            async def iter_chunked(self, n):
+                yield resp._body
+
+            async def read(self, n=-1):
+                return resp._body
+        self.content = _Content()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+
+class _FakeSession:
+    """session.get 直接返回预设的“跳转后”响应。"""
+
+    def __init__(self, resp):
+        self.resp, self.calls = resp, []
+
+    def get(self, url, **kw):
+        self.calls.append(url)
+        return self.resp
+
+
+async def test_redirect_checks():
+    start = "https://h.example.com/p/index.m3u8"
+    for name, resp in [("m3u8 跳到 http → 报错", _FakeResp("http://evil.example.com/x.m3u8", [start])),
+                       ("中间一跳是 http → 报错", _FakeResp("https://h2.example.com/x.m3u8",
+                                                     [start, "http://mid.example.com/x.m3u8"]))]:
+        try:
+            await vp.fetch_playlist(_FakeSession(resp), start)
+            check(name, False)
+        except PlaylistError as e:
+            check(name, e.message == NO_PLAYABLE)
+    ok = await vp.fetch_playlist(_FakeSession(_FakeResp("https://h2.example.com/q/x.m3u8", [start])), start)
+    check("全程 https 的跳转可以，按最终地址解析", uris(ok.text) == ["https://h2.example.com/q/a.ts"])
+    seg = vp.Playlist("", 5.0, "https://h.example.com/p/a.ts", 0)
+    origin = "https://watch.example.com"
+    check("片段跳到 http → probe False",
+          await vp.probe(_FakeSession(_FakeResp("http://evil.example.com/a.ts", [seg.first_segment], 206)), seg, origin)
+          is False)
+    check("片段全程 https → probe True",
+          await vp.probe(_FakeSession(_FakeResp("https://cdn.example.com/a.ts", [seg.first_segment], 206)), seg, origin)
+          is True)
+
+
 async def serve(routes):
     app = web.Application()
     for path, h in routes.items():
@@ -207,15 +292,15 @@ async def test_probe():
     async with aiohttp.ClientSession() as s:
         def pl(path):
             return vp.Playlist("", 1.0, base + path, 0)
-        check("206 + ACAO * → True", await vp.probe(s, pl("/star"), origin) is True)
+        check("206 + ACAO * → True", await vp.probe(s, pl("/star"), origin, allow_http=True) is True)
         check("发了 Range 和 Origin", seen["range"] == "bytes=0-1023" and seen["origin"] == origin)
-        check("无 ACAO → False", await vp.probe(s, pl("/none"), origin) is False)
-        check("403 → False", await vp.probe(s, pl("/403"), origin) is False)
-        check("ACAO = origin → True", await vp.probe(s, pl("/origin"), origin) is True)
-        check("ACAO 是别人 → False", await vp.probe(s, pl("/other"), origin) is False)
-        check("没有片段 → False", await vp.probe(s, vp.Playlist("", 0.0, None, 0), origin) is False)
+        check("无 ACAO → False", await vp.probe(s, pl("/none"), origin, allow_http=True) is False)
+        check("403 → False", await vp.probe(s, pl("/403"), origin, allow_http=True) is False)
+        check("ACAO = origin → True", await vp.probe(s, pl("/origin"), origin, allow_http=True) is True)
+        check("ACAO 是别人 → False", await vp.probe(s, pl("/other"), origin, allow_http=True) is False)
+        check("没有片段 → False", await vp.probe(s, vp.Playlist("", 0.0, None, 0), origin, allow_http=True) is False)
         dead = vp.Playlist("", 1.0, "http://127.0.0.1:1/x.ts", 0)
-        check("连不上 → False 不抛", await vp.probe(s, dead, origin) is False)
+        check("连不上 → False 不抛", await vp.probe(s, dead, origin, allow_http=True) is False)
     await srv.close()
 
 
@@ -256,6 +341,9 @@ if __name__ == "__main__":
     test_rewrite_keeps_unsure()
     test_discontinuity_sequence()
     test_rewrite_uris()
+    test_rewrite_tag_between_extinf_and_uri()
+    test_rewrite_zero_duration()
+    asyncio.run(test_redirect_checks())
     asyncio.run(test_fetch_playlist())
     asyncio.run(test_probe())
     asyncio.run(test_find_playable())
