@@ -80,11 +80,15 @@ class ProgressStore:
 
 
 class ProgressRecorder:
+    """只在房间里有人时记录：没人后服务器上的播放时钟还在走（空房保留 10 分钟），
+    那段时间没人在看，不能算进度。最后一个人的断线宽限期结束（rooms 发 "members"、房间变空）时记最后一次。"""
+
     def __init__(self, rooms: RoomManager, store: ProgressStore, interval: float = RECORD_INTERVAL):
         self.rooms = rooms
         self.store = store
         self.interval = interval
         self._last: dict[str, float] = {}   # room_id -> 上次记录时间
+        self._empty: set[str] = set()       # 已经因为变空记过一次的房间
         rooms.listeners.append(self.on_event)
 
     def _record(self, room: Room) -> None:
@@ -99,14 +103,22 @@ class ProgressRecorder:
     def on_event(self, room: Room, kind: str) -> None:
         if kind == "playback":
             self._record(room)
+        elif kind == "members":
+            if room.present():
+                self._empty.discard(room.room_id)
+            elif room.room_id not in self._empty:
+                self._empty.add(room.room_id)
+                self._record(room)      # 最多晚 GRACE_SECONDS 秒
         elif kind == "closed":
-            self._record(room)
+            if room.present():
+                self._record(room)
             self._last.pop(room.room_id, None)
+            self._empty.discard(room.room_id)
 
     def tick(self) -> None:
         now = self.rooms.clock()
         for room in self.rooms.active():
-            if room.video.vod is None or not room.playback.playing:
+            if room.video.vod is None or not room.playback.playing or not room.present():
                 continue
             last = self._last.get(room.room_id)
             if last is None or now - last >= self.interval:

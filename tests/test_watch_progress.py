@@ -141,6 +141,59 @@ def test_recorder_tick_interval():
     check("暂停中不 tick 记录", s.get(7, "k1").position == 62.0)
 
 
+def test_recorder_empty_room():
+    from watch_rooms import EMPTY_TTL_SECONDS, GRACE_SECONDS
+    m, s, rec = mkrec()
+    r = m.create(7, 9, "小明", mkvod())
+    h = m.connect(r.room_id, None, None)
+    m.control(r.room_id, h.viewer_id, "play", 0.0)
+    now[0] += 100
+    m.disconnect(r.room_id, h.viewer_id)       # 没暂停就走了
+    while not r.closed and now[0] < 1000.0 + 100 + GRACE_SECONDS + EMPTY_TTL_SECONDS + 60:
+        now[0] += 5
+        m.tick()
+        rec.tick()
+    p = s.get(7, "k1")
+    check("空房最终关闭", r.closed)
+    check("空房不继续记进度：位置≈离开时（+≤30 秒宽限）而不是 +10 分钟",
+          p is not None and 100.0 <= p.position <= 100.0 + GRACE_SECONDS + 5)
+    check("变空那一刻记一次", p is not None and p.updated_at <= 1000.0 + 100 + GRACE_SECONDS + 5)
+    check("关闭后忘记房间（空房）", r.room_id not in rec._last and r.room_id not in rec._empty)
+
+    # 宽限期内回来：不算变空，之后照常记
+    m, s, rec = mkrec()
+    r = m.create(7, 9, "小明", mkvod())
+    h = m.connect(r.room_id, None, None)
+    m.control(r.room_id, h.viewer_id, "play", 0.0)
+    now[0] += 50
+    m.disconnect(r.room_id, h.viewer_id)
+    now[0] += 10
+    m.tick()
+    h2 = m.connect(r.room_id, h.viewer_id, None)
+    check("宽限期内回来不算变空", r.room_id not in rec._empty and h2.viewer_id == h.viewer_id)
+    now[0] += 40
+    rec.tick()
+    check("回来后 tick 照常记", s.get(7, "k1").position == 100.0)
+
+    # 变空后又有人进来、再走：再记一次
+    m.disconnect(r.room_id, h.viewer_id)
+    now[0] += GRACE_SECONDS
+    m.tick()
+    first = s.get(7, "k1").position
+    check("变空时记一次", first == 100.0 + GRACE_SECONDS and r.room_id in rec._empty)
+    now[0] += 200
+    m.tick()
+    rec.tick()
+    check("空房 tick 不记", s.get(7, "k1").position == first)
+    h3 = m.connect(r.room_id, None, None)
+    check("有人进来清掉变空标记", r.room_id not in rec._empty)
+    m.control(r.room_id, h3.viewer_id, "seek", 500.0)
+    m.disconnect(r.room_id, h3.viewer_id)
+    now[0] += GRACE_SECONDS
+    m.tick()
+    check("第二次变空再记", s.get(7, "k1").position == 500.0 + GRACE_SECONDS)
+
+
 def test_resume_line():
     ts = datetime(2026, 10, 23, 20, 0, tzinfo=ZoneInfo("Australia/Sydney")).timestamp()
     p = Progress("绝命毒师 第一季", 2, 2052, ts)
@@ -155,6 +208,7 @@ if __name__ == "__main__":
     test_store_corrupt()
     test_recorder_events()
     test_recorder_tick_interval()
+    test_recorder_empty_room()
     test_resume_line()
     passed = sum(1 for _, ok in results if ok)
     print(f"\n{passed}/{len(results)} passed")
