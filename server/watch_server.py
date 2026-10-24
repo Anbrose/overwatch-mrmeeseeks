@@ -11,9 +11,10 @@
 
 vod 房间额外的客户端消息（当前视频不是 vod 时一律忽略）：
 - {"type": "episode", "index": int}   房主选集（从 0 开始），停在开头、暂停，优先用当前片源线路
-- {"type": "next_line"}               房主换一个片源：同一集、下一条线路（绕圈），保持当前位置、暂停
+- {"type": "next_line"}               房主换一个片源：同一集、下一条线路（绕圈），保持当前位置和播放/暂停状态
 - {"type": "resume"}                  房主或有控制权的人：跳到建房时的进度快照（需要时先换集），暂停
 播完（rooms 的 "finished" 事件）自动换下一集并开始播放；期间有人手动换过就作废（按版本号）。
+准备一集（找线路、取 m3u8、探测片段）整体最多 VOD_PREPARE_TIMEOUT 秒，超时按“没有能播的片源”处理。
 """
 from __future__ import annotations
 
@@ -31,9 +32,9 @@ import aiohttp
 from aiohttp import web
 
 from live_watch import USER_AGENT
-from vod_playlist import Playlist, PlaylistError, fetch_playlist, find_playable
+from vod_playlist import NO_PLAYABLE, Playlist, PlaylistError, fetch_playlist, find_playable
 from vod_search import Show
-from watch_progress import ProgressRecorder, ProgressStore, resume_line
+from watch_progress import ProgressRecorder, resume_line
 from watch_rooms import Room, RoomManager, RoomsFull, Video, VodInfo, vod_video
 from watch_sources import BILI_REFERER, DashStreams, Sources, VideoUnavailable
 
@@ -43,6 +44,7 @@ TICK_SECONDS = 5
 HELLO_TIMEOUT = 10
 REFRESH_MARGIN = 60          # 地址过期前多少秒就重新取
 CHUNK = 64 * 1024
+VOD_PREPARE_TIMEOUT = 45     # 准备一集的总时限（秒）；网页端的“正在准备…”要比它久
 SEND_QUEUE_MAX = 256         # 单个连接积压的待发消息上限，超过就断开
 MAX_URL_LEN = 2000
 STATIC_FILES = {
@@ -118,19 +120,19 @@ class _Conn:
 class WatchServer:
     def __init__(self, rooms: RoomManager, sources: Sources, host: str, port: int,
                  web_dir: Path = Path(__file__).parent / "watch_web", origin: str = "",
-                 progress: ProgressStore | None = None, recorder: ProgressRecorder | None = None,
-                 allow_http: bool = False):
+                 recorder: ProgressRecorder | None = None, allow_http: bool = False,
+                 vod_prepare_timeout: float = VOD_PREPARE_TIMEOUT):
         """origin = WATCH_PUBLIC_URL（探测片段跨域用）；recorder 自己注册监听，这里只定时调 tick()。
-        allow_http 仅供测试（连本地 http 假上游），生产不要传。"""
+        allow_http 仅供测试（连本地 http 假上游），生产不要传；vod_prepare_timeout 测试里调小。"""
         self.rooms = rooms
         self.sources = sources
         self.host = host
         self.port = port
         self.web_dir = Path(web_dir)
         self.origin = origin
-        self.progress = progress
         self.recorder = recorder
         self.allow_http = allow_http
+        self.vod_prepare_timeout = vod_prepare_timeout
         self.conns: dict[str, set[_Conn]] = {}
         self._streams: dict[tuple[str, int], DashStreams] = {}
         self._stream_locks: dict[tuple[str, int], asyncio.Lock] = {}
@@ -497,9 +499,15 @@ class WatchServer:
     # ---------------- vod ----------------
     async def prepare_vod(self, show: Show, episode: int, start_line: int = 0,
                           resume: object | None = None) -> tuple[Video, Playlist]:
-        """从 start_line 起找能播这一集的线路，返回 (vod 视频, 改写过的播放列表)；都不能播抛 PlaylistError。"""
-        line, playlist = await find_playable(self._vod_http(), show, episode, start_line, self.origin,
-                                             self.allow_http)
+        """从 start_line 起找能播这一集的线路，返回 (vod 视频, 改写过的播放列表)；
+        都不能播或超过 vod_prepare_timeout 秒抛 PlaylistError。建房、选集、换片源、续看、自动下一集都走这里。"""
+        try:
+            line, playlist = await asyncio.wait_for(
+                find_playable(self._vod_http(), show, episode, start_line, self.origin, self.allow_http),
+                self.vod_prepare_timeout)
+        except asyncio.TimeoutError:
+            log.info("watch vod prepare timed out (%r episode %d)", show.title, episode)
+            raise PlaylistError(NO_PLAYABLE) from None
         return vod_video(VodInfo(show, episode, line, resume), playlist.duration), playlist
 
     def attach_playlist(self, room: Room, playlist: Playlist) -> None:
@@ -536,7 +544,7 @@ class WatchServer:
                 if room.version != version:
                     return      # 取片源期间已经换了集，这条线路的播放列表已经不对了
                 pos = room.playback.position_at(self.rooms.clock(), room.video.duration)
-                ok = self.rooms.change_video(rid, vid, video, position=pos)
+                ok = self.rooms.change_video(rid, vid, video, position=pos, playing=room.playback.playing)
             else:
                 ok = self.rooms.resume(rid, vid, video, info.resume.position)
             if ok:

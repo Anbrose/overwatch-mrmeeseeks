@@ -1070,7 +1070,7 @@ async def main() -> None:
         recorder = ProgressRecorder(watch_rooms, progress)
         watch_server = WatchServer(watch_rooms, watch_sources, host=os.environ.get("WATCH_HOST", "").strip() or "0.0.0.0",
                                    port=int(os.environ.get("WATCH_PORT", "").strip() or "8080"),
-                                   origin=watch_url, progress=progress, recorder=recorder)
+                                   origin=watch_url, recorder=recorder)
         watch_ui = WatchUI(watch_rooms, watch_url, CardStore(state_dir / "watch_cards.json"))
         log.info("Watch together enabled at %s (max quality %s)", watch_url, quality)
 

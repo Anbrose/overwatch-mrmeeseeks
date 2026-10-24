@@ -518,7 +518,8 @@ def test_pick_flow():
     room = rooms.active()[0]
     check("选中后建 vod 房间", len(rooms.active()) == 1 and room.video.source == "vod" and sent.deferred == [True]
           and room.creator_id == 42 and room.video.vod.episode == 0 and len(ws.attached) == 1)
-    check("搜索消息改成已选择且去掉选单", edits[0] == (555, 7001, "已选择：绝命毒师 第一季", None))
+    check("选中后先改成正在准备…并去掉选单", edits[0] == (555, 7001, "正在准备…", None) and wui.PICK_PREPARING == "正在准备…")
+    check("搜索消息改成已选择且去掉选单", edits[1:] == [(555, 7001, "已选择：绝命毒师 第一季", None)])
     text, view, mentions = msg.replies[1]
     check("卡片回复在原消息下并记录", text.startswith("🎬 **一起看**") and "片源：量子" in text and view is not None
           and room.message_id == 7002 and ui.cards.all() == [(555, 7002)]
@@ -567,8 +568,27 @@ def test_pick_twice_unknown_unplayable():
         it, _ = make_pick_interaction(42)
         await ui.on_pick(it, token_of(msg))
     asyncio.run(go2())
-    check("没有能播的片源", rooms.active() == [] and edits == [(555, 7001, "这一集暂时没有能播的片源", None)]
+    check("没有能播的片源", rooms.active() == [] and edits == [(555, 7001, "正在准备…", None),
+                                                          (555, 7001, "这一集暂时没有能播的片源", None)]
           and len(msg.replies) == 1)
+
+
+def test_pick_preparing_shown_before_prepare():
+    """“正在准备…”在开始找片源之前就已经显示（找片源可能要几十秒）。"""
+    seen = []
+
+    class SlowServer(FakeWatchServer):
+        async def prepare_vod(self, show, episode, start_line=0, resume=None):
+            seen.append(list(edits))
+            raise PlaylistError("这一集暂时没有能播的片源")
+    b, ui, rooms, clock, edits, ws, msg = setup_search(ws=SlowServer())
+
+    async def go():
+        it, _ = make_pick_interaction(42)
+        await ui.on_pick(it, token_of(msg))
+    asyncio.run(go())
+    check("找片源时搜索消息已经是正在准备…", seen == [[(555, 7001, "正在准备…", None)]])
+    check("超时/没有片源 → 改成没有能播的片源", edits[-1] == (555, 7001, "这一集暂时没有能播的片源", None))
 
 
 def test_pick_failures():
@@ -614,7 +634,8 @@ def test_pick_failures():
         it, _ = make_pick_interaction(42)
         await ui.on_pick(it, tok)
     asyncio.run(go3())
-    check("意外错误给通用提示", rooms.active() == [] and edits == [(555, 7001, "出错了，请稍后再试", None)])
+    check("意外错误给通用提示", rooms.active() == [] and edits == [(555, 7001, "正在准备…", None),
+                                                          (555, 7001, "出错了，请稍后再试", None)])
 
     # 回复的 allowed_mentions
     ui, rooms, _, _ = make_ui()
@@ -698,6 +719,7 @@ if __name__ == "__main__":
     test_watch_search_errors()
     test_watch_search_posts_menu()
     test_pick_flow()
+    test_pick_preparing_shown_before_prepare()
     test_pick_resume()
     test_pick_twice_unknown_unplayable()
     test_pick_failures()

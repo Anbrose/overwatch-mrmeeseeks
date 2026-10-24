@@ -23,7 +23,7 @@
   const UNPLAYABLE_MSG = "这个视频暂时无法播放";
   const VOD_FAILED_MSG = "视频加载失败";
   const PREPARING_MSG = "正在准备…";
-  const PREPARING_TIMEOUT_MS = 15000;
+  const PREPARING_TIMEOUT_MS = 50000;   // outlasts the server's 45 s VOD_PREPARE_TIMEOUT
   const RESUME_NEAR = 30;    // seconds: resume line hidden this close to the snapshot
 
   const $ = (id) => document.getElementById(id);
@@ -586,7 +586,7 @@
       btn.disabled = preparing;
     });
     ui.lineLabel.textContent = `片源：${v.line_name || ""}（共 ${v.line_count || 0} 个）`;
-    ui.nextLine.disabled = preparing;
+    ui.nextLine.disabled = preparing || (Number(v.line_count) || 0) <= 1;
   }
 
   function renderMembers(members) {

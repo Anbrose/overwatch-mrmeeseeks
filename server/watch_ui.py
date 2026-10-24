@@ -42,6 +42,7 @@ PICK_TIMEOUT = 120.0
 PICK_EXPIRED = "选择已过期"
 PICK_GONE = "已过期，请重新搜索"
 PICK_NOT_REQUESTER = "只有发起人能选"
+PICK_PREPARING = "正在准备…"
 OPTION_MAX = 100
 
 
@@ -302,6 +303,11 @@ class WatchUI:
         await interaction.response.defer()
         if self.create_vod_room is None:
             return
+        if self.edit is not None and p.message_id is not None:
+            try:                 # 找片源可能要几十秒：先去掉选单、告诉大家在准备
+                await self.edit(p.channel_id, p.message_id, PICK_PREPARING, None)
+            except Exception:
+                log.exception("Could not edit search message %s", p.message_id)
         try:
             await self.create_vod_room(p, index)
         except Exception:

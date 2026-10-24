@@ -738,7 +738,7 @@ async def test_vod_state_message():
     store = ProgressStore(None)
     recorder = ProgressRecorder(rooms, store)
     n_listeners = len(rooms.listeners)
-    up, up_client, base, rooms, server, client = await make_vod(rooms, progress=store, recorder=recorder)
+    up, up_client, base, rooms, server, client = await make_vod(rooms, recorder=recorder)
     try:
         check("server 不替 recorder 重复注册监听", len(rooms.listeners) == n_listeners + 1
               and rooms.listeners.count(recorder.on_event) == 1)
@@ -853,6 +853,14 @@ async def test_vod_next_line():
         await a.send_json({"type": "next_line"})
         s = await recv_type(a, "state")
         check("最后一条线路换片源绕回第一条", s and s["video"]["line_name"] == "线路A" and room.video.vod.line == 0)
+
+        # 播放中换片源 → 从当前位置继续播
+        rooms.control(rid, wa["viewer_id"], "play", 600.0)
+        await drain(a)
+        await a.send_json({"type": "next_line"})
+        s = await recv_type(a, "state")
+        check("播放中换片源 → 保持播放、从当前位置继续", s and s["video"]["line_name"] == "线路B"
+              and s["playing"] is True and room.playback.playing is True and 600.0 <= s["position"] < 605.0)
     finally:
         await client.close()
         await up_client.close()
@@ -942,6 +950,37 @@ async def test_vod_switch_race():
         await up_client.close()
 
 
+async def test_vod_prepare_timeout():
+    up, up_client, base, rooms, server, client = await make_vod(vod_prepare_timeout=0.3)
+    try:
+        check("默认准备时限 45 秒", ws_mod.VOD_PREPARE_TIMEOUT == 45
+              and ws_mod.WatchServer(RoomManager(), FakeSources(), "127.0.0.1", 0).vod_prepare_timeout == 45)
+        show = vod_show(base)
+        up.delays = {1: 2.0}
+        t0 = time.monotonic()
+        try:
+            await server.prepare_vod(show, 1)
+            raised = None
+        except Exception as e:
+            raised = e
+        took = time.monotonic() - t0
+        check(f"片源太慢 → 超时按没有能播的片源（{took:.2f}s）", raised is not None
+              and type(raised).__name__ == "PlaylistError" and raised.message == "这一集暂时没有能播的片源"
+              and took < 1.5)
+
+        # 网页上的选集也走同一个时限
+        room = await vod_room(rooms, server, show)
+        a, _ = await hello(client, room.room_id, key=room.owner_key)
+        await drain(a)
+        await a.send_json({"type": "episode", "index": 1})
+        e = await recv_type(a, "error")
+        check("选集超时 → 提示没有能播的片源、不换集", e and e["message"] == "这一集暂时没有能播的片源"
+              and room.version == 0 and room.video.vod.episode == 0)
+    finally:
+        await client.close()
+        await up_client.close()
+
+
 async def test_vod_auto_next():
     offset = [0.0]
     rooms = RoomManager(clock=lambda: time.time() + offset[0])
@@ -992,6 +1031,7 @@ async def main():
     await test_vod_next_line()
     await test_vod_resume()
     await test_vod_switch_race()
+    await test_vod_prepare_timeout()
     await test_vod_auto_next()
 
 
