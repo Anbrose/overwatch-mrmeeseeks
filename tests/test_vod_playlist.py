@@ -193,12 +193,12 @@ async def test_redirect_checks():
     check("全程 https 的跳转可以，按最终地址解析", uris(ok.text) == ["https://h2.example.com/q/a.ts"])
     seg = vp.Playlist("", 5.0, "https://h.example.com/p/a.ts", 0)
     origin = "https://watch.example.com"
-    check("片段跳到 http → probe False",
+    check("片段跳到 http → probe 给出原因",
           await vp.probe(_FakeSession(_FakeResp("http://evil.example.com/a.ts", [seg.first_segment], 206)), seg, origin)
-          is False)
-    check("片段全程 https → probe True",
+          == "地址不是 https：evil.example.com")
+    check("片段全程 https → probe 能播",
           await vp.probe(_FakeSession(_FakeResp("https://cdn.example.com/a.ts", [seg.first_segment], 206)), seg, origin)
-          is True)
+          is None)
 
 
 async def serve(routes):
@@ -292,15 +292,21 @@ async def test_probe():
     async with aiohttp.ClientSession() as s:
         def pl(path):
             return vp.Playlist("", 1.0, base + path, 0)
-        check("206 + ACAO * → True", await vp.probe(s, pl("/star"), origin, allow_http=True) is True)
+        check("206 + ACAO * → 能播（None）", await vp.probe(s, pl("/star"), origin, allow_http=True) is None)
         check("发了 Range 和 Origin", seen["range"] == "bytes=0-1023" and seen["origin"] == origin)
-        check("无 ACAO → False", await vp.probe(s, pl("/none"), origin, allow_http=True) is False)
-        check("403 → False", await vp.probe(s, pl("/403"), origin, allow_http=True) is False)
-        check("ACAO = origin → True", await vp.probe(s, pl("/origin"), origin, allow_http=True) is True)
-        check("ACAO 是别人 → False", await vp.probe(s, pl("/other"), origin, allow_http=True) is False)
-        check("没有片段 → False", await vp.probe(s, vp.Playlist("", 0.0, None, 0), origin, allow_http=True) is False)
+        r = await vp.probe(s, pl("/none"), origin, allow_http=True)
+        check("无 ACAO → 原因说明跨域", r == f"片段不允许跨域（CORS 无，127.0.0.1:{srv.port}）")
+        r = await vp.probe(s, pl("/403"), origin, allow_http=True)
+        check("403 → 原因带状态码和域名", r == f"片段 HTTP 403（127.0.0.1:{srv.port}）")
+        check("ACAO = origin → 能播", await vp.probe(s, pl("/origin"), origin, allow_http=True) is None)
+        r = await vp.probe(s, pl("/other"), origin, allow_http=True)
+        check("ACAO 是别人 → 原因带对方的 ACAO", r and r.startswith("片段不允许跨域（CORS https://other.example.com"))
+        check("没有片段 → 原因", await vp.probe(s, vp.Playlist("", 0.0, None, 0), origin, allow_http=True) == "m3u8 里没有片段")
         dead = vp.Playlist("", 1.0, "http://127.0.0.1:1/x.ts", 0)
-        check("连不上 → False 不抛", await vp.probe(s, dead, origin, allow_http=True) is False)
+        r = await vp.probe(s, dead, origin, allow_http=True)
+        check("连不上 → 原因、不抛", r and r.startswith("片段取不到：") and "127.0.0.1:1" in r)
+        evil = vp.Playlist("", 1.0, "http://evil.example.com/a.ts", 0)
+        check("非 https 片段 → 原因", await vp.probe(s, evil, origin) == "地址不是 https：evil.example.com")
     await srv.close()
 
 
@@ -332,6 +338,13 @@ async def test_find_playable():
             check("全不可播报错", False)
         except PlaylistError as e:
             check("全不可播报错", e.message == "这一集暂时没有能播的片源")
+            check("原因按线路列出", e.detail == f"甲：片段 HTTP 403（127.0.0.1:{srv.port}）；"
+                  f"乙：m3u8 HTTP 404（127.0.0.1:{srv.port}）；丙：没有第 1 集")
+            check("text = message + 括号里的原因", e.text == f"这一集暂时没有能播的片源（{e.detail}）")
+        check("没有 detail 时 text 就是 message", PlaylistError("x").text == "x")
+        long = vp.join_reasons(["甲：" + "很长" * 300])
+        check("原因过长会截断", len(long) == vp.DETAIL_MAX_CHARS and long.endswith("…"))
+        check("没有线路", vp.join_reasons([]) == "没有片源线路")
     await srv.close()
 
 
