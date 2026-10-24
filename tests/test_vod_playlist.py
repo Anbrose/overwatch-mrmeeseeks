@@ -86,6 +86,13 @@ def test_rewrite_keeps_unsure():
     check("重复短块删掉", p4.removed_blocks == 2)
 
 
+def test_discontinuity_sequence():
+    text = ("#EXTM3U\n#EXT-X-DISCONTINUITY-SEQUENCE:3\n" + "#EXTINF:5,\na.ts\n" * 3
+            + "#EXT-X-DISCONTINUITY\n" + "#EXTINF:100,\nb.ts\n")
+    pl = vp.rewrite_media(text, "https://h.example.com/i.m3u8")
+    check("DISCONTINUITY-SEQUENCE 不当作分块", pl.removed_blocks == 0 and "DISCONTINUITY-SEQUENCE:3" in pl.text)
+
+
 def test_rewrite_uris():
     text = ("#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI=\"key.key\"\n#EXT-X-MAP:URI=\"init.mp4\"\n"
             "#EXTINF:5,\na.ts\n#EXTINF:5,\n/root/b.ts\n#EXTINF:5,\n//cdn.example.com/c.ts\n"
@@ -124,13 +131,39 @@ def text_handler(body, status=200, headers=None):
     return h
 
 
+def playlist_of(n):
+    return "#EXTM3U\n" + "#EXTINF:5,\nseg.ts\n" * n + "#EXT-X-ENDLIST\n"
+
+
+def chunked_handler(body):
+    """不带 Content-Length（分块传输），逼着走流式上限。"""
+    async def h(request):
+        resp = web.StreamResponse()
+        resp.enable_chunked_encoding()
+        await resp.prepare(request)
+        data = body.encode()
+        for i in range(0, len(data), 8192):
+            await resp.write(data[i:i + 8192])
+        await resp.write_eof()
+        return resp
+    return h
+
+
+def redirect_handler(to):
+    async def h(request):
+        raise web.HTTPFound(to)
+    return h
+
+
 async def test_fetch_playlist():
     srv = await serve({
         "/m/index.m3u8": text_handler(load("vod_master.m3u8")),
         "/m/1000k/hls/mixed.m3u8": text_handler(load("vod_variant_ads.m3u8")),
         "/forbidden": text_handler("<html>403</html>", 403),
         "/html": text_handler("<html>hi</html>"),
-        "/big": text_handler("#EXTM3U\n" + "#" * (vp.MAX_PLAYLIST_BYTES + 10)),
+        "/big": chunked_handler(playlist_of(vp.MAX_PLAYLIST_BYTES // 14 + 1000)),
+        "/medium": chunked_handler(playlist_of(30000)),
+        "/redir/index.m3u8": redirect_handler("/m/index.m3u8"),
         "/bad/index.m3u8": text_handler(load("vod_master.m3u8")),
     })
     base = f"http://127.0.0.1:{srv.port}"
@@ -138,6 +171,12 @@ async def test_fetch_playlist():
         pl = await vp.fetch_playlist(s, f"{base}/m/index.m3u8", allow_http=True)
         check("master → 变体，时长", abs(pl.duration - 3486.48) < 0.5)
         check("地址指向测试服务器", all(u.startswith(f"{base}/m/1000k/hls/") for u in uris(pl.text)))
+        check("大小测试用的列表确实合法且超限", len(playlist_of(vp.MAX_PLAYLIST_BYTES // 14 + 1000)) > vp.MAX_PLAYLIST_BYTES
+              and len(uris(vp.rewrite_media(playlist_of(100), base + "/x.m3u8", True).text)) == 100)
+        med = await vp.fetch_playlist(s, f"{base}/medium", allow_http=True)
+        check("几百 KB 的列表完整返回", len(uris(med.text)) == 30000 and abs(med.duration - 150000) < 0.01)
+        redir = await vp.fetch_playlist(s, f"{base}/redir/index.m3u8", allow_http=True)
+        check("按跳转后的地址解析相对路径", all(u.startswith(f"{base}/m/1000k/hls/") for u in uris(redir.text)))
         for name, path in [("403 页面", "/forbidden"), ("非 m3u8", "/html"), ("太大", "/big"), ("变体 404", "/bad/index.m3u8")]:
             try:
                 await vp.fetch_playlist(s, base + path, allow_http=True)
@@ -215,6 +254,7 @@ if __name__ == "__main__":
     test_pick_variant()
     test_rewrite_ads()
     test_rewrite_keeps_unsure()
+    test_discontinuity_sequence()
     test_rewrite_uris()
     asyncio.run(test_fetch_playlist())
     asyncio.run(test_probe())

@@ -115,7 +115,7 @@ def rewrite_media(text: str, base_url: str, allow_http: bool = False) -> Playlis
         ln = raw.strip()
         if not ln:
             continue
-        if ln.startswith("#EXT-X-DISCONTINUITY"):
+        if ln == "#EXT-X-DISCONTINUITY":
             blocks.append(_Block([], ln))
         elif ln.startswith("#"):
             m = _EXTINF.match(ln)
@@ -168,34 +168,40 @@ def _checked(url: str, allow_http: bool) -> str:
     return url
 
 
-async def _get_text(session: aiohttp.ClientSession, url: str) -> str:
+async def _get_text(session: aiohttp.ClientSession, url: str) -> tuple[str, str]:
+    """取 m3u8 文本，返回 (文本, 跳转后的最终地址)；相对地址要按最终地址解析。"""
     try:
         async with session.get(url, headers={"User-Agent": USER_AGENT}, timeout=FETCH_TIMEOUT) as resp:
             if resp.status != 200:
                 raise PlaylistError(NO_PLAYABLE)
-            body = await resp.content.read(MAX_PLAYLIST_BYTES + 1)
+            if resp.content_length is not None and resp.content_length > MAX_PLAYLIST_BYTES:
+                raise PlaylistError(NO_PLAYABLE)
+            body = bytearray()
+            async for chunk in resp.content.iter_chunked(65536):
+                body += chunk
+                if len(body) > MAX_PLAYLIST_BYTES:
+                    raise PlaylistError(NO_PLAYABLE)
+            final_url = str(resp.url)
     except PlaylistError:
         raise
     except Exception as e:
         log.warning("m3u8 fetch failed: %s", type(e).__name__)
         raise PlaylistError(NO_PLAYABLE) from e
-    if len(body) > MAX_PLAYLIST_BYTES:
-        raise PlaylistError(NO_PLAYABLE)
-    text = body.decode("utf-8", errors="replace").lstrip("﻿")
+    text = bytes(body).decode("utf-8", errors="replace").lstrip("\ufeff")
     if not text.lstrip().startswith("#EXTM3U"):
         raise PlaylistError(NO_PLAYABLE)
-    return text
+    return text, final_url
 
 
 async def fetch_playlist(session: aiohttp.ClientSession, url: str, allow_http: bool = False) -> Playlist:
     """取 m3u8 并改写；master 只跟进一个变体。allow_http 仅供测试。"""
     _checked(url, allow_http)
-    text = await _get_text(session, url)
-    variant = pick_variant(text, url)
+    text, final = await _get_text(session, url)
+    variant = pick_variant(text, final)
     if variant is not None:
         _checked(variant, allow_http)
-        url, text = variant, await _get_text(session, variant)
-    return rewrite_media(text, url, allow_http)
+        text, final = await _get_text(session, variant)
+    return rewrite_media(text, final, allow_http)
 
 
 async def probe(session: aiohttp.ClientSession, playlist: Playlist, origin: str) -> bool:
