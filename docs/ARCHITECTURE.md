@@ -30,8 +30,8 @@
 | `server/watch_rooms.py` | 一起看房间：状态（播放/暂停/位置）、观众、控制权限、房主交接、过期；不依赖网络和 Discord |
 | `server/watch_sources.py` | 一起看视频源：解析 B 站 / YouTube 链接，取 B 站 DASH 流地址（buvid3、WBI 签名）和 YouTube 信息 |
 | `server/vod_search.py` | 一起看按片名搜索：解析 `WATCH_VOD_SOURCES`，并发查询采集接口（`?ac=detail&wd=`），只留 https 的 `.m3u8` 片源，多个接口按「片名+年份」合并、按贴近程度排序，最多 10 条 |
-| `server/vod_playlist.py` | 一起看 vod 播放列表：取 m3u8（master 跟进一层最高码率）、改写成全绝对 https 地址、去掉片中插入的广告、试播探测（带 Origin 的 Range 请求）、按线路找第一条能播的 |
-| `server/watch_progress.py` | 一起看按频道的观看进度（`STATE_DIR/watch_progress.json`）：只记 vod 房间，少于 30 秒不记，坏文件按空处理；生成「上次一起看到…」文案 |
+| `server/vod_playlist.py` | 一起看 vod 播放列表：取 m3u8（master 跟进一层最高码率）、改写成全绝对 https 地址、去掉片中插入的广告、试播探测（带 Origin 的 Range 请求，m3u8 和片段的跳转链也只认 https）、按线路找第一条能播的；`WatchServer.prepare_vod` 给整个过程加 45 秒总时限（`VOD_PREPARE_TIMEOUT`），超时按「这一集暂时没有能播的片源」处理 |
+| `server/watch_progress.py` | 一起看按频道的观看进度（`STATE_DIR/watch_progress.json`）：只记 vod 房间，少于 30 秒不记，房间里没人时不记（最后一个人宽限期结束时记最后一次），坏文件按空处理；生成「上次一起看到…」文案 |
 | `server/watch_server.py` | 一起看 HTTP / WebSocket 服务（aiohttp）：房间页、静态文件、同步协议、B 站转流和 MPD |
 | `server/watch_ui.py` | 一起看的 Discord 部分：房间卡片、房主链接按钮（`DynamicItem`）、人数更新 |
 | `server/watch_web/` | 一起看网页：`index.html`、`player.js`（播放器、同步、权限面板）、`style.css` |
@@ -102,7 +102,7 @@
 | `grant` | `target`（成员的公开 `id`）, `allowed` | 房主开关某人的控制权限 |
 | `change_video` | `url` | 房主换视频 |
 | `episode` | `index`（从 0 开始） | 房主选集（vod 房间）：停在开头、暂停，优先用当前片源线路。当前视频不是 vod 时忽略 |
-| `next_line` | 无 | 房主换一个片源（vod 房间）：同一集、下一条线路（绕圈），保持当前位置、暂停 |
+| `next_line` | 无 | 房主换一个片源（vod 房间）：同一集、下一条线路（绕圈），保持当前位置和播放/暂停状态 |
 | `resume` | 无 | 房主或有控制权的人（vod 房间）：跳到建房时的进度快照（需要时先换集），暂停 |
 
 **服务器 → 客户端**
