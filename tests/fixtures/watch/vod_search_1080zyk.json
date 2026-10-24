@@ -1,0 +1,70 @@
+{
+ "code": 1,
+ "msg": "数据列表",
+ "page": 1,
+ "pagecount": 1,
+ "limit": 20,
+ "total": 5,
+ "list": [
+  {
+   "vod_id": "26089",
+   "vod_name": "绝命毒师第一季",
+   "vod_year": "2008",
+   "type_name": "欧美剧",
+   "vod_area": "美国",
+   "vod_remarks": "全7集",
+   "vod_pic": "https://pic3.yzzyimg.online/upload/vod/2022-09-13/16630751371.jpg",
+   "vod_play_from": "1080zyk",
+   "vod_play_url": "第01集$https://yzzy.play-cdn6.com/20220913/14552_d0e2fb6b/index.m3u8#第02集$https://yzzy.play-cdn6.com/20220913/14551_13349d36/index.m3u8#第03集$https://yzzy.play-cdn6.com/20220913/14550_d641bcfc/index.m3u8#第04集$https://yzzy.play-cdn6.com/20220913/14549_dcb54f3d/index.m3u8#第05集$https://yzzy.play-cdn6.com/20220913/14547_a7c97daf/index.m3u8#第06集$https://yzzy.play-cdn6.com/20220913/14546_4d36abe3/index.m3u8#第07集$https://yzzy.play-cdn6.com/20220913/14548_da9bb24b/index.m3u8",
+   "vod_play_note": ""
+  },
+  {
+   "vod_id": "26090",
+   "vod_name": "绝命毒师第二季",
+   "vod_year": "2009",
+   "type_name": "欧美剧",
+   "vod_area": "美国",
+   "vod_remarks": "全13集",
+   "vod_pic": "https://pic3.yzzyimg.online/upload/vod/2022-09-13/16630751631.jpg",
+   "vod_play_from": "1080zyk",
+   "vod_play_url": "第01集$https://yzzy.play-cdn6.com/20220913/14607_66b89334/index.m3u8#第02集$https://yzzy.play-cdn6.com/20220913/14606_fec8dc81/index.m3u8#第03集$https://yzzy.play-cdn6.com/20220913/14605_46f915dd/index.m3u8#第04集$https://yzzy.play-cdn6.com/20220913/14604_b947e355/index.m3u8#第05集$https://yzzy.play-cdn6.com/20220913/14603_7bf36df5/index.m3u8#第06集$https://yzzy.play-cdn6.com/20220913/14602_81d4c92b/index.m3u8#第07集$https://yzzy.play-cdn6.com/20220913/14601_b5952d5d/index.m3u8#第08集$https://yzzy.play-cdn6.com/20220913/14600_8a3ed89f/index.m3u8#第09集$https://yzzy.play-cdn6.com/20220913/14599_99026d2a/index.m3u8#第10集$https://yzzy.play-cdn6.com/20220913/14598_97e77043/index.m3u8#第11集$https://yzzy.play-cdn6.com/20220913/14597_3c92c23a/index.m3u8#第12集$https://yzzy.play-cdn6.com/20220913/14596_f8293d77/index.m3u8#第13集$https://yzzy.play-cdn6.com/20220913/14595_1af84218/index.m3u8",
+   "vod_play_note": ""
+  },
+  {
+   "vod_id": "26091",
+   "vod_name": "绝命毒师第三季",
+   "vod_year": "2010",
+   "type_name": "欧美剧",
+   "vod_area": "美国",
+   "vod_remarks": "全13集",
+   "vod_pic": "https://pic3.yzzyimg.online/upload/vod/2022-09-13/16630753061.jpg",
+   "vod_play_from": "1080zyk",
+   "vod_play_url": "第01集$https://yzzy.play-cdn6.com/20220913/14594_1c8d37bf/index.m3u8#第02集$https://yzzy.play-cdn6.com/20220913/14593_b3df6daf/index.m3u8#第03集$https://yzzy.play-cdn6.com/20220913/14592_e9560cae/index.m3u8#第04集$https://yzzy.play-cdn6.com/20220913/14591_efbcc279/index.m3u8#第05集$https://yzzy.play-cdn6.com/20220913/14590_9743ecc4/index.m3u8#第06集$https://yzzy.play-cdn6.com/20220913/14589_f29dc765/index.m3u8#第07集$https://yzzy.play-cdn6.com/20220913/14588_5737b252/index.m3u8#第08集$https://yzzy.play-cdn6.com/20220913/14587_c7631ff4/index.m3u8#第09集$https://yzzy.play-cdn6.com/20220913/14586_dc81da3a/index.m3u8#第10集$https://yzzy.play-cdn6.com/20220913/14585_0268d97e/index.m3u8#第11集$https://yzzy.play-cdn6.com/20220913/14584_2d0216fd/index.m3u8#第12集$https://yzzy.play-cdn6.com/20220913/14583_644114c7/index.m3u8#第13集$https://yzzy.play-cdn6.com/20220913/14582_cfc163e3/index.m3u8",
+   "vod_play_note": ""
+  },
+  {
+   "vod_id": "26092",
+   "vod_name": "绝命毒师第四季",
+   "vod_year": "2011",
+   "type_name": "欧美剧",
+   "vod_area": "美国",
+   "vod_remarks": "全13集",
+   "vod_pic": "https://pic3.yzzyimg.online/upload/vod/2022-09-13/16630761031.jpg",
+   "vod_play_from": "1080zyk",
+   "vod_play_url": "第01集$https://yzzy.play-cdn6.com/20220913/14581_b1ab0754/index.m3u8#第02集$https://yzzy.play-cdn6.com/20220913/14580_2475642b/index.m3u8#第03集$https://yzzy.play-cdn6.com/20220913/14579_b156dd3b/index.m3u8#第04集$https://yzzy.play-cdn6.com/20220913/14578_37e4ebc6/index.m3u8#第05集$https://yzzy.play-cdn6.com/20220913/14577_064e2ce0/index.m3u8#第06集$https://yzzy.play-cdn6.com/20220913/14576_63c93160/index.m3u8#第07集$https://yzzy.play-cdn6.com/20220913/14575_b759e5b9/index.m3u8#第08集$https://yzzy.play-cdn6.com/20220913/14574_00689d62/index.m3u8#第09集$https://yzzy.play-cdn6.com/20220913/14573_e628ca36/index.m3u8#第10集$https://yzzy.play-cdn6.com/20220913/14572_06e2dfa4/index.m3u8#第11集$https://yzzy.play-cdn6.com/20220913/14571_f0ec7029/index.m3u8#第12集$https://yzzy.play-cdn6.com/20220913/14570_144393fd/index.m3u8#第13集$https://yzzy.play-cdn6.com/20220913/14569_0696c81b/index.m3u8",
+   "vod_play_note": ""
+  },
+  {
+   "vod_id": "26093",
+   "vod_name": "绝命毒师第五季",
+   "vod_year": "2012",
+   "type_name": "欧美剧",
+   "vod_area": "美国",
+   "vod_remarks": "全16集",
+   "vod_pic": "https://pic3.yzzyimg.online/upload/vod/2022-09-13/16630761491.jpg",
+   "vod_play_from": "1080zyk",
+   "vod_play_url": "第01集$https://yzzy.play-cdn6.com/20220913/14568_7f38a24e/index.m3u8#第02集$https://yzzy.play-cdn6.com/20220913/14567_83a553a7/index.m3u8#第03集$https://yzzy.play-cdn6.com/20220913/14566_2246c1c7/index.m3u8#第04集$https://yzzy.play-cdn6.com/20220913/14565_1fcbe235/index.m3u8#第05集$https://yzzy.play-cdn6.com/20220913/14564_e6c8c7be/index.m3u8#第06集$https://yzzy.play-cdn6.com/20220913/14563_15d13cd5/index.m3u8#第07集$https://yzzy.play-cdn6.com/20220913/14562_71443c22/index.m3u8#第08集$https://yzzy.play-cdn6.com/20220913/14561_6034fce9/index.m3u8#第09集$https://yzzy.play-cdn6.com/20220913/14560_ce77d170/index.m3u8#第10集$https://yzzy.play-cdn6.com/20220913/14559_74b833aa/index.m3u8#第11集$https://yzzy.play-cdn6.com/20220913/14557_4fe23195/index.m3u8#第12集$https://yzzy.play-cdn6.com/20220913/14558_78f7ad1b/index.m3u8#第13集$https://yzzy.play-cdn6.com/20220913/14556_24caee48/index.m3u8#第14集$https://yzzy.play-cdn6.com/20220913/14555_db1a6900/index.m3u8#第15集$https://yzzy.play-cdn6.com/20220913/14554_7d9da919/index.m3u8#第16集$https://yzzy.play-cdn6.com/20220913/14553_20f4ad9b/index.m3u8",
+   "vod_play_note": ""
+  }
+ ]
+}
