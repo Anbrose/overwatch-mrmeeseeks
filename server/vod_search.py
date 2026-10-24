@@ -126,10 +126,8 @@ def parse_detail(resp: dict, api_name: str) -> list[Show]:
             lines.append(Line(f"{api_name}/{src}" if len(urls) > 1 and src else api_name, eps))
         if not lines:
             continue
-        try:
-            year = int(str(it.get("vod_year")).strip())
-        except ValueError:
-            year = None
+        m = re.search(r"\d{4}", str(it.get("vod_year")))
+        year = int(m.group()) if m else None
         title = re.sub(r"\s+", " ", name).strip()
         type_name = it.get("type_name")
         shows.append(Show(
@@ -154,17 +152,17 @@ def merge_shows(groups: list[list[Show]]) -> list[Show]:
 def rank_shows(shows: list[Show], query: str) -> list[Show]:
     q = normalize_title(query)
 
-    def bucket(s: Show) -> int:
+    def key(s: Show):
         t = normalize_title(s.title)
+        year = -(s.year or 0)  # 没有年份的排最后
         if t == q:
-            return 0
-        # 「片名[电影解说]」这类带标签后缀的条目不算正片，排到最后一档
-        if t.startswith(q) and not t.endswith("]"):
-            return 1
-        return 2
+            return (0, 0, year)
+        if t.startswith(q):
+            return (1, len(t), year)  # 越短越像正片，「片名[电影解说]」这类自然靠后
+        return (2, 0, year)
 
-    # sorted 是稳定排序：同档同年份保持合并顺序
-    return sorted(shows, key=lambda s: (bucket(s), -(s.year or 0)))
+    # sorted 是稳定排序：完全同分时保持合并顺序
+    return sorted(shows, key=key)
 
 
 def _default_session() -> aiohttp.ClientSession:
@@ -197,8 +195,12 @@ class VodSearch:
     async def search(self, query: str) -> list[Show]:
         if not self._sources:
             return []
-        async with self._session_factory() as session:
-            results = await asyncio.gather(*(self._fetch(session, n, u, query) for n, u in self._sources))
+        try:
+            async with self._session_factory() as session:
+                results = await asyncio.gather(*(self._fetch(session, n, u, query) for n, u in self._sources))
+        except Exception as e:  # noqa: BLE001
+            log.warning("vod search session failed: %s", type(e).__name__)
+            raise SearchUnavailable() from e
         ok = [r for r in results if r is not None]
         if not ok:
             raise SearchUnavailable()

@@ -80,6 +80,9 @@ def test_parse_detail_bad_input():
     check("缺 vod_play_url 跳过", vs.parse_detail({"list": [bad, "x", entry(name="好")]}, "站")[0].title == "好"
           and len(vs.parse_detail({"list": [bad, "x", entry(name="好")]}, "站")) == 1)
     check("年份非数字", vs.parse_detail({"list": [entry(year="未知")]}, "站")[0].year is None)
+    check("年份取前 4 位数字", [vs.parse_detail({"list": [entry(year=y)]}, "站")[0].year
+                              for y in ("2012.0", "2012-2013", 2012, "约1999年")] == [2012, 2012, 2012, 1999])
+    check("年份不足 4 位", vs.parse_detail({"list": [entry(year="12")]}, "站")[0].year is None)
     check("年份缺失", vs.parse_detail({"list": [entry(year=None)]}, "站")[0].year is None)
 
 
@@ -115,6 +118,13 @@ def test_rank():
         entry(name="别的 绝命毒师", year="2030"), entry(name="绝命毒师 外传", year="2001"),
         entry(name="绝命 毒师", year="1999"), entry(name="绝命毒师续", year="2010")]}, "站")]), "绝命毒师")
     check("相等 > 开头 > 其他", [s.title for s in exact] == ["绝命 毒师", "绝命毒师续", "绝命毒师 外传", "别的 绝命毒师"])
+    longer = vs.rank_shows(vs.merge_shows([vs.parse_detail({"list": [
+        entry(name="绝命毒师 前传特别篇", year="2030"), entry(name="绝命毒师二", year="2001"),
+        entry(name="绝命毒师三", year="2005"), entry(name="绝命毒师无年份", year=None)]}, "站")]), "绝命毒师")
+    check("开头档：短的在前，同长度年份倒序", [s.title for s in longer] == ["绝命毒师三", "绝命毒师二", "绝命毒师无年份", "绝命毒师 前传特别篇"])
+    nulls = vs.rank_shows(vs.merge_shows([vs.parse_detail({"list": [
+        entry(name="甲", year=None), entry(name="乙", year="2001")]}, "站")]), "x")
+    check("无年份排最后", [s.title for s in nulls] == ["乙", "甲"])
     check("规范化", vs.normalize_title(" ＡＢ c　D ") == "abcd")
 
 
@@ -171,7 +181,7 @@ def test_search_fake_session():
         check("三个站都查了", len(fs.calls) == 3)
         many = {"list": [entry(name=f"片{i}", year=str(2000 + i)) for i in range(15)]}
         out2 = await VodSearch([("甲", "https://a.test/x")], session_factory=lambda: FakeSession([("a.test", FakeResp(200, json.dumps(many)))])).search("片")
-        check("最多 10 条", len(out2) == 10 and out2[0].year == 2014)
+        check("最多 10 条", len(out2) == 10 and out2[0].year == 2009)
         slow = VodSearch([("甲", "https://a.test/x"), ("慢", "https://slow.test/x")], session_factory=lambda: FakeSession(
             [("a.test", FakeResp(200, raw("cxkjg"))), ("slow.test", lambda u: _Hang())]), timeout=0.05)
         check("超时的站被跳过", len(await slow.search("绝命毒师")) == 3)
@@ -181,6 +191,14 @@ def test_search_fake_session():
 class _Hang:
     async def __aenter__(self):
         await asyncio.sleep(10)
+
+    async def __aexit__(self, *a):
+        return False
+
+
+class _BadEnter:
+    async def __aenter__(self):
+        raise OSError("enter failed")
 
     async def __aexit__(self, *a):
         return False
@@ -201,6 +219,15 @@ def test_search_all_fail():
         empty = VodSearch([("甲", "https://a.test/x"), ("乙", "https://b.test/x")],
                           session_factory=lambda: FakeSession([("a.test", FakeResp(200, raw("empty"))), ("b.test", FakeResp(200, raw("empty")))]))
         check("都没结果返回 []", await empty.search("zzz") == [])
+        class BadFactory:
+            def __call__(self):
+                raise RuntimeError("no session")
+        for fac in (BadFactory(), lambda: _BadEnter()):
+            try:
+                await VodSearch([("甲", "https://a.test/x")], session_factory=fac).search("x")
+                check("session 出错抛 SearchUnavailable", False)
+            except SearchUnavailable as e:
+                check("session 出错抛 SearchUnavailable", e.message == "资源站暂时无法访问，请稍后再试")
         check("没有配置源返回 []", await VodSearch([]).search("x") == [])
     asyncio.run(run())
 
