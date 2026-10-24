@@ -12,7 +12,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "server"))
 
 import watch_rooms as wr  # noqa: E402
-from watch_rooms import RoomManager, RoomsFull, Video  # noqa: E402
+from watch_rooms import RoomManager, RoomsFull, Video, VodInfo, vod_title, vod_video  # noqa: E402
+from vod_search import Episode, Line, Show  # noqa: E402
 
 results = []
 now = [1000.0]
@@ -232,6 +233,113 @@ def test_listener_errors_and_random_name():
     check("名字不重复", wr.random_name({"快乐的企鹅"}, random.Random(1)) != "快乐的企鹅")
 
 
+def mkshow(n=3, title="绝命毒师 第一季"):
+    lines = [Line(f"线路{k}", [Episode(f"第{i + 1}集", f"https://v{k}.example/{i}/index.m3u8") for i in range(n)])
+             for k in (1, 2)]
+    return Show("k1", title, 2008, "美剧", lines)
+
+
+def mkvod(episode=0, duration=3000.0):
+    info = VodInfo(mkshow(), episode, 0)
+    return vod_video(info, duration)
+
+
+def test_vod_title():
+    check("多集标题", vod_title(mkshow(), 2) == "绝命毒师 第一季 · 第 3 集")
+    check("单集只有片名", vod_title(mkshow(1), 0) == "绝命毒师 第一季")
+    v = mkvod(1)
+    check("vod_video 字段", v.source == "vod" and v.id == "k1" and v.page == 2 and v.duration == 3000.0
+          and v.url == "https://v1.example/1/index.m3u8" and v.vod.episode == 1 and v.title.endswith("第 2 集"))
+
+
+def test_change_video_position():
+    m, r = mk()
+    h = m.connect(r.room_id, None, None)
+    v0 = r.version
+    check("房主切到指定位置", m.change_video(r.room_id, h.viewer_id, mkvod(), position=120.0)
+          and r.version == v0 + 1 and r.playback.position == 120.0 and r.playback.playing is False)
+    check("video 事件", ("video", r.room_id) in events)
+    check("超出时长夹住", m.change_video(r.room_id, h.viewer_id, mkvod(), position=5000.0)
+          and r.playback.position == 3000.0)
+    b = m.connect(r.room_id, None, None)
+    v = r.version
+    check("非房主不能切", not m.change_video(r.room_id, b.viewer_id, mkvod(), position=1.0) and r.version == v)
+    check("非法位置拒绝", not m.change_video(r.room_id, h.viewer_id, mkvod(), position=math.nan)
+          and not m.change_video(r.room_id, h.viewer_id, mkvod(), position=True) and r.version == v)
+
+
+def test_resume_permission():
+    m, r = mk(mkvod())
+    h = m.connect(r.room_id, None, None)
+    b = m.connect(r.room_id, None, None)
+    check("没有控制权不能 resume", not m.resume(r.room_id, b.viewer_id, mkvod(1), 50.0))
+    m.set_permission(r.room_id, h.viewer_id, b.public_id, True)
+    check("有控制权可以 resume", m.resume(r.room_id, b.viewer_id, mkvod(1), 50.0)
+          and r.playback.playing is False and r.playback.position == 50.0 and r.video.vod.episode == 1)
+    check("房主可以 resume", m.resume(r.room_id, h.viewer_id, mkvod(2), 10.0) and r.video.vod.episode == 2)
+    check("非法位置拒绝", not m.resume(r.room_id, h.viewer_id, mkvod(), math.inf))
+    m2, r2 = mk()
+    h2 = m2.connect(r2.room_id, None, None)
+    check("当前是 YouTube 不能 resume", not m2.resume(r2.room_id, h2.viewer_id, mkvod(), 5.0))
+
+
+def test_advance_version_guard():
+    m, r = mk(mkvod())
+    m.connect(r.room_id, None, None)
+    old = r.version
+    check("版本一致时切换", m.advance(r.room_id, old, mkvod(1)) and r.playback.playing is True
+          and r.playback.position == 0 and r.version == old + 1 and r.video.vod.episode == 1)
+    check("旧版本被丢弃", not m.advance(r.room_id, old, mkvod(2)) and r.video.vod.episode == 1
+          and r.version == old + 1)
+    m2, r2 = mk()
+    check("非 vod 房间不能 advance", not m2.advance(r2.room_id, r2.version, mkvod()))
+    m.close(r.room_id)
+    check("已关闭房间不能 advance", not m.advance(r.room_id, r.version, mkvod()))
+
+
+def finished_count():
+    return sum(1 for k, _ in events if k == "finished")
+
+
+def test_tick_finished():
+    m, r = mk(mkvod())
+    h = m.connect(r.room_id, None, None)
+    m.control(r.room_id, h.viewer_id, "play", 2990.0)
+    now[0] += 5
+    m.tick()
+    check("没到结尾不通知", finished_count() == 0)
+    now[0] += 20
+    m.tick()
+    check("到结尾通知一次", finished_count() == 1 and r.finished_version == r.version)
+    m.tick()
+    check("不重复通知", finished_count() == 1)
+    m.advance(r.room_id, r.version, mkvod(1))
+    m.control(r.room_id, h.viewer_id, "seek", 2995.0)
+    now[0] += 10
+    m.tick()
+    check("下一集结尾再次通知", finished_count() == 2)
+
+
+def test_tick_finished_needs_people():
+    m, r = mk(mkvod())
+    h = m.connect(r.room_id, None, None)
+    m.control(r.room_id, h.viewer_id, "play", 2990.0)
+    m.disconnect(r.room_id, h.viewer_id)
+    now[0] += wr.GRACE_SECONDS + 20
+    m.tick()
+    check("没人在就不通知", finished_count() == 0)
+
+
+def test_tick_finished_not_for_youtube():
+    m, r = mk()
+    h = m.connect(r.room_id, None, None)
+    m.set_duration(r.room_id, 100.0)
+    m.control(r.room_id, h.viewer_id, "play", 90.0)
+    now[0] += 20
+    m.tick()
+    check("YouTube 不通知 finished", finished_count() == 0)
+
+
 if __name__ == "__main__":
     import logging
     logging.disable(logging.CRITICAL)
@@ -247,6 +355,13 @@ if __name__ == "__main__":
     test_playback_math_and_seek_clamp()
     test_set_duration()
     test_listener_errors_and_random_name()
+    test_vod_title()
+    test_change_video_position()
+    test_resume_permission()
+    test_advance_version_guard()
+    test_tick_finished()
+    test_tick_finished_needs_people()
+    test_tick_finished_not_for_youtube()
     passed = sum(1 for _, ok in results if ok)
     print(f"\n{passed}/{len(results)} passed")
     sys.exit(0 if passed == len(results) else 1)

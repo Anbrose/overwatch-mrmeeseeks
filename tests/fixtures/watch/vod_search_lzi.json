@@ -1,0 +1,46 @@
+{
+ "code": 1,
+ "msg": "数据列表",
+ "page": 1,
+ "pagecount": 1,
+ "limit": 20,
+ "total": 11,
+ "list": [
+  {
+   "vod_id": "91662",
+   "vod_name": "绝命毒师  第五季[电影解说]",
+   "vod_year": "2012",
+   "type_name": "电影解说",
+   "vod_area": "美国",
+   "vod_remarks": "已完结",
+   "vod_pic": "https://img.lzipic.com/upload/vod/20240722-1/93fafe156b44c32c8d9ed403cea5eed4.jpg",
+   "vod_play_from": "lzm3u8",
+   "vod_play_url": "第01集$https://v.lzcdn23.com/20240722/2640_649b85ec/index.m3u8",
+   "vod_play_note": ""
+  },
+  {
+   "vod_id": "91530",
+   "vod_name": "绝命毒师  第二季[电影解说]",
+   "vod_year": "2009",
+   "type_name": "电影解说",
+   "vod_area": "美国",
+   "vod_remarks": "已完结",
+   "vod_pic": "https://img.lzipic.com/upload/vod/20240720-1/ededa89e19676e2515c5d3204b5e8528.jpg",
+   "vod_play_from": "lzm3u8",
+   "vod_play_url": "第01集$https://v.lzcdn23.com/20240719/2544_495a32fc/index.m3u8",
+   "vod_play_note": ""
+  },
+  {
+   "vod_id": "91527",
+   "vod_name": "绝命毒师 第一季[电影解说]",
+   "vod_year": "2008",
+   "type_name": "电影解说",
+   "vod_area": "美国",
+   "vod_remarks": "已完结",
+   "vod_pic": "https://img.lzipic.com/upload/vod/20240720-1/f97cbaadf40e9939965ac1cdd4b4dbd0.jpg",
+   "vod_play_from": "lzm3u8",
+   "vod_play_url": "第01集$https://v.lzcdn23.com/20240719/2547_529ab259/index.m3u8",
+   "vod_play_note": ""
+  }
+ ]
+}

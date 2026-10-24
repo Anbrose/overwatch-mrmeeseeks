@@ -1,7 +1,8 @@
 """一起看视频的房间状态（与 Discord、网络层无关，便于单独测试）。
 
 规则：进房默认只能看；只有房主能开关别人的控制权、换视频；控制权 = 播放、暂停、拖进度条。
-网络层通过 RoomManager.listeners 订阅状态变化（kind: members/playback/video/permissions/host/closed）。
+网络层通过 RoomManager.listeners 订阅状态变化（kind: members/playback/video/permissions/host/closed/finished）；
+finished = 在线的 vod 房间播到结尾（只通知一次，由网络层决定要不要自动下一集）。
 """
 from __future__ import annotations
 
@@ -12,6 +13,8 @@ import secrets
 import time
 from dataclasses import dataclass, field
 from typing import Callable
+
+from vod_search import Show
 
 log = logging.getLogger(__name__)
 
@@ -35,13 +38,33 @@ class RoomsFull(Exception):
 
 
 @dataclass
+class VodInfo:
+    show: Show
+    episode: int                   # 从 0 开始
+    line: int                      # show.lines 的下标
+    resume: object | None = None   # 建房时的观看进度快照（Progress），房间只存不改
+
+
+def vod_title(show: Show, episode: int) -> str:
+    if show.episode_count == 1:
+        return show.title
+    return f"{show.title} · 第 {episode + 1} 集"
+
+
+def vod_video(info: VodInfo, duration: float) -> Video:
+    return Video(source="vod", id=info.show.key, page=info.episode + 1, title=vod_title(info.show, info.episode),
+                 duration=duration, url=info.show.lines[info.line].episodes[info.episode].url, vod=info)
+
+
+@dataclass
 class Video:
-    source: str          # "bilibili" | "youtube"
+    source: str          # "bilibili" | "youtube" | "vod"
     id: str
     page: int
     title: str
     duration: float | None
     url: str
+    vod: VodInfo | None = None   # source == "vod" 时才有
 
 
 @dataclass
@@ -85,6 +108,7 @@ class Room:
     empty_since: float | None = None
     closed: bool = False
     version: int = 0                      # 每次换视频 +1
+    finished_version: int | None = None   # 已经通知过 finished 的 version
     owner_viewer_id: str | None = None    # 用房主链接拿回房主身份的人
     now: Callable[[], float] = field(default=time.time, repr=False)
 
@@ -248,15 +272,45 @@ class RoomManager:
         self._notify(room, "permissions")
         return True
 
-    def change_video(self, room_id, actor_id, video: Video) -> bool:
-        room = self.get(room_id)
-        if room is None or not self._is_host(room, actor_id):
-            return False
-        self._check_bili(video, exclude=room)
+    def _set_video(self, room: Room, video: Video, position: float, playing: bool) -> None:
         room.video = video
         room.version += 1
-        room.playback = Playback(False, 0.0, self.clock())
+        pos = max(0.0, float(position))
+        if video.duration is not None:
+            pos = min(pos, video.duration)
+        room.playback = Playback(playing, pos, self.clock())
         self._notify(room, "video")
+
+    @staticmethod
+    def _valid_position(position) -> bool:
+        return (not isinstance(position, bool) and isinstance(position, (int, float))
+                and math.isfinite(position))
+
+    def change_video(self, room_id, actor_id, video: Video, position: float = 0.0, playing: bool = False) -> bool:
+        room = self.get(room_id)
+        if room is None or not self._is_host(room, actor_id) or not self._valid_position(position):
+            return False
+        self._check_bili(video, exclude=room)
+        self._set_video(room, video, position, playing)
+        return True
+
+    def resume(self, room_id, actor_id, video: Video, position: float) -> bool:
+        """房主或有控制权的人，在 vod 房间里换到指定集并停在指定位置（暂停）。"""
+        room = self.get(room_id)
+        member = room.members.get(actor_id) if room else None
+        if member is None or not (member.can_control or self._is_host(room, actor_id)):
+            return False
+        if room.video.source != "vod" or not self._valid_position(position):
+            return False
+        self._set_video(room, video, position, False)
+        return True
+
+    def advance(self, room_id: str, expected_version: int, video: Video) -> bool:
+        """自动下一集：不看人，只认版本号；版本变了（有人手动切过）就丢弃。"""
+        room = self.get(room_id)
+        if room is None or room.video.source != "vod" or room.version != expected_version:
+            return False
+        self._set_video(room, video, 0.0, True)
         return True
 
     def set_duration(self, room_id: str, value: float) -> bool:
@@ -283,6 +337,11 @@ class RoomManager:
                 self._notify(room, "members")
             if self._ensure_host(room):
                 self._notify(room, "host")
+            if (room.video.source == "vod" and room.playback.playing and room.video.duration is not None
+                    and room.finished_version != room.version and room.present()
+                    and room.playback.position_at(now, room.video.duration) >= room.video.duration):
+                room.finished_version = room.version
+                self._notify(room, "finished")
             if not room.present() and room.empty_since is None:
                 # 从最后一个人宽限期结束的那一刻开始算
                 room.empty_since = max((m.gone_since + GRACE_SECONDS for m in expired), default=now)

@@ -538,7 +538,13 @@ def test_build_mpd():
 
 async def test_lifecycle():
     rooms = RoomManager()
-    server = ws_mod.WatchServer(rooms, FakeSources(), "127.0.0.1", 0)
+
+    class FakeRecorder:
+        ticks = 0
+
+        def tick(self):
+            FakeRecorder.ticks += 1
+    server = ws_mod.WatchServer(rooms, FakeSources(), "127.0.0.1", 0, recorder=FakeRecorder())
     await server.start()
     ticks = []
     rooms.tick = lambda: ticks.append(1)
@@ -552,6 +558,7 @@ async def test_lifecycle():
         pass
     await server.close()
     check("run 定时 tick", len(ticks) >= 2)
+    check("run 定时调用 recorder.tick", FakeRecorder.ticks >= 2)
 
     # 有打开的 WebSocket 时 close() 也要很快结束（docker stop 只给 10 秒）
     rooms = RoomManager()
@@ -600,6 +607,415 @@ async def test_lifecycle():
         await pending.close()
 
 
+# ---------------- vod（按片名搜索的剧） ----------------
+FIX = os.path.join(ROOT, "tests", "fixtures", "watch")
+AD_SEGMENT = "9abd76c66643cf6bbfbda0a81923d523.ts"
+
+
+def _fixture(name):
+    with open(os.path.join(FIX, name), encoding="utf-8") as f:
+        return f.read()
+
+
+class VodUpstream:
+    """假资源站 CDN：/{line}/{ep}/index.m3u8 → master，/…/1000k/hls/mixed.m3u8 → 带广告的变体，片段带 ACAO *。"""
+
+    def __init__(self):
+        self.master = _fixture("vod_master.m3u8")
+        self.variant = _fixture("vod_variant_ads.m3u8")
+        self.dead_lines = set()      # 这些线路的 m3u8 返回 404
+        self.delays = {}             # 集数 → 取 master 前等几秒
+        self.m3u8_requests = []
+        self.app = web.Application()
+        self.app.router.add_get("/{line}/{ep}/{tail:.*}", self.handle)
+
+    async def handle(self, request):
+        line, ep, tail = request.match_info["line"], request.match_info["ep"], request.match_info["tail"]
+        if tail.endswith(".ts"):
+            return web.Response(status=206, body=b"x" * 1024, headers={"Access-Control-Allow-Origin": "*"})
+        self.m3u8_requests.append(request.path)
+        if line in self.dead_lines:
+            return web.Response(status=404, text="gone")
+        if tail == "index.m3u8":
+            delay = self.delays.get(int(ep), 0)
+            if delay:
+                await asyncio.sleep(delay)
+            return web.Response(text=self.master)
+        if tail == "1000k/hls/mixed.m3u8":
+            return web.Response(text=self.variant)
+        return web.Response(status=404)
+
+
+def vod_show(base, lines=("线路A", "线路B", "线路C"), episodes=3):
+    from vod_search import Episode, Line, Show
+    return Show(key="测试剧|2024", title="测试剧", year=2024, type_name="剧集", lines=[
+        Line(name, [Episode(f"第{e + 1}集", f"{base}/l{i}/{e}/index.m3u8") for e in range(episodes)])
+        for i, name in enumerate(lines)])
+
+
+async def make_vod(rooms=None, **kw):
+    up = VodUpstream()
+    up_client = TestClient(TestServer(up.app))
+    await up_client.start_server()
+    base = str(up_client.make_url("/")).rstrip("/")
+    rooms = rooms or RoomManager()
+    server = ws_mod.WatchServer(rooms, FakeSources(), "127.0.0.1", 0, origin="https://watch.example.com",
+                                allow_http=True, **kw)
+    client = TestClient(TestServer(server.app))
+    await client.start_server()
+    return up, up_client, base, rooms, server, client
+
+
+async def vod_room(rooms, server, show, episode=0, line=0, resume=None):
+    video, pl = await server.prepare_vod(show, episode, line, resume)
+    room = rooms.create(1, 2, "发起人", video)
+    server.attach_playlist(room, pl)
+    return room
+
+
+async def test_vod_playlist_route():
+    up, up_client, base, rooms, server, client = await make_vod()
+    try:
+        show = vod_show(base)
+        room = await vod_room(rooms, server, show)
+        rid = room.room_id
+        check("prepare_vod 生成 vod 视频", room.video.source == "vod" and room.video.vod.episode == 0
+              and room.video.vod.line == 0 and abs(room.video.duration - 3486.48) < 0.5
+              and room.video.url == f"{base}/l0/0/index.m3u8")
+        n_req = len(up.m3u8_requests)
+        r = await client.get(f"/vod/{rid}/0/index.m3u8")
+        body = await r.text()
+        check("vod 播放列表 200 且类型对", r.status == 200 and r.content_type == "application/vnd.apple.mpegurl"
+              and r.headers.get("Cache-Control") == "no-store" and body.startswith("#EXTM3U"))
+        check("播放列表去掉了广告、地址绝对", AD_SEGMENT not in body and f"{base}/l0/0/1000k/hls/" in body)
+        check("命中缓存不再取上游", len(up.m3u8_requests) == n_req)
+        check("vod 旧版本号 404", (await client.get(f"/vod/{rid}/1/index.m3u8")).status == 404)
+        check("vod 版本号非数字 404", (await client.get(f"/vod/{rid}/x/index.m3u8")).status == 404)
+        check("vod 不存在的房间 404", (await client.get("/vod/zzzzzz/0/index.m3u8")).status == 404)
+        yt_room = rooms.create(1, 2, "x", yt())
+        check("YouTube 房间没有 vod 播放列表", (await client.get(f"/vod/{yt_room.room_id}/0/index.m3u8")).status == 404)
+
+        # 缓存被清掉 → 按房间当前地址取一次
+        server._playlists.clear()
+        r = await client.get(f"/vod/{rid}/0/index.m3u8")
+        body = await r.text()
+        check("缓存缺失时按当前集地址重取", r.status == 200 and AD_SEGMENT not in body
+              and up.m3u8_requests[n_req:] == ["/l0/0/index.m3u8", "/l0/0/1000k/hls/mixed.m3u8"])
+        r = await client.get(f"/vod/{rid}/0/index.m3u8")
+        await r.read()
+        check("重取后缓存", len(up.m3u8_requests) == n_req + 2)
+        server._playlists.clear()
+        up.dead_lines.add("l0")
+        r = await client.get(f"/vod/{rid}/0/index.m3u8")
+        check("重取失败 502 带提示", r.status == 502 and (await r.text()) == "这一集暂时没有能播的片源")
+        up.dead_lines.clear()
+
+        bad = vod_show(base)
+        up.dead_lines.update({"l0", "l1", "l2"})
+        try:
+            await server.prepare_vod(bad, 0)
+            raised = None
+        except Exception as e:
+            raised = e
+        check("所有线路都不能播 → prepare_vod 抛 PlaylistError", raised is not None
+              and type(raised).__name__ == "PlaylistError" and raised.message == "这一集暂时没有能播的片源")
+        up.dead_lines.clear()
+        up.dead_lines.add("l0")
+        video, _ = await server.prepare_vod(show, 1, 0)
+        check("prepare_vod 跳过不能播的线路", video.vod.line == 1 and video.vod.episode == 1)
+        up.dead_lines.clear()
+
+        rooms.close(rid)
+        check("关房后清掉播放列表缓存", not any(k[0] == rid for k in server._playlists))
+    finally:
+        await client.close()
+        await up_client.close()
+
+
+async def test_vod_state_message():
+    from watch_progress import Progress, ProgressRecorder, ProgressStore
+    rooms = RoomManager()
+    store = ProgressStore(None)
+    recorder = ProgressRecorder(rooms, store)
+    n_listeners = len(rooms.listeners)
+    up, up_client, base, rooms, server, client = await make_vod(rooms, recorder=recorder)
+    try:
+        check("server 不替 recorder 重复注册监听", len(rooms.listeners) == n_listeners + 1
+              and rooms.listeners.count(recorder.on_event) == 1)
+        show = vod_show(base)
+        room = await vod_room(rooms, server, show)
+        a, _ = await hello(client, room.room_id, key=room.owner_key)
+        s = await recv_type(a, "state")
+        v = s and s["video"]
+        check("vod state.video 字段", v and v["source"] == "vod" and v["hls"] == f"/vod/{room.room_id}/0/index.m3u8"
+              and v["episode"] == 0 and v["episode_count"] == 3 and v["line_name"] == "线路A"
+              and v["line_count"] == 3 and v["show_title"] == "测试剧" and v["mpd"] is None
+              and v["title"] == "测试剧 · 第 1 集")
+        check("没有进度快照 → resume 是 null", s and "resume" in s and s["resume"] is None)
+        await a.close()
+
+        snap = Progress("测试剧", 2, 2052.0, 1761300000.0)
+        room2 = await vod_room(rooms, server, show, resume=snap)
+        b, _ = await hello(client, room2.room_id)
+        s = await recv_type(b, "state")
+        r = s and s["resume"]
+        check("有进度快照 → resume 带集数、位置、文字", r and r["episode"] == 2 and r["position"] == 2052.0
+              and r["text"].startswith("上次一起看到 第 3 集 34:12（"))
+        await b.close()
+
+        yt_room = rooms.create(1, 2, "x", yt())
+        c, _ = await hello(client, yt_room.room_id)
+        s = await recv_type(c, "state")
+        check("YouTube state 没有 hls、resume 为 null", s and s["video"]["hls"] is None and s["resume"] is None)
+        await c.close()
+    finally:
+        await client.close()
+        await up_client.close()
+
+
+async def test_vod_episode_switch():
+    up, up_client, base, rooms, server, client = await make_vod()
+    try:
+        room = await vod_room(rooms, server, vod_show(base))
+        rid = room.room_id
+        a, _ = await hello(client, rid, key=room.owner_key)
+        b, wb = await hello(client, rid)
+        await drain(a)
+        await drain(b)
+
+        await b.send_json({"type": "episode", "index": 1})
+        got = await drain(b, 0.5)
+        check("非房主选集无效", room.version == 0 and not any(m["type"] == "state" for m in got))
+        for bad in (3, -1, "1", 1.0, True, None):
+            await a.send_json({"type": "episode", "index": bad})
+        got = await drain(a, 0.5)
+        check("集数越界/类型错误被忽略", room.version == 0 and not any(m["type"] in ("state", "error") for m in got))
+
+        await a.send_json({"type": "episode", "index": 1})
+        s1, s2 = await recv_type(a, "state"), await recv_type(b, "state")
+        check("房主选集 → 所有人切到第 2 集", s1 and s2 and s1["video"]["episode"] == 1 and s2["video"]["episode"] == 1
+              and s2["video"]["version"] == 1 and s2["video"]["hls"] == f"/vod/{rid}/1/index.m3u8"
+              and s2["playing"] is False and s2["position"] == 0 and s2["video"]["line_name"] == "线路A")
+        check("新版本播放列表已缓存、旧的被清掉", (rid, 1) in server._playlists and (rid, 0) not in server._playlists)
+        n_req = len(up.m3u8_requests)
+        r = await client.get(f"/vod/{rid}/1/index.m3u8")
+        check("新版本播放列表直接可取", r.status == 200 and AD_SEGMENT not in await r.text()
+              and len(up.m3u8_requests) == n_req)
+
+        yt_room = rooms.create(1, 2, "x", yt())
+        c, _ = await hello(client, yt_room.room_id, key=yt_room.owner_key)
+        await drain(c)
+        for msg in ({"type": "episode", "index": 0}, {"type": "next_line"}, {"type": "resume"}):
+            await c.send_json(msg)
+        got = await drain(c, 0.5)
+        check("不是 vod 房间时 vod 消息被忽略", yt_room.version == 0 and not got)
+    finally:
+        await client.close()
+        await up_client.close()
+
+
+async def test_vod_next_line():
+    up, up_client, base, rooms, server, client = await make_vod()
+    try:
+        room = await vod_room(rooms, server, vod_show(base))
+        rid = room.room_id
+        a, wa = await hello(client, rid, key=room.owner_key)
+        b, wb = await hello(client, rid)
+        await drain(a)
+        await drain(b)
+        rooms.control(rid, wa["viewer_id"], "seek", 300.0)
+        await drain(a)
+        await drain(b)
+
+        await b.send_json({"type": "next_line"})
+        got = await drain(b, 0.5)
+        check("非房主换片源无效", room.version == 0 and not any(m["type"] == "state" for m in got))
+
+        await a.send_json({"type": "next_line"})
+        s = await recv_type(b, "state")
+        check("换片源 → 下一条线路、同一集、位置不变、暂停", s and s["video"]["line_name"] == "线路B"
+              and s["video"]["episode"] == 0 and s["position"] == 300.0 and s["playing"] is False
+              and s["video"]["version"] == 1 and room.video.url == f"{base}/l1/0/index.m3u8")
+        check("换片源后缓存新版本", (rid, 1) in server._playlists)
+        await drain(a)
+
+        up.dead_lines.update({"l0", "l1", "l2"})
+        await a.send_json({"type": "next_line"})
+        e = await recv_type(a, "error")
+        got = await drain(b)
+        check("其它线路都不能播 → 只告诉房主", e and e["message"] == "这一集暂时没有能播的片源"
+              and not got and room.version == 1 and room.video.vod.line == 1)
+        up.dead_lines.clear()
+
+        # 最后一条线路再换 → 绕回第一条
+        await a.send_json({"type": "next_line"})
+        s = await recv_type(a, "state")
+        await a.send_json({"type": "next_line"})
+        s = await recv_type(a, "state")
+        check("最后一条线路换片源绕回第一条", s and s["video"]["line_name"] == "线路A" and room.video.vod.line == 0)
+
+        # 播放中换片源 → 从当前位置继续播
+        rooms.control(rid, wa["viewer_id"], "play", 600.0)
+        await drain(a)
+        await a.send_json({"type": "next_line"})
+        s = await recv_type(a, "state")
+        check("播放中换片源 → 保持播放、从当前位置继续", s and s["video"]["line_name"] == "线路B"
+              and s["playing"] is True and room.playback.playing is True and 600.0 <= s["position"] < 605.0)
+    finally:
+        await client.close()
+        await up_client.close()
+
+
+async def test_vod_resume():
+    from watch_progress import Progress
+    up, up_client, base, rooms, server, client = await make_vod()
+    try:
+        show = vod_show(base)
+        snap = Progress("测试剧", 2, 2052.0, 1761300000.0)
+        room = await vod_room(rooms, server, show, resume=snap)
+        rid = room.room_id
+        a, wa = await hello(client, rid, key=room.owner_key)
+        b, wb = await hello(client, rid)
+        c, wc = await hello(client, rid)
+        await drain(a)
+        await drain(c)
+        await c.send_json({"type": "resume"})
+        got = await drain(c, 0.5)
+        check("没有控制权的人续看无效", room.version == 0 and not any(m["type"] == "state" for m in got))
+
+        rooms.set_permission(rid, wa["viewer_id"], room.members[wb["viewer_id"]].public_id, True)
+        await drain(b)
+        await b.send_json({"type": "resume"})
+        s = await recv_type(c, "state")
+        check("有控制权的人续看 → 第 3 集 2052 秒暂停", s and s["video"]["episode"] == 2 and s["position"] == 2052.0
+              and s["playing"] is False and s["video"]["version"] == 1 and s["resume"]["episode"] == 2)
+        check("续看后缓存新版本", (rid, 1) in server._playlists and room.video.vod.line == 0)
+
+        # 已在快照那一集：不重新取，只跳到位置
+        rooms.control(rid, wa["viewer_id"], "seek", 10.0)
+        await drain(c)
+        n_req = len(up.m3u8_requests)
+        await a.send_json({"type": "resume"})
+        s = await recv_type(c, "state")
+        check("同一集续看只跳位置、不取播放列表", s and s["position"] == 2052.0 and s["video"]["version"] == 2
+              and len(up.m3u8_requests) == n_req and (rid, 2) in server._playlists
+              and (rid, 1) not in server._playlists)
+
+        room2 = await vod_room(rooms, server, show)
+        d, _ = await hello(client, room2.room_id, key=room2.owner_key)
+        await drain(d)
+        await d.send_json({"type": "resume"})
+        got = await drain(d, 0.5)
+        check("没有快照时续看被忽略", room2.version == 0 and not got)
+    finally:
+        await client.close()
+        await up_client.close()
+
+
+async def test_vod_switch_race():
+    up, up_client, base, rooms, server, client = await make_vod()
+    try:
+        room = await vod_room(rooms, server, vod_show(base))
+        rid = room.room_id
+        a, wa = await hello(client, rid, key=room.owner_key)
+        await drain(a)
+        up.delays = {1: 0.3}
+        await a.send_json({"type": "episode", "index": 1})
+        await a.send_json({"type": "episode", "index": 2})
+        e = await recv_type(a, "error")
+        s = await recv_type(a, "state")
+        await asyncio.sleep(0.4)
+        check("连点两集 → 第二次提示请稍候、只切一次", e and e["message"] == "正在换视频，请稍候"
+              and s and s["video"]["episode"] == 1 and room.version == 1 and room.video.vod.episode == 1)
+        await drain(a)
+
+        # 自动下一集（目标第 3 集，慢）与房主手动选第 1 集（快）赛跑：房主先换，自动下一集被版本号丢弃
+        advances = []
+        orig_advance = rooms.advance
+
+        def spy(room_id, expected_version, video):
+            ok = orig_advance(room_id, expected_version, video)
+            advances.append(ok)
+            return ok
+        rooms.advance = spy
+        up.delays = {2: 0.5, 0: 0.1}
+        server._on_room_event(room, "finished")
+        await a.send_json({"type": "episode", "index": 0})
+        await asyncio.sleep(0.9)
+        check("自动下一集与手动切换赛跑 → 手动的赢", advances == [False] and room.video.vod.episode == 0
+              and room.version == 2 and room.playback.playing is False)
+        check("输掉的自动下一集不留播放列表", set(k for k in server._playlists if k[0] == rid) == {(rid, 2)})
+    finally:
+        await client.close()
+        await up_client.close()
+
+
+async def test_vod_prepare_timeout():
+    up, up_client, base, rooms, server, client = await make_vod(vod_prepare_timeout=0.3)
+    try:
+        check("默认准备时限 45 秒", ws_mod.VOD_PREPARE_TIMEOUT == 45
+              and ws_mod.WatchServer(RoomManager(), FakeSources(), "127.0.0.1", 0).vod_prepare_timeout == 45)
+        show = vod_show(base)
+        up.delays = {1: 2.0}
+        t0 = time.monotonic()
+        try:
+            await server.prepare_vod(show, 1)
+            raised = None
+        except Exception as e:
+            raised = e
+        took = time.monotonic() - t0
+        check(f"片源太慢 → 超时按没有能播的片源（{took:.2f}s）", raised is not None
+              and type(raised).__name__ == "PlaylistError" and raised.message == "这一集暂时没有能播的片源"
+              and took < 1.5)
+
+        # 网页上的选集也走同一个时限
+        room = await vod_room(rooms, server, show)
+        a, _ = await hello(client, room.room_id, key=room.owner_key)
+        await drain(a)
+        await a.send_json({"type": "episode", "index": 1})
+        e = await recv_type(a, "error")
+        check("选集超时 → 提示没有能播的片源、不换集", e and e["message"] == "这一集暂时没有能播的片源"
+              and room.version == 0 and room.video.vod.episode == 0)
+    finally:
+        await client.close()
+        await up_client.close()
+
+
+async def test_vod_auto_next():
+    offset = [0.0]
+    rooms = RoomManager(clock=lambda: time.time() + offset[0])
+    up, up_client, base, rooms, server, client = await make_vod(rooms)
+    try:
+        show = vod_show(base)
+        room = await vod_room(rooms, server, show)
+        rid = room.room_id
+        a, wa = await hello(client, rid, key=room.owner_key)
+        await drain(a)
+        rooms.control(rid, wa["viewer_id"], "play", room.video.duration - 2)
+        await drain(a)
+        offset[0] += 5
+        rooms.tick()
+        s = await recv_type(a, "state")
+        check("播完自动下一集：第 2 集、播放中、从 0 开始", s and s["video"]["episode"] == 1 and s["playing"] is True
+              and s["position"] == 0 and s["video"]["version"] == 1 and room.video.vod.line == 0)
+        check("自动下一集后缓存新版本", (rid, 1) in server._playlists and (rid, 0) not in server._playlists)
+
+        last = await vod_room(rooms, server, show, episode=2)
+        b, wb = await hello(client, last.room_id, key=last.owner_key)
+        await drain(b)
+        rooms.control(last.room_id, wb["viewer_id"], "play", last.video.duration - 2)
+        await drain(b)
+        offset[0] += 5
+        rooms.tick()
+        await asyncio.sleep(0.3)
+        got = await drain(b)
+        check("最后一集播完停住", last.version == 0 and last.video.vod.episode == 2
+              and not any(m["type"] == "state" for m in got))
+    finally:
+        await client.close()
+        await up_client.close()
+
+
 async def main():
     await test_ws_flow()
     await test_duration_and_change_video()
@@ -609,6 +1025,14 @@ async def main():
     await test_pages()
     test_build_mpd()
     await test_lifecycle()
+    await test_vod_playlist_route()
+    await test_vod_state_message()
+    await test_vod_episode_switch()
+    await test_vod_next_line()
+    await test_vod_resume()
+    await test_vod_switch_race()
+    await test_vod_prepare_timeout()
+    await test_vod_auto_next()
 
 
 if __name__ == "__main__":

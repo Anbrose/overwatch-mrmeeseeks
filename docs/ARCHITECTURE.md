@@ -29,6 +29,9 @@
 | `server/patch_feed.py` | 补丁推送：`PatchFeed` 定时检查、用 `PatchSummarizer`（Claude）写摘要并发到频道；也给英雄问答提供最近的官方补丁 |
 | `server/watch_rooms.py` | 一起看房间：状态（播放/暂停/位置）、观众、控制权限、房主交接、过期；不依赖网络和 Discord |
 | `server/watch_sources.py` | 一起看视频源：解析 B 站 / YouTube 链接，取 B 站 DASH 流地址（buvid3、WBI 签名）和 YouTube 信息 |
+| `server/vod_search.py` | 一起看按片名搜索：解析 `WATCH_VOD_SOURCES`，并发查询采集接口（`?ac=detail&wd=`），只留 https 的 `.m3u8` 片源，多个接口按「片名+年份」合并、按贴近程度排序，最多 10 条 |
+| `server/vod_playlist.py` | 一起看 vod 播放列表：取 m3u8（master 跟进一层最高码率）、改写成全绝对 https 地址、去掉片中插入的广告、试播探测（带 Origin 的 Range 请求，m3u8 和片段的跳转链也只认 https）、按线路找第一条能播的；`WatchServer.prepare_vod` 给整个过程加 45 秒总时限（`VOD_PREPARE_TIMEOUT`），超时按「这一集暂时没有能播的片源」处理 |
+| `server/watch_progress.py` | 一起看按频道的观看进度（`STATE_DIR/watch_progress.json`）：只记 vod 房间，少于 30 秒不记，房间里没人时不记（最后一个人宽限期结束时记最后一次），坏文件按空处理；生成「上次一起看到…」文案 |
 | `server/watch_server.py` | 一起看 HTTP / WebSocket 服务（aiohttp）：房间页、静态文件、同步协议、B 站转流和 MPD |
 | `server/watch_ui.py` | 一起看的 Discord 部分：房间卡片、房主链接按钮（`DynamicItem`）、人数更新 |
 | `server/watch_web/` | 一起看网页：`index.html`、`player.js`（播放器、同步、权限面板）、`style.css` |
@@ -84,6 +87,7 @@
 | `GET /ws/{room_id}` | WebSocket，协议见下 |
 | `GET /bili/{room_id}/{version}/manifest.mpd` | B 站视频的 DASH 清单，`BaseURL` 指向下面的转流地址 |
 | `GET /bili/{room_id}/{version}/{video\|audio}` | B 站视频流、音频流转发（支持 Range）。`version` 随换视频递增，旧地址失效 |
+| `GET /vod/{room_id}/{version}/index.m3u8` | 按片名搜索的剧集播放列表：本服务器只取当前集、当前片源线路的 m3u8，改写后返回（去广告，所有 URI 变成绝对 https）。片段由浏览器直接从资源站 CDN 取。`version` 随换视频递增，旧地址失效 |
 
 页面用 `localStorage["watch_viewer_id:<room_id>"]`（每个房间一个）保存 `viewer_id`，断线 2 秒后自动重连并带上同一个 `viewer_id`。`viewer_id` 是重连凭据，服务器只在 `welcome` 里发给本人；别人看到的是每个成员的公开 `id`（`members` 列表、`grant.target` 用它）。
 
@@ -97,6 +101,9 @@
 | `duration` | `value` | YouTube 播放器加载后上报一次视频时长；只接受房主和有控制权的人，且只在时长未知时 |
 | `grant` | `target`（成员的公开 `id`）, `allowed` | 房主开关某人的控制权限 |
 | `change_video` | `url` | 房主换视频 |
+| `episode` | `index`（从 0 开始） | 房主选集（vod 房间）：停在开头、暂停，优先用当前片源线路。当前视频不是 vod 时忽略 |
+| `next_line` | 无 | 房主换一个片源（vod 房间）：同一集、下一条线路（绕圈），保持当前位置和播放/暂停状态 |
+| `resume` | 无 | 房主或有控制权的人（vod 房间）：跳到建房时的进度快照（需要时先换集），暂停 |
 
 **服务器 → 客户端**
 
@@ -104,7 +111,7 @@
 |---|---|---|
 | `welcome` | `viewer_id`, `name`, `is_host`, `can_control` | 握手回复 |
 | `pong` | `t`, `server_time` | 回复 `ping` |
-| `state` | `video`（`source`, `id`, `title`, `duration`, `version`, `mpd`）, `playing`, `position`, `server_time` | 房间状态；`mpd` 只对 B 站有值 |
+| `state` | `video`（`source`, `id`, `title`, `duration`, `version`, `mpd`, `hls`, `episode`, `episode_count`, `line_name`, `line_count`, `show_title`）, `playing`, `position`, `server_time`, `resume` | 房间状态；`mpd` 只对 B 站有值。`hls` 只对 vod 房间有值（播放列表地址），`episode` 从 0 开始，`line_name` 是当前片源线路名，`line_count` 是线路数，`show_title` 是剧名。`resume` 是建房时的进度快照（`episode`, `position`, `text`），没有进度或不是 vod 时为 null，`text` 就是「上次一起看到…」文案 |
 | `you` | `is_host`, `can_control` | 自己的身份或权限变了 |
 | `members` | `members`（`id`（公开 id，不是 `viewer_id`）, `name`, `can_control`） | 只发给房主，不含房主自己 |
 | `error` | `message` | 提示信息，如 `正在换视频，请稍候`（上一次 `change_video` 还没处理完时） |

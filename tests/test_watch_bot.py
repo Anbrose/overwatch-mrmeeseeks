@@ -6,6 +6,7 @@
 import asyncio
 import json
 import os
+import re
 import sys
 import tempfile
 import types
@@ -18,7 +19,10 @@ import discord  # noqa: E402
 
 import bot  # noqa: E402
 import watch_ui as wui  # noqa: E402
-from watch_rooms import RoomManager, Video  # noqa: E402
+from vod_playlist import PlaylistError  # noqa: E402
+from vod_search import Episode, Line, SearchUnavailable, Show  # noqa: E402
+from watch_progress import Progress, ProgressStore  # noqa: E402
+from watch_rooms import RoomManager, Video, VodInfo, vod_video  # noqa: E402
 from watch_sources import VideoUnavailable  # noqa: E402
 
 results = []
@@ -105,9 +109,10 @@ class FakeMessage:
         return NS(id=7000 + len(self.replies))
 
 
-def make_bot(ui=None, sources=None):
+def make_bot(ui=None, sources=None, vod_search=None, watch_server=None, progress=None):
     b = bot.MeeseeksBot.__new__(bot.MeeseeksBot)
     b.watch_ui, b.watch_sources = ui, sources
+    b.vod_search, b.watch_server, b.progress = vod_search, watch_server, progress
     return b
 
 
@@ -132,7 +137,9 @@ def test_parse_and_route():
     check("watch 紧贴链接", bot.parse_command("watch" + url) == ("watch", url))
     check("watch 后全角空格 / 大小写", bot.parse_command("Watch\u3000" + url) == ("watch", url))
     check("watch 开头的普通问题不是指令", bot.parse_command("watchpoint genji?") == ("ask", "watchpoint genji?"))
-    check("帮助里有一起看", "`@mrmeeseeks 一起看 <Bilibili or YouTube link>` (or `watch`)" in bot.HELP_TEXT)
+    check("帮助里有一起看", "`@mrmeeseeks 一起看 <Bilibili/YouTube link or show name>` (or `watch`)" in bot.HELP_TEXT)
+    check("按片名一起看", bot.parse_command("一起看 绝命毒师") == ("一起看", "绝命毒师")
+          and bot.parse_command("watch Breaking Bad") == ("watch", "Breaking Bad"))
 
 
 def test_card_text():
@@ -189,7 +196,7 @@ def test_watch_command():
         b = make_bot(ui, src)
         msg = FakeMessage()
         asyncio.run(b._watch(msg, "看这个"))
-        check("无链接给用法", msg.replies[0][0].startswith("用法：") and "一起看 <B站或YouTube链接>" in msg.replies[0][0]
+        check("无链接且没启用搜索", msg.replies[0][0] == "按片名搜索没有启用，请贴 B 站或 YouTube 链接"
               and src.calls == [])
 
         msg = FakeMessage(uid=42, name="小红")
@@ -380,9 +387,322 @@ def test_bot_edit_and_setup_hook():
     b.add_dynamic_items = lambda *items: added.extend(items)
     b.wish_view = b.announce_desk = b.prediction_ui = None
     b.watch_ui = ui
+    b.vod_search = b.watch_server = b.progress = None
     asyncio.run(b.setup_hook())
-    check("启动时注册房主按钮并设置 handler", added == [wui.HostButton] and wui.HostButton.handler is ui)
-    wui.HostButton.handler = None
+    check("启动时注册房主按钮和选单并设置 handler", added == [wui.HostButton, wui.PickSelect]
+          and wui.HostButton.handler is ui and wui.PickSelect.handler is ui and ui.create_vod_room == b._create_vod_room)
+    wui.HostButton.handler = wui.PickSelect.handler = None
+
+
+# ---------------------------------------------------------------- 按片名搜索
+def show(title="绝命毒师 第一季", key="k1", year=2008, type_name="欧美剧", eps=7):
+    lines = [Line("量子", [Episode(f"第{i + 1}集", f"https://a.example.com/{i}.m3u8") for i in range(eps)]),
+             Line("1080资源", [Episode(f"第{i + 1}集", f"https://b.example.com/{i}.m3u8") for i in range(eps)])]
+    return Show(key, title, year, type_name, lines)
+
+
+class FakeVodSearch:
+    def __init__(self, shows=None, error=None):
+        self.shows, self.error, self.calls = shows or [], error, []
+
+    async def search(self, query):
+        self.calls.append(query)
+        if self.error:
+            raise self.error
+        return self.shows
+
+
+class FakeWatchServer:
+    def __init__(self, error=None):
+        self.error, self.prepared, self.attached = error, [], []
+
+    async def prepare_vod(self, show, episode, start_line=0, resume=None):
+        self.prepared.append((show, episode, resume))
+        if self.error:
+            raise self.error
+        info = VodInfo(show, episode, 0, resume)
+        return vod_video(info, 2400.0), NS(duration=2400.0)
+
+    def attach_playlist(self, room, playlist):
+        self.attached.append((room.room_id, playlist))
+
+
+def make_pick_interaction(uid, index=0):
+    it, sent = make_interaction(uid)
+    deferred = []
+
+    async def defer():
+        deferred.append(True)
+    it.response.defer = defer
+    it.data = {"values": [str(index)]}
+    sent.deferred = deferred
+    return it, sent
+
+
+def setup_search(shows=None, progress=None, ws=None, uid=42):
+    ui, rooms, clock, edits = make_ui()
+    vs = FakeVodSearch([show()] if shows is None else shows)
+    ws = ws or FakeWatchServer()
+    b = make_bot(ui, FakeSources(yt()), vs, ws, progress)
+    ui.create_vod_room = b._create_vod_room
+    msg = FakeMessage(uid=uid, name="小红")
+    msg.author.mention = f"<@{uid}>"
+    asyncio.run(b._watch(msg, "绝命毒师"))
+    return b, ui, rooms, clock, edits, ws, msg
+
+
+def token_of(msg):
+    return msg.replies[0][1].children[0].item.custom_id.split(":")[-1]
+
+
+def test_watch_search_errors():
+    ui, rooms, _, _ = make_ui()
+    msg = FakeMessage()
+    asyncio.run(make_bot(ui, FakeSources(yt()), None, FakeWatchServer())._watch(msg, "绝命毒师"))
+    check("搜索没启用", msg.replies[0][0] == "按片名搜索没有启用，请贴 B 站或 YouTube 链接")
+    vs = FakeVodSearch()
+    b = make_bot(ui, FakeSources(yt()), vs, FakeWatchServer())
+    msg = FakeMessage()
+    asyncio.run(b._watch(msg, "x" * 51))
+    check("51 个字给用法", msg.replies[0][0] == bot.WATCH_USAGE == "用法：@mrmeeseeks 一起看 <B站或YouTube链接 或 片名>"
+          and vs.calls == [])
+    msg = FakeMessage()
+    asyncio.run(b._watch(msg, ""))
+    check("空参数给用法", msg.replies[0][0] == bot.WATCH_USAGE)
+    msg = FakeMessage()
+    asyncio.run(b._watch(msg, "x" * 50))
+    check("50 个字可以搜", vs.calls == ["x" * 50])
+    b = make_bot(ui, FakeSources(yt()), FakeVodSearch(error=SearchUnavailable()), FakeWatchServer())
+    msg = FakeMessage()
+    asyncio.run(b._watch(msg, "绝命毒师"))
+    check("资源站不可用", msg.replies[0][0] == "资源站暂时无法访问，请稍后再试")
+    b = make_bot(ui, FakeSources(yt()), FakeVodSearch([]), FakeWatchServer())
+    msg = FakeMessage()
+    asyncio.run(b._watch(msg, "不存在的剧"))
+    check("没找到", msg.replies[0][0] == "没找到「不存在的剧」")
+
+
+def test_watch_search_posts_menu():
+    b, ui, rooms, clock, edits, ws, msg = setup_search()
+    text, view, mentions = msg.replies[0]
+    sel = view.children[0].item
+    check("搜索结果文字", text == wui.search_header("绝命毒师", "<@42>")
+          and text == "🔎 「绝命毒师」的搜索结果（只有 <@42> 能选，2 分钟内有效）")
+    check("选单 custom_id 匹配模板", len(view.children) == 1 and re.fullmatch(wui.PICK_TEMPLATE, sel.custom_id))
+    check("选项标签", len(sel.options) <= 10 and sel.options[0].label == "绝命毒师 第一季 · 2008 · 欧美剧 · 7 集"
+          and sel.options[0].value == "0" and not sel.options[0].description)
+    check("结果消息不 ping", mentions is not None and mentions.users is False)
+    check("登记了待选", token_of(msg) in ui.pending and ui.pending[token_of(msg)].message_id == 7001)
+    check("缺 year / type_name 就省掉",
+          wui.option_label(show(year=None, type_name="")) == "绝命毒师 第一季 · 7 集"
+          and wui.option_label(show(title="x" * 200)).__len__() == 100)
+    prog = ProgressStore(None)
+    prog.record(555, "k1", Progress("绝命毒师 第一季", 2, 300.0, 1.0))
+    b, ui, rooms, clock, edits, ws, msg = setup_search(progress=prog)
+    check("有进度就写上次看到第几集",
+          msg.replies[0][1].children[0].item.options[0].description == "上次看到第 3 集")
+
+
+def test_pick_flow():
+    b, ui, rooms, clock, edits, ws, msg = setup_search()
+    tok = token_of(msg)
+
+    async def go(uid):
+        it, sent = make_pick_interaction(uid)
+        await ui.on_pick(it, tok)
+        return sent
+    sent = asyncio.run(go(7))
+    check("别人选 → 只有发起人能选", sent.content == "只有发起人能选" and sent.ephemeral and rooms.active() == []
+          and not tok_done(ui, tok))
+    sent = asyncio.run(go(42))
+    room = rooms.active()[0]
+    check("选中后建 vod 房间", len(rooms.active()) == 1 and room.video.source == "vod" and sent.deferred == [True]
+          and room.creator_id == 42 and room.video.vod.episode == 0 and len(ws.attached) == 1)
+    check("选中后先改成正在准备…并去掉选单", edits[0] == (555, 7001, "正在准备…", None) and wui.PICK_PREPARING == "正在准备…")
+    check("搜索消息改成已选择且去掉选单", edits[1:] == [(555, 7001, "已选择：绝命毒师 第一季", None)])
+    text, view, mentions = msg.replies[1]
+    check("卡片回复在原消息下并记录", text.startswith("🎬 **一起看**") and "片源：量子" in text and view is not None
+          and room.message_id == 7002 and ui.cards.all() == [(555, 7002)]
+          and mentions is not None and mentions.users is False)
+    check("没有进度时 resume 为空", room.video.vod.resume is None)
+
+
+def tok_done(ui, tok):
+    return ui.pending[tok].done
+
+
+def test_pick_resume():
+    prog = ProgressStore(None)
+    pr = Progress("绝命毒师 第一季", 2, 300.0, 1.0)
+    prog.record(555, "k1", pr)
+    b, ui, rooms, clock, edits, ws, msg = setup_search(progress=prog)
+
+    async def go():
+        it, _ = make_pick_interaction(42)
+        await ui.on_pick(it, token_of(msg))
+    asyncio.run(go())
+    check("房间带上进度快照", rooms.active()[0].video.vod.resume == pr and ws.prepared[0][2] == pr)
+
+
+def test_pick_twice_unknown_unplayable():
+    b, ui, rooms, clock, edits, ws, msg = setup_search()
+    tok = token_of(msg)
+
+    async def go():
+        a, sa = make_pick_interaction(42)
+        c, sc = make_pick_interaction(42)
+        await asyncio.gather(ui.on_pick(a, tok), ui.on_pick(c, tok))
+        return sa, sc
+    sa, sc = asyncio.run(go())
+    check("连点两次只建一个房间", len(rooms.active()) == 1 and len(ws.prepared) == 1)
+    second = [s for s in (sa, sc) if s.content is not None]
+    check("第二次提示已过期", len(second) == 1 and second[0].content == "已过期，请重新搜索" and second[0].ephemeral)
+
+    it, sent = make_pick_interaction(42)
+    asyncio.run(ui.on_pick(it, "nosuchtoken123"))
+    check("未知 token 已过期", sent.content == "已过期，请重新搜索" and sent.ephemeral)
+
+    b, ui, rooms, clock, edits, ws, msg = setup_search(ws=FakeWatchServer(PlaylistError("这一集暂时没有能播的片源")))
+
+    async def go2():
+        it, _ = make_pick_interaction(42)
+        await ui.on_pick(it, token_of(msg))
+    asyncio.run(go2())
+    check("没有能播的片源", rooms.active() == [] and edits == [(555, 7001, "正在准备…", None),
+                                                          (555, 7001, "这一集暂时没有能播的片源", None)]
+          and len(msg.replies) == 1)
+
+
+def test_pick_preparing_shown_before_prepare():
+    """“正在准备…”在开始找片源之前就已经显示（找片源可能要几十秒）。"""
+    seen = []
+
+    class SlowServer(FakeWatchServer):
+        async def prepare_vod(self, show, episode, start_line=0, resume=None):
+            seen.append(list(edits))
+            raise PlaylistError("这一集暂时没有能播的片源")
+    b, ui, rooms, clock, edits, ws, msg = setup_search(ws=SlowServer())
+
+    async def go():
+        it, _ = make_pick_interaction(42)
+        await ui.on_pick(it, token_of(msg))
+    asyncio.run(go())
+    check("找片源时搜索消息已经是正在准备…", seen == [[(555, 7001, "正在准备…", None)]])
+    check("超时/没有片源 → 改成没有能播的片源", edits[-1] == (555, 7001, "这一集暂时没有能播的片源", None))
+
+
+def test_pick_failures():
+    # 搜索消息编辑失败：卡片照发、房间保持开着
+    b, ui, rooms, clock, edits, ws, msg = setup_search()
+
+    async def boom(*a):
+        raise discord.HTTPException(NS(status=404, reason="Not Found"), "gone")
+    ui.edit = boom
+
+    async def go(uid=42):
+        it, sent = make_pick_interaction(uid)
+        await ui.on_pick(it, token_of(msg))
+        return sent
+    asyncio.run(go())
+    room = rooms.active()[0] if rooms.active() else None
+    check("搜索消息编辑失败仍发卡片并保持房间", room is not None and len(msg.replies) == 2
+          and room.message_id == 7002 and ui.cards.all() == [(555, 7002)])
+    sent = asyncio.run(go(7))
+    check("选过之后别人点仍提示只有发起人能选", sent.content == "只有发起人能选")
+    sent = asyncio.run(go(42))
+    check("选过之后发起人再点提示已过期", sent.content == "已过期，请重新搜索")
+
+    # 卡片发不出去：关房
+    b, ui, rooms, clock, edits, ws, msg = setup_search()
+
+    async def fail_reply(content, view=None, allowed_mentions=None):
+        raise discord.HTTPException(NS(status=403, reason="Forbidden"), "no perms")
+    msg.reply = fail_reply
+
+    async def go2():
+        it, _ = make_pick_interaction(42)
+        await ui.on_pick(it, token_of_saved)
+    token_of_saved = list(ui.pending)[0]
+    asyncio.run(go2())
+    check("卡片发送失败就关房", rooms.active() == [] and ui.cards.all() == [])
+
+    # 意外错误：搜索消息改成通用提示
+    b, ui, rooms, clock, edits, ws, msg = setup_search(ws=FakeWatchServer(RuntimeError("boom")))
+    tok = token_of(msg)
+
+    async def go3():
+        it, _ = make_pick_interaction(42)
+        await ui.on_pick(it, tok)
+    asyncio.run(go3())
+    check("意外错误给通用提示", rooms.active() == [] and edits == [(555, 7001, "正在准备…", None),
+                                                          (555, 7001, "出错了，请稍后再试", None)])
+
+    # 回复的 allowed_mentions
+    ui, rooms, _, _ = make_ui()
+    b = make_bot(ui, FakeSources(yt()), FakeVodSearch([]), FakeWatchServer())
+    msg = FakeMessage()
+    asyncio.run(b._watch(msg, "@everyone"))
+    check("没找到不 ping", msg.replies[0][2] is not None and msg.replies[0][2].everyone is False)
+    b = make_bot(ui, FakeSources(yt()), FakeVodSearch([show()]), FakeWatchServer())
+    msg = FakeMessage()
+    msg.author.mention = "<@1>"
+
+    async def fail_menu(content, view=None, allowed_mentions=None):
+        raise discord.HTTPException(NS(status=403, reason="Forbidden"), "no perms")
+    msg.reply = fail_menu
+    asyncio.run(b._watch(msg, "绝命毒师"))
+    check("选单发不出去就不登记", ui.pending == {})
+
+
+def test_pick_timeout():
+    ui, rooms, clock, edits = make_ui()
+    b = make_bot(ui, FakeSources(yt()), FakeVodSearch([show()]), FakeWatchServer())
+    ui.create_vod_room = b._create_vod_room
+    msg = FakeMessage(uid=42)
+    msg.author.mention = "<@42>"
+
+    async def go():
+        await b._watch(msg, "绝命毒师")
+        tok = token_of(msg)
+        before = tok in ui.pending
+        await drain(ui)
+        return tok, before
+    tok, before = asyncio.run(go())
+    check("2 分钟后选单过期", before and edits == [(555, 7001, "选择已过期", None)] and tok not in ui.pending)
+    check("过期 120 秒", wui.PICK_TIMEOUT == 120.0 and clock.t == 1000.0 + 120.0)
+
+
+def test_pick_select_item():
+    sel = wui.PickSelect("abcdefgh1234", [discord.SelectOption(label="a", value="0")])
+    check("PickSelect 模板", sel.item.custom_id == "watch:pick:abcdefgh1234"
+          and re.fullmatch(wui.PICK_TEMPLATE, sel.item.custom_id))
+
+    async def go():
+        item = await wui.PickSelect.from_custom_id(None, sel.item, re.fullmatch(wui.PICK_TEMPLATE, sel.item.custom_id))
+        return item
+    item = asyncio.run(go())
+    check("from_custom_id 还原 token", item.token == "abcdefgh1234")
+    it, sent = make_pick_interaction(1)
+    wui.PickSelect.handler = None
+    asyncio.run(item.callback(it))
+    check("没 handler 提示没启用", sent.content == "一起看功能没有启用。")
+    ui, *_ = make_ui()
+    ui.pending = {}
+    wui.PickSelect.handler = ui
+    it, sent = make_pick_interaction(1)
+    asyncio.run(item.callback(it))
+    check("回调交给 handler", sent.content == "已过期，请重新搜索")
+    wui.PickSelect.handler = None
+
+
+def test_watch_link_unchanged():
+    ui, rooms, _, _ = make_ui()
+    src = FakeSources(yt())
+    b = make_bot(ui, src, FakeVodSearch([show()]), FakeWatchServer())
+    msg = FakeMessage()
+    asyncio.run(b._watch(msg, "https://youtu.be/dQw4w9WgXcQ"))
+    check("链接仍走 sources.resolve", src.calls == ["https://youtu.be/dQw4w9WgXcQ"] and len(rooms.active()) == 1
+          and b.vod_search.calls == [])
 
 
 if __name__ == "__main__":
@@ -396,6 +716,16 @@ if __name__ == "__main__":
     test_edit_failure_logged()
     test_stale_cards_on_ready()
     test_bot_edit_and_setup_hook()
+    test_watch_search_errors()
+    test_watch_search_posts_menu()
+    test_pick_flow()
+    test_pick_preparing_shown_before_prepare()
+    test_pick_resume()
+    test_pick_twice_unknown_unplayable()
+    test_pick_failures()
+    test_pick_timeout()
+    test_pick_select_item()
+    test_watch_link_unchanged()
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")
     sys.exit(0 if passed == len(results) else 1)
