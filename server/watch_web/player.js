@@ -602,7 +602,7 @@
     const playing = room && room.playing;
     ui.play.textContent = playing ? "⏸" : "▶";
     ui.play.setAttribute("aria-label", playing ? "暂停" : "播放");
-    ui.me.textContent = me.name ? `你是「${me.name}」` : "";
+    ui.me.textContent = me.name ? `ID：「${me.name}」` : "";
     ui.permBtn.hidden = !me.isHost || ended;
     if (!me.isHost || ended) {
       ui.panel.hidden = true;
