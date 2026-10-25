@@ -531,7 +531,8 @@ def test_pick_flow():
     check("选中后先改成正在准备…并去掉选单", edits[0] == (555, 7001, "正在准备…", None) and wui.PICK_PREPARING == "正在准备…")
     check("搜索消息改成已选择且去掉选单", edits[1:] == [(555, 7001, "已选择：绝命毒师 第一季", None)])
     text, view, mentions = msg.replies[1]
-    check("卡片回复在原消息下并记录", text.startswith("🎬 **一起看**") and "片源：量子" in text and view is not None
+    check("卡片回复在原消息下并记录", text.startswith("🎬 **一起看**") and "（来源1）" in text and "量子" not in text
+          and view is not None
           and room.message_id == 7002 and ui.cards.all() == [(555, 7002)]
           and mentions is not None and mentions.users is False)
     check("房主链接 ephemeral 回给选的人，卡片只有公开链接", sent.followups == [(wui.host_link_text(PUBLIC, room), True)]

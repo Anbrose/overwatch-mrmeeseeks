@@ -338,8 +338,9 @@ async def test_find_playable():
             check("全不可播报错", False)
         except PlaylistError as e:
             check("全不可播报错", e.message == "这一集暂时没有能播的片源")
-            check("原因按线路列出", e.detail == f"甲：片段 HTTP 403（127.0.0.1:{srv.port}）；"
-                  f"乙：m3u8 HTTP 404（127.0.0.1:{srv.port}）；丙：没有第 1 集")
+            check("原因按线路列出，线路只写序号", e.detail == f"来源1：片段 HTTP 403（127.0.0.1:{srv.port}）；"
+                  f"来源2：m3u8 HTTP 404（127.0.0.1:{srv.port}）；来源3：没有第 1 集"
+                  and "甲" not in e.detail)
             check("text = message + 括号里的原因", e.text == f"这一集暂时没有能播的片源（{e.detail}）")
         check("没有 detail 时 text 就是 message", PlaylistError("x").text == "x")
         long = vp.join_reasons(["甲：" + "很长" * 300])

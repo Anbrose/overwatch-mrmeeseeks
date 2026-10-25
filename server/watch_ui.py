@@ -82,7 +82,7 @@ def card_text(room: Room, now: float, ended: bool = False, reason: str = "") -> 
         state = "▶ 播放中" if room.playback.playing else "⏸ 已暂停"
     vod = room.video.vod
     if vod is not None and 0 <= vod.line < len(vod.show.lines):
-        source = f"片源：{vod.show.lines[vod.line].name}"
+        source = f"来源{vod.line + 1}"       # 不写线路名：用户不需要知道资源站
     else:
         source = SOURCE_LABEL.get(room.video.source, room.video.source)
     return (f"🎬 **一起看**\n"

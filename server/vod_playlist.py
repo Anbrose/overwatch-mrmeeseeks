@@ -5,7 +5,8 @@
 - rewrite_media：把所有 URI 变成绝对地址，按规则去掉片源中途插入的广告，从保留的 EXTINF 累加时长。
 - probe：像浏览器一样（带 Origin 的 Range 请求）试取第一个片段，确认 CDN 允许跨域且能播；不能播返回原因。
 - find_playable：从指定片源线路开始，找第一条能播这一集的线路；每条线路跳过的原因进日志，
-  全都不能播时按线路列在 PlaylistError.detail 里（用户看到「这一集暂时没有能播的片源（线路：原因；…）」）。
+  全都不能播时按线路列在 PlaylistError.detail 里（用户看到「这一集暂时没有能播的片源（来源1：原因；…）」，
+  线路名只进日志）。
 
 广告规则：按 #EXT-X-DISCONTINUITY 切块，总时长最大的块是正片；一个块是广告，当且仅当
 总时长 < AD_MAX_SECONDS，并且（它的 EXTINF 序列在整份列表里作为整块出现不止一次，
@@ -267,7 +268,8 @@ async def probe(session: aiohttp.ClientSession, playlist: Playlist, origin: str,
 async def find_playable(session: aiohttp.ClientSession, show: Show, episode: int, start_line: int,
                         origin: str, allow_http: bool = False) -> tuple[int, Playlist]:
     """从 start_line 起绕一圈，找第一条有这一集、m3u8 能取、片段能探测通的线路。
-    每条线路跳过的原因记进日志；全都不能播时，原因按线路列在 PlaylistError.detail 里。"""
+    每条线路跳过的原因记进日志（带线路名）；全都不能播时，原因按线路列在 PlaylistError.detail 里，
+    线路只写成「来源N」（N 是线路序号，从 1 起），用户看不到资源站的名字。"""
     n = len(show.lines)
     reasons: list[str] = []
     for k in range(n):
@@ -287,7 +289,7 @@ async def find_playable(session: aiohttp.ClientSession, show: Show, episode: int
                     log.info("watch vod %r ep %d: line %s playable", show.title, episode + 1, line.name)
                     return idx, pl
         log.info("watch vod %r ep %d: line %s skipped: %s", show.title, episode + 1, line.name, reason)
-        reasons.append(f"{line.name}：{reason}")
+        reasons.append(f"来源{idx + 1}：{reason}")
     raise PlaylistError(NO_PLAYABLE, join_reasons(reasons))
 
 

@@ -264,7 +264,7 @@ class WatchServer:
         if v.vod is not None:
             show = v.vod.show
             video.update(episode=v.vod.episode, episode_count=show.episode_count,
-                         line_name=show.lines[v.vod.line].name, line_count=len(show.lines), show_title=show.title)
+                         line=v.vod.line, line_count=len(show.lines), show_title=show.title)
             snap = v.vod.resume
             if snap is not None:
                 resume = {"episode": snap.episode, "position": snap.position,

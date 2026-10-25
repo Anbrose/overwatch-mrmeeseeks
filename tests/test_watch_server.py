@@ -753,7 +753,7 @@ async def test_vod_state_message():
         s = await recv_type(a, "state")
         v = s and s["video"]
         check("vod state.video 字段", v and v["source"] == "vod" and v["hls"] == f"/vod/{room.room_id}/0/index.m3u8"
-              and v["episode"] == 0 and v["episode_count"] == 3 and v["line_name"] == "线路A"
+              and v["episode"] == 0 and v["episode_count"] == 3 and v["line"] == 0 and "line_name" not in v
               and v["line_count"] == 3 and v["show_title"] == "测试剧" and v["mpd"] is None
               and v["title"] == "测试剧 · 第 1 集")
         check("没有进度快照 → resume 是 null", s and "resume" in s and s["resume"] is None)
@@ -800,7 +800,7 @@ async def test_vod_episode_switch():
         s1, s2 = await recv_type(a, "state"), await recv_type(b, "state")
         check("房主选集 → 所有人切到第 2 集", s1 and s2 and s1["video"]["episode"] == 1 and s2["video"]["episode"] == 1
               and s2["video"]["version"] == 1 and s2["video"]["hls"] == f"/vod/{rid}/1/index.m3u8"
-              and s2["playing"] is False and s2["position"] == 0 and s2["video"]["line_name"] == "线路A")
+              and s2["playing"] is False and s2["position"] == 0 and s2["video"]["line"] == 0)
         check("新版本播放列表已缓存、旧的被清掉", (rid, 1) in server._playlists and (rid, 0) not in server._playlists)
         n_req = len(up.m3u8_requests)
         r = await client.get(f"/vod/{rid}/1/index.m3u8")
@@ -838,7 +838,7 @@ async def test_vod_next_line():
 
         await a.send_json({"type": "next_line"})
         s = await recv_type(b, "state")
-        check("换片源 → 下一条线路、同一集、位置不变、暂停", s and s["video"]["line_name"] == "线路B"
+        check("换片源 → 下一条线路、同一集、位置不变、暂停", s and s["video"]["line"] == 1
               and s["video"]["episode"] == 0 and s["position"] == 300.0 and s["playing"] is False
               and s["video"]["version"] == 1 and room.video.url == f"{base}/l1/0/index.m3u8")
         check("换片源后缓存新版本", (rid, 1) in server._playlists)
@@ -857,14 +857,14 @@ async def test_vod_next_line():
         s = await recv_type(a, "state")
         await a.send_json({"type": "next_line"})
         s = await recv_type(a, "state")
-        check("最后一条线路换片源绕回第一条", s and s["video"]["line_name"] == "线路A" and room.video.vod.line == 0)
+        check("最后一条线路换片源绕回第一条", s and s["video"]["line"] == 0 and room.video.vod.line == 0)
 
         # 播放中换片源 → 从当前位置继续播
         rooms.control(rid, wa["viewer_id"], "play", 600.0)
         await drain(a)
         await a.send_json({"type": "next_line"})
         s = await recv_type(a, "state")
-        check("播放中换片源 → 保持播放、从当前位置继续", s and s["video"]["line_name"] == "线路B"
+        check("播放中换片源 → 保持播放、从当前位置继续", s and s["video"]["line"] == 1
               and s["playing"] is True and room.playback.playing is True and 600.0 <= s["position"] < 605.0)
     finally:
         await client.close()

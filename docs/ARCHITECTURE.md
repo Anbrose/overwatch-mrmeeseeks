@@ -112,7 +112,7 @@
 |---|---|---|
 | `welcome` | `viewer_id`, `name`, `is_host`, `can_control` | 握手回复 |
 | `pong` | `t`, `server_time` | 回复 `ping` |
-| `state` | `video`（`source`, `id`, `title`, `duration`, `version`, `mpd`, `hls`, `episode`, `episode_count`, `line_name`, `line_count`, `show_title`）, `playing`, `position`, `server_time`, `resume` | 房间状态；`mpd` 只对 B 站有值。`hls` 只对 vod 房间有值（播放列表地址），`episode` 从 0 开始，`line_name` 是当前片源线路名，`line_count` 是线路数，`show_title` 是剧名。`resume` 是建房时的进度快照（`episode`, `position`, `text`），没有进度或不是 vod 时为 null，`text` 就是「上次一起看到…」文案 |
+| `state` | `video`（`source`, `id`, `title`, `duration`, `version`, `mpd`, `hls`, `episode`, `episode_count`, `line`, `line_count`, `show_title`）, `playing`, `position`, `server_time`, `resume` | 房间状态；`mpd` 只对 B 站有值。`hls` 只对 vod 房间有值（播放列表地址），`episode` 从 0 开始，`line` 是当前片源线路的序号（从 0 开始；网页只显示「来源N」，不给线路名），`line_count` 是线路数，`show_title` 是剧名。`resume` 是建房时的进度快照（`episode`, `position`, `text`），没有进度或不是 vod 时为 null，`text` 就是「上次一起看到…」文案 |
 | `you` | `is_host`, `can_control` | 自己的身份或权限变了 |
 | `members` | `members`（`id`（公开 id，不是 `viewer_id`）, `name`, `can_control`） | 只发给房主，不含房主自己 |
 | `error` | `message` | 提示信息，如 `正在换视频，请稍候`（上一次 `change_video` 还没处理完时） |

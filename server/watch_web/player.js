@@ -671,7 +671,8 @@
       if (current) btn.setAttribute("aria-current", "true"); else btn.removeAttribute("aria-current");
       btn.disabled = preparing;
     });
-    ui.lineLabel.textContent = `片源：${v.line_name || ""}（共 ${v.line_count || 0} 个）`;
+    // Sources are numbered, never named: viewers should not see which site a stream comes from.
+    ui.lineLabel.textContent = `来源${(Number(v.line) || 0) + 1}（共 ${v.line_count || 0} 个）`;
     ui.nextLine.disabled = preparing || (Number(v.line_count) || 0) <= 1;
   }
 
