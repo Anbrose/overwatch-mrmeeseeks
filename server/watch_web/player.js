@@ -222,7 +222,7 @@
       if (player !== adapter || adapter.failed) return;
       adapter.failed = true;
       adapter.ready = false;
-      failPlayer(UNPLAYABLE_MSG, describeDashError(e) || describeMediaError(video.error), mpdUrl, false);
+      failPlayer(UNPLAYABLE_MSG, describeDashError(e) || describeMediaError(video.error), mpdUrl, false, "dash.js");
     }
     const onVideoError = () => onError(null);
     dash.on(window.dashjs.MediaPlayer.events.ERROR, onError);
@@ -240,8 +240,11 @@
     video.setAttribute("playsinline", "");
     video.preload = "auto";
     ui.host.appendChild(video);
-    const native = !!video.canPlayType(HLS_MIME);
+    const useHls = !!(window.Hls && window.Hls.isSupported());
+    const native = !useHls && !!video.canPlayType(HLS_MIME);
+    const mode = useHls ? `hls.js ${window.Hls.version || "?"}` : native ? "native HLS" : "no HLS support";
     let hls = null;
+    let lastHlsError = "";   // last non-fatal hls.js error: context when the <video> errors first
 
     const adapter = {
       source: "vod",
@@ -278,7 +281,7 @@
       if (player !== adapter || adapter.failed) return;
       adapter.failed = true;
       adapter.ready = false;
-      failPlayer(VOD_FAILED_MSG, reason, hlsUrl, true);
+      failPlayer(VOD_FAILED_MSG, reason, hlsUrl, true, mode);
       // Our own playlist route answers 4xx/5xx with the server-side reason in
       // the body (e.g. which source lines failed and why); hls.js only keeps
       // the status code, so fetch it once and add it to the stage.
@@ -292,20 +295,22 @@
         }).catch(() => { /* already failed; nothing more to say */ });
       }
     }
-    const onVideoError = () => onError(describeMediaError(video.error));
+    const onVideoError = () => onError(describeMediaError(video.error)
+      + (lastHlsError ? `；hls.js 之前的错误：${lastHlsError}` : ""));
     video.addEventListener("error", onVideoError);
-    if (native) {
-      video.src = hlsUrl;
-    } else if (window.Hls && window.Hls.isSupported()) {
+    if (useHls) {
       hls = new window.Hls();
       hls.on(window.Hls.Events.ERROR, (_event, data) => {
         if (!data) return;
         // Non-fatal errors are retried by hls.js; keep them in the console for triage.
         console.warn("[watch] hls.js error" + (data.fatal ? " (fatal)" : ""), data.details, data);
         if (data.fatal) onError(describeHlsError(data), data);
+        else lastHlsError = describeHlsError(data);
       });
       hls.loadSource(hlsUrl);
       hls.attachMedia(video);
+    } else if (native) {
+      video.src = hlsUrl;
     } else {
       // No way to play HLS here; report once the caller has installed us.
       Promise.resolve().then(() => onError("这个浏览器不支持 HLS 播放"));
@@ -356,15 +361,16 @@
   }
 
   // Shows "<msg>：<reason>" on the stage, logs it, and sends it to the server
-  // as `report` so it lands in the server log with the room and video. This
-  // never changes room state; the other viewers are not told.
-  function failPlayer(msg, reason, srcUrl, hostCanSwitch) {
+  // as `report` (with the player mode and browser) so it lands in the server
+  // log with the room and video. Never changes room state; others are not told.
+  function failPlayer(msg, reason, srcUrl, hostCanSwitch, mode) {
     const text = reason ? `${msg}：${reason}` : msg;
-    console.error("[watch] " + text, srcUrl || "");
+    console.error("[watch] " + text, srcUrl || "", mode || "");
     const hint = hostCanSwitch && me.isHost ? "\n房主可以在 🔑 面板里「换一个片源」" : "";
     setStageMessage(text + hint);
     renderStartButton();
-    send({ type: "report", detail: text, url: String(srcUrl || "").slice(0, 300) });
+    send({ type: "report", detail: text, url: String(srcUrl || "").slice(0, 300),
+           env: `${mode || "?"}; ${navigator.userAgent}`.slice(0, 300) });
   }
 
   function createYouTubePlayer(videoId, version, onReady) {
@@ -465,10 +471,16 @@
         player = createBiliPlayer(video.mpd);
         onPlayerReady(player);
       } else if (video.source === "vod") {
-        if (!document.createElement("video").canPlayType(HLS_MIME)) {
+        // Prefer hls.js (MSE) wherever it works: browsers that claim native HLS
+        // (Android Chrome, some TVs) often fail on real streams with a bare
+        // "format not supported". Native is only for browsers without MSE
+        // (iPhone Safari), or when the hls.js script cannot be loaded.
+        try {
           await loadScript(HLS_SRC);
-          if (token !== buildToken) return;
+        } catch (err) {
+          if (!document.createElement("video").canPlayType(HLS_MIME)) throw err;
         }
+        if (token !== buildToken) return;
         player = createVodPlayer(video.hls);
         onPlayerReady(player);
       } else if (video.source === "youtube") {

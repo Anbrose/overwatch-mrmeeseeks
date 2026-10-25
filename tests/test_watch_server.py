@@ -1006,7 +1006,7 @@ async def test_client_report():
         await drain(a)
         pub = rooms.get(rid).members[wa["viewer_id"]].public_id
         await a.send_json({"type": "report", "detail": "视频加载失败：片段 HTTP 403 · cdn.example.com [fragLoadError]\n第二行",
-                           "url": "/vod/x/0/index.m3u8"})
+                           "url": "/vod/x/0/index.m3u8", "env": "hls.js 1.5.20; Mozilla/5.0 (Android)"})
         await a.send_json({"type": "ping", "t": 1})
         check("回报后连接仍开着", (await recv_type(a, "pong")) is not None)
         msgs = [r.getMessage() for r in records if r.levelno == logging.WARNING and "playback failed" in r.getMessage()]
@@ -1014,6 +1014,8 @@ async def test_client_report():
               and f"member={pub}" in msgs[0] and "video=https://www.youtube.com/watch?v=dQw4w9WgXcQ" in msgs[0]
               and "src=/vod/x/0/index.m3u8" in msgs[0] and "片段 HTTP 403 · cdn.example.com [fragLoadError] 第二行" in msgs[0]
               and wa["viewer_id"] not in msgs[0])
+        check("日志带网页报的播放器模式和连接的 User-Agent", "env=hls.js 1.5.20; Mozilla/5.0 (Android)" in msgs[0]
+              and "ua=Python/" in msgs[0] and "aiohttp" in msgs[0])
         check("房间状态没变", rooms.get(rid).version == 0 and not rooms.get(rid).playback.playing)
         await a.send_json({"type": "report", "detail": 123})
         await a.send_json({"type": "report"})

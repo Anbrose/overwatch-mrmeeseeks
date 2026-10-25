@@ -13,8 +13,8 @@ vod 房间额外的客户端消息（当前视频不是 vod 时一律忽略）�
 - {"type": "episode", "index": int}   房主选集（从 0 开始），停在开头、暂停，优先用当前片源线路
 - {"type": "next_line"}               房主换一个片源：同一集、下一条线路（绕圈），保持当前位置和播放/暂停状态
 - {"type": "resume"}                  房主或有控制权的人：跳到建房时的进度快照（需要时先换集），暂停
-任何房间都接受 {"type": "report", "detail": str, "url": str}：网页端播放失败的回报，只记 WARNING 日志
-（带房间号、成员公开 id、当前视频地址），不改房间状态；每个连接最多 MAX_REPORTS 条。
+任何房间都接受 {"type": "report", "detail": str, "url": str, "env": str}：网页端播放失败的回报，只记 WARNING 日志
+（带房间号、成员公开 id、当前视频地址、播放器模式和浏览器 UA），不改房间状态；每个连接最多 MAX_REPORTS 条。
 播完（rooms 的 "finished" 事件）自动换下一集并开始播放；期间有人手动换过就作废（按版本号）。
 准备一集（找线路、取 m3u8、探测片段）整体最多 VOD_PREPARE_TIMEOUT 秒，超时按“没有能播的片源”处理。
 """
@@ -116,6 +116,7 @@ class _Conn:
     writer: asyncio.Task | None = None
     busy: asyncio.Task | None = None     # 正在处理的换视频（change_video / episode / next_line / resume）
     reports: int = 0                     # 已记录的失败回报数
+    ua: str = ""                         # 浏览器 User-Agent，只在失败回报的日志里用
 
     def push(self, msg: dict | None) -> None:
         try:
@@ -358,11 +359,11 @@ class WatchServer:
         await ws.prepare(request)
         self._sockets.add(ws)
         try:
-            return await self._ws_session(ws, room_id)
+            return await self._ws_session(ws, room_id, request.headers.get("User-Agent", ""))
         finally:
             self._sockets.discard(ws)
 
-    async def _ws_session(self, ws: web.WebSocketResponse, room_id: str) -> web.WebSocketResponse:
+    async def _ws_session(self, ws: web.WebSocketResponse, room_id: str, ua: str = "") -> web.WebSocketResponse:
         async def end():
             try:
                 await ws.send_str(json.dumps({"type": "ended"}))
@@ -390,7 +391,7 @@ class WatchServer:
             return ws
         member = self.rooms.connect(room_id, viewer_id if isinstance(viewer_id, str) else None,
                                     key if isinstance(key, str) else None)
-        conn = _Conn(ws, room_id, member.viewer_id)
+        conn = _Conn(ws, room_id, member.viewer_id, ua=ua[:300])
         try:
             self.conns.setdefault(room_id, set()).add(conn)
             conn.writer = asyncio.get_running_loop().create_task(self._writer(conn))
@@ -475,11 +476,13 @@ class WatchServer:
         conn.reports += 1
         room = self.rooms.get(conn.room_id)
         member = room.members.get(conn.viewer_id) if room is not None else None
-        url = data.get("url")
-        log.warning("watch client playback failed (room=%s member=%s video=%s src=%s): %s",
+        url, env = data.get("url"), data.get("env")
+        log.warning("watch client playback failed (room=%s member=%s video=%s src=%s env=%s ua=%s): %s",
                     conn.room_id, member.public_id if member is not None else "?",
                     room.video.url if room is not None else "?",
-                    _one_line(url, 300) if isinstance(url, str) else "", _one_line(detail, REPORT_MAX_CHARS))
+                    _one_line(url, 300) if isinstance(url, str) else "",
+                    _one_line(env, 300) if isinstance(env, str) else "", _one_line(conn.ua, 300),
+                    _one_line(detail, REPORT_MAX_CHARS))
 
     def _start_busy(self, conn: _Conn, coro) -> None:
         """每个连接同一时刻只换一次视频；正在换就提示请稍候。"""

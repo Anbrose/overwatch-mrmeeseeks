@@ -34,7 +34,7 @@
 | `server/watch_progress.py` | 一起看按频道的观看进度（`STATE_DIR/watch_progress.json`）：只记 vod 房间，少于 30 秒不记，房间里没人时不记（最后一个人宽限期结束时记最后一次），坏文件按空处理；生成「上次一起看到…」文案 |
 | `server/watch_server.py` | 一起看 HTTP / WebSocket 服务（aiohttp）：房间页、静态文件、同步协议、B 站转流和 MPD |
 | `server/watch_ui.py` | 一起看的 Discord 部分：房间卡片、房主链接按钮（`DynamicItem`）、人数更新 |
-| `server/watch_web/` | 一起看网页：`index.html`、`player.js`（播放器、同步、权限面板）、`style.css` |
+| `server/watch_web/` | 一起看网页：`index.html`、`player.js`（播放器、同步、权限面板）、`style.css`。vod 房间只要浏览器有 MSE 就用 hls.js，不信 `canPlayType` 的原生 HLS（Android Chrome 等常以「格式不支持」失败）；原生只给没有 MSE 的 iPhone Safari 或 hls.js 脚本加载不了时用 |
 | `client/client.py` | 本地客户端：连接/重连、配对码输入、Tab 监听、两段截图、上传 |
 
 ## 客户端状态
@@ -104,7 +104,7 @@
 | `episode` | `index`（从 0 开始） | 房主选集（vod 房间）：停在开头、暂停，优先用当前片源线路。当前视频不是 vod 时忽略 |
 | `next_line` | 无 | 房主换一个片源（vod 房间）：同一集、下一条线路（绕圈），保持当前位置和播放/暂停状态 |
 | `resume` | 无 | 房主或有控制权的人（vod 房间）：跳到建房时的进度快照（需要时先换集），暂停 |
-| `report` | `detail`, `url` | 网页端播放失败的回报（stage 上显示的那句原因，如「视频加载失败：片段 HTTP 403 · cdn 域名 [fragLoadError]」）。服务器只记一条 WARNING 日志（房间号、成员公开 id、当前视频地址），不改房间状态；每个连接最多 5 条 |
+| `report` | `detail`, `url`, `env` | 网页端播放失败的回报（stage 上显示的那句原因，如「视频加载失败：片段 HTTP 403 · cdn 域名 [fragLoadError]」；`env` 是播放器模式加浏览器 UA，如 `hls.js 1.5.20; Mozilla/5.0 …`）。服务器只记一条 WARNING 日志（房间号、成员公开 id、当前视频地址、env、连接的 User-Agent），不改房间状态；每个连接最多 5 条 |
 
 **服务器 → 客户端**
 
