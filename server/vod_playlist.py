@@ -3,6 +3,10 @@
 浏览器直接从第三方 CDN 拉 HLS 片段，我们的服务器只负责取 m3u8 文本并改写：
 - fetch_playlist：取 m3u8（master 就再跟进一层最高码率的变体），改写成全绝对 https 地址。
 - rewrite_media：把所有 URI 变成绝对地址，按规则去掉片源中途插入的广告，从保留的 EXTINF 累加时长。
+  #EXT-X-KEY 的地址例外：改写成相对播放列表的 key{n}，原地址记在 Playlist.keys 里，由本服务器中转
+  （fetch_key）。密钥只有 16 字节，而有些资源站的密钥域名在部分地区（如上海电信/联通的 CDN 边缘节点）
+  直接拒绝连接，浏览器拿不到密钥就整集播不了；片段域名通常不受影响，仍由浏览器直接取。
+- fetch_key：取一把密钥（最多 MAX_KEY_BYTES 字节），跳转链同样只认 https。
 - probe：像浏览器一样（带 Origin 的 Range 请求）试取第一个片段，确认 CDN 允许跨域且能播；不能播返回原因。
 - find_playable：从指定片源线路开始，找第一条能播这一集的线路；每条线路跳过的原因进日志，
   全都不能播时按线路列在 PlaylistError.detail 里（用户看到「这一集暂时没有能播的片源（来源1：原因；…）」，
@@ -19,7 +23,7 @@ import asyncio
 import logging
 import re
 import urllib.parse
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import aiohttp
 
@@ -30,6 +34,7 @@ log = logging.getLogger("mrmeeseeks.watch")
 
 AD_MAX_SECONDS = 30.0
 MAX_PLAYLIST_BYTES = 2 * 1024 * 1024
+MAX_KEY_BYTES = 1024                 # AES-128 密钥是 16 字节；留余量但别让人拿这个口子下载别的
 NO_PLAYABLE = "这一集暂时没有能播的片源"
 FETCH_TIMEOUT = aiohttp.ClientTimeout(total=10)
 PROBE_TIMEOUT = aiohttp.ClientTimeout(total=8)
@@ -61,6 +66,7 @@ class Playlist:
     duration: float
     first_segment: str | None
     removed_blocks: int
+    keys: list[str] = field(default_factory=list)    # #EXT-X-KEY 的原地址；text 里第 n 把写成 key{n}
 
 
 def _absolutize(ref: str, base_url: str) -> str:
@@ -126,10 +132,18 @@ def rewrite_media(text: str, base_url: str, allow_http: bool = False) -> Playlis
     blocks = [_Block([], None)]
     pending: list[str] = []
     pending_dur = 0.0
+    keys: list[str] = []
 
     def tag(ln: str) -> str:
-        """标签行里的 URI="..."（KEY / MAP 等）绝对化并检查 https。"""
-        return _URI_ATTR.sub(lambda mm: f'URI="{_checked(_absolutize(mm.group(1), base_url), allow_http)}"', ln)
+        """标签行里的 URI="..."（KEY / MAP 等）绝对化并检查 https；KEY 的地址换成 key{n}，由本服务器中转。"""
+        def sub(mm):
+            url = _checked(_absolutize(mm.group(1), base_url), allow_http)
+            if not ln.startswith("#EXT-X-KEY:"):
+                return f'URI="{url}"'
+            if url not in keys:
+                keys.append(url)
+            return f'URI="key{keys.index(url)}"'
+        return _URI_ATTR.sub(sub, ln)
 
     for raw in text.splitlines():
         ln = raw.strip()
@@ -180,7 +194,7 @@ def rewrite_media(text: str, base_url: str, allow_http: bool = False) -> Playlis
                 out.append(e)
     if not duration > 0:
         raise PlaylistError(NO_PLAYABLE, "m3u8 总时长为 0")    # 没有时长会立刻“播完”，自动下一集会一路跳过
-    return Playlist("\n".join(out) + "\n", duration, first, removed)
+    return Playlist("\n".join(out) + "\n", duration, first, removed, keys)
 
 
 def _checked(url: str, allow_http: bool) -> str:
@@ -220,6 +234,26 @@ async def _get_text(session: aiohttp.ClientSession, url: str, allow_http: bool =
     if not text.lstrip().startswith("#EXTM3U"):
         raise PlaylistError(NO_PLAYABLE, f"m3u8 内容不是 M3U 格式（{host}）")
     return text, final_url
+
+
+async def fetch_key(session: aiohttp.ClientSession, url: str, allow_http: bool = False) -> bytes:
+    """取一把 AES 密钥（最多 MAX_KEY_BYTES 字节）。失败抛 PlaylistError，detail 说明原因。allow_http 仅供测试。"""
+    host = _host(url)
+    try:
+        _checked(url, allow_http)
+        async with session.get(url, headers={"User-Agent": USER_AGENT}, timeout=FETCH_TIMEOUT) as resp:
+            _check_redirects(resp, allow_http)
+            if resp.status != 200:
+                raise PlaylistError(NO_PLAYABLE, f"密钥 HTTP {resp.status}（{host}）")
+            body = await resp.content.read(MAX_KEY_BYTES + 1)
+    except PlaylistError:
+        raise
+    except Exception as e:
+        log.warning("key fetch failed: %s (%s)", _error_name(e), host)
+        raise PlaylistError(NO_PLAYABLE, f"密钥取不到：{_error_name(e)}（{host}）") from e
+    if not body or len(body) > MAX_KEY_BYTES:
+        raise PlaylistError(NO_PLAYABLE, f"密钥大小不对（{host}）")
+    return body
 
 
 def _error_name(e: BaseException) -> str:

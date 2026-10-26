@@ -619,11 +619,16 @@ def _fixture(name):
 
 
 class VodUpstream:
-    """假资源站 CDN：/{line}/{ep}/index.m3u8 → master，/…/1000k/hls/mixed.m3u8 → 带广告的变体，片段带 ACAO *。"""
+    """假资源站 CDN：/{line}/{ep}/index.m3u8 → master，/…/1000k/hls/mixed.m3u8 → 带广告的变体（带一把 AES 密钥
+    enc.key），片段带 ACAO *。"""
 
     def __init__(self):
         self.master = _fixture("vod_master.m3u8")
-        self.variant = _fixture("vod_variant_ads.m3u8")
+        self.variant = _fixture("vod_variant_ads.m3u8").replace(
+            "#EXTM3U\n", '#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI="enc.key",IV=0x0\n', 1)
+        self.key = b"0123456789abcdef"
+        self.dead_keys = set()       # 这些线路的密钥返回 403
+        self.key_requests = []
         self.dead_lines = set()      # 这些线路的 m3u8 返回 404
         self.delays = {}             # 集数 → 取 master 前等几秒
         self.m3u8_requests = []
@@ -634,6 +639,11 @@ class VodUpstream:
         line, ep, tail = request.match_info["line"], request.match_info["ep"], request.match_info["tail"]
         if tail.endswith(".ts"):
             return web.Response(status=206, body=b"x" * 1024, headers={"Access-Control-Allow-Origin": "*"})
+        if tail.endswith(".key"):
+            self.key_requests.append(request.path)
+            if line in self.dead_keys:
+                return web.Response(status=403, text="no")
+            return web.Response(body=self.key)
         self.m3u8_requests.append(request.path)
         if line in self.dead_lines:
             return web.Response(status=404, text="gone")
@@ -690,6 +700,24 @@ async def test_vod_playlist_route():
               and r.headers.get("Cache-Control") == "no-store" and body.startswith("#EXTM3U"))
         check("播放列表去掉了广告、地址绝对", AD_SEGMENT not in body and f"{base}/l0/0/1000k/hls/" in body)
         check("命中缓存不再取上游", len(up.m3u8_requests) == n_req)
+        check("密钥地址换成本服务器的 key0", 'URI="key0"' in body and "enc.key" not in body)
+        r = await client.get(f"/vod/{rid}/0/key0")
+        check("密钥由本服务器中转", r.status == 200 and await r.read() == up.key
+              and r.content_type == "application/octet-stream" and r.headers.get("Cache-Control") == "no-store"
+              and up.key_requests == ["/l0/0/1000k/hls/enc.key"])
+        r = await client.get(f"/vod/{rid}/0/key0")
+        await r.read()
+        check("密钥缓存，不再取上游", r.status == 200 and len(up.key_requests) == 1)
+        check("没有的密钥序号 404", (await client.get(f"/vod/{rid}/0/key1")).status == 404)
+        check("密钥旧版本号 404", (await client.get(f"/vod/{rid}/1/key0")).status == 404)
+        check("密钥序号非数字 404", (await client.get(f"/vod/{rid}/0/keyx")).status == 404)
+        check("不存在的房间没有密钥", (await client.get("/vod/zzzzzz/0/key0")).status == 404)
+        server._keys.clear()
+        up.dead_keys.add("l0")
+        r = await client.get(f"/vod/{rid}/0/key0")
+        check("密钥取不到 502 带原因", r.status == 502
+              and (await r.text()) == f"这一集暂时没有能播的片源（密钥 HTTP 403（{base.split('//')[1]}））")
+        up.dead_keys.clear()
         check("vod 旧版本号 404", (await client.get(f"/vod/{rid}/1/index.m3u8")).status == 404)
         check("vod 版本号非数字 404", (await client.get(f"/vod/{rid}/x/index.m3u8")).status == 404)
         check("vod 不存在的房间 404", (await client.get("/vod/zzzzzz/0/index.m3u8")).status == 404)

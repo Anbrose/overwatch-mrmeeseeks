@@ -103,8 +103,20 @@ def test_rewrite_uris():
     check("相对 / 根 / 协议相对 / 带参数",
           uris(out) == ["https://h.example.com/p/q/a.ts", "https://h.example.com/root/b.ts",
                         "https://cdn.example.com/c.ts", "https://x.example.com/d.ts?t=1"])
-    check("KEY URI", 'URI="https://h.example.com/p/q/key.key"' in out)
+    check("KEY URI 换成本服务器中转的 key0", 'URI="key0"' in out and "key.key" not in out)
     check("MAP URI", 'URI="https://h.example.com/p/q/init.mp4"' in out)
+    check("原密钥地址记在 keys 里",
+          vp.rewrite_media(text, "https://h.example.com/p/q/index.m3u8").keys == ["https://h.example.com/p/q/key.key"])
+    two = ("#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI=\"k1.key\"\n#EXTINF:5,\na.ts\n"
+           "#EXT-X-KEY:METHOD=AES-128,URI=\"k2.key\"\n#EXTINF:5,\nb.ts\n"
+           "#EXT-X-KEY:METHOD=AES-128,URI=\"k1.key\"\n#EXTINF:5,\nc.ts\n#EXT-X-ENDLIST\n")
+    pl2 = vp.rewrite_media(two, "https://h.example.com/p/index.m3u8")
+    check("多把密钥按出现顺序编号，同一把只记一次",
+          pl2.keys == ["https://h.example.com/p/k1.key", "https://h.example.com/p/k2.key"]
+          and [ln for ln in pl2.text.splitlines() if ln.startswith("#EXT-X-KEY")]
+          == ['#EXT-X-KEY:METHOD=AES-128,URI="key0"', '#EXT-X-KEY:METHOD=AES-128,URI="key1"',
+              '#EXT-X-KEY:METHOD=AES-128,URI="key0"'])
+    check("没有密钥时 keys 为空", vp.rewrite_media("#EXTM3U\n#EXTINF:5,\na.ts\n", "https://h.example.com/i.m3u8").keys == [])
     check("METHOD 保留", "#EXT-X-KEY:METHOD=AES-128," in out)
     try:
         vp.rewrite_media("#EXTM3U\n#EXTINF:5,\nhttp://h.example.com/a.ts\n", "https://h.example.com/i.m3u8")
@@ -122,8 +134,11 @@ def test_rewrite_tag_between_extinf_and_uri():
     text = ("#EXTM3U\n#EXTINF:10,\n#EXT-X-KEY:METHOD=AES-128,URI=\"k/key.key\"\na.ts\n"
             "#EXTINF:10,\n#EXT-X-BYTERANGE:100@0\nb.ts\n#EXT-X-ENDLIST\n")
     out = vp.rewrite_media(text, "https://h.example.com/p/index.m3u8").text
-    check("EXTINF 和地址之间的 KEY URI 也绝对化", 'URI="https://h.example.com/p/k/key.key"' in out
-          and 'URI="k/key.key"' not in out and "#EXT-X-BYTERANGE:100@0" in out)
+    pl = vp.rewrite_media(text, "https://h.example.com/p/index.m3u8")
+    out = pl.text
+    check("EXTINF 和地址之间的 KEY 也换成 key0、原地址绝对化", 'URI="key0"' in out
+          and 'URI="k/key.key"' not in out and "#EXT-X-BYTERANGE:100@0" in out
+          and pl.keys == ["https://h.example.com/p/k/key.key"])
     try:
         vp.rewrite_media("#EXTM3U\n#EXTINF:10,\n#EXT-X-KEY:METHOD=AES-128,URI=\"http://h.example.com/k.key\"\na.ts\n",
                          "https://h.example.com/p/index.m3u8")
@@ -238,6 +253,43 @@ def redirect_handler(to):
     async def h(request):
         raise web.HTTPFound(to)
     return h
+
+
+async def test_fetch_key():
+    def body(data, status=200):
+        async def h(request):
+            return web.Response(body=data, status=status)
+        return h
+    srv = await serve({"/k": body(b"0123456789abcdef"), "/403": body(b"", 403),
+                       "/big": body(b"x" * (vp.MAX_KEY_BYTES + 1)), "/empty": body(b""),
+                       "/redir": redirect_handler("/k")})
+    base = f"http://127.0.0.1:{srv.port}"
+    async with aiohttp.ClientSession() as s:
+        check("密钥原样返回", await vp.fetch_key(s, f"{base}/k", allow_http=True) == b"0123456789abcdef")
+        check("跟随跳转", await vp.fetch_key(s, f"{base}/redir", allow_http=True) == b"0123456789abcdef")
+        for name, path, want in [("403", "/403", f"密钥 HTTP 403（127.0.0.1:{srv.port}）"),
+                                 ("太大", "/big", f"密钥大小不对（127.0.0.1:{srv.port}）"),
+                                 ("空", "/empty", f"密钥大小不对（127.0.0.1:{srv.port}）")]:
+            try:
+                await vp.fetch_key(s, f"{base}{path}", allow_http=True)
+                check(f"密钥 {name} 报错", False)
+            except PlaylistError as e:
+                check(f"密钥 {name} 报错", e.message == NO_PLAYABLE and e.detail == want)
+        try:
+            await vp.fetch_key(s, f"{base}/k")
+            check("不允许 http 时密钥地址被拒", False)
+        except PlaylistError as e:
+            check("不允许 http 时密钥地址被拒", e.detail.startswith("地址不是 https"))
+    await srv.close()
+
+    class _Timeout:
+        def get(self, url, **kw):
+            raise asyncio.TimeoutError()
+    try:
+        await vp.fetch_key(_Timeout(), "https://h.example.com/k")
+        check("超时 → 原因", False)
+    except PlaylistError as e:
+        check("超时 → 原因", e.detail == "密钥取不到：超时（h.example.com）")
 
 
 async def test_fetch_playlist():
@@ -358,6 +410,7 @@ if __name__ == "__main__":
     test_rewrite_tag_between_extinf_and_uri()
     test_rewrite_zero_duration()
     asyncio.run(test_redirect_checks())
+    asyncio.run(test_fetch_key())
     asyncio.run(test_fetch_playlist())
     asyncio.run(test_probe())
     asyncio.run(test_find_playable())

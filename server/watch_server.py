@@ -8,6 +8,8 @@
 - GET /bili/{room_id}/{version}/{video|audio}  转发 B 站 CDN（只请求 Sources 给的地址）
 - GET /vod/{room_id}/{version}/index.m3u8      改写过（去广告、地址绝对）的 vod 播放列表；
                                                片段由浏览器直接从资源站 CDN 取，本服务器只取房间当前集的 m3u8
+- GET /vod/{room_id}/{version}/key{n}          播放列表里第 n 把 AES 密钥，由本服务器向资源站取后中转
+                                               （有些地区连不上资源站的密钥域名；见 vod_playlist）
 
 vod 房间额外的客户端消息（当前视频不是 vod 时一律忽略）：
 - {"type": "episode", "index": int}   房主选集（从 0 开始），停在开头、暂停，优先用当前片源线路
@@ -34,7 +36,7 @@ import aiohttp
 from aiohttp import web
 
 from live_watch import USER_AGENT
-from vod_playlist import NO_PLAYABLE, Playlist, PlaylistError, fetch_playlist, find_playable
+from vod_playlist import NO_PLAYABLE, Playlist, PlaylistError, fetch_key, fetch_playlist, find_playable
 from vod_search import Show
 from watch_progress import ProgressRecorder, resume_line
 from watch_rooms import Room, RoomManager, RoomsFull, Video, VodInfo, vod_video
@@ -149,6 +151,7 @@ class WatchServer:
         self._streams: dict[tuple[str, int], DashStreams] = {}
         self._stream_locks: dict[tuple[str, int], asyncio.Lock] = {}
         self._playlists: dict[tuple[str, int], Playlist] = {}
+        self._keys: dict[tuple[str, int, int], bytes] = {}      # (room, version, n) → 密钥
         self._playlist_locks: dict[tuple[str, int], asyncio.Lock] = {}
         self._tasks: set[asyncio.Task] = set()     # 自动下一集的后台任务
         self._session: aiohttp.ClientSession | None = None
@@ -163,6 +166,7 @@ class WatchServer:
         self.app.router.add_get("/ws/{room_id}", self._ws)
         self.app.router.add_get("/bili/{room_id}/{version}/{name}", self._bili)
         self.app.router.add_get("/vod/{room_id}/{version}/index.m3u8", self._vod)
+        self.app.router.add_get(r"/vod/{room_id}/{version}/key{index:\d+}", self._vod_key)
         self._sockets: set[web.WebSocketResponse] = set()
         self.app.on_shutdown.append(self._shutdown)
         self.app.on_cleanup.append(self._cleanup)
@@ -327,12 +331,10 @@ class WatchServer:
             self._start_auto_next(room)
 
     def _evict(self, room_id: str, keep: int | None = None) -> None:
-        """清掉这个房间除 keep 版本以外的 B 站地址和 vod 播放列表缓存。"""
-        for cache, locks in ((self._streams, self._stream_locks), (self._playlists, self._playlist_locks)):
+        """清掉这个房间除 keep 版本以外的 B 站地址、vod 播放列表和密钥缓存。"""
+        for cache in (self._streams, self._stream_locks, self._playlists, self._playlist_locks, self._keys):
             for key in [k for k in cache if k[0] == room_id and k[1] != keep]:
                 cache.pop(key, None)
-            for key in [k for k in locks if k[0] == room_id and k[1] != keep]:
-                locks.pop(key, None)
 
     async def _writer(self, conn: _Conn) -> None:
         try:
@@ -616,7 +618,9 @@ class WatchServer:
         if room is not None and self.rooms.advance(room_id, expected_version, video):
             self.attach_playlist(room, playlist)
 
-    async def _vod(self, request: web.Request) -> web.StreamResponse:
+    async def _vod_lookup(self, request: web.Request) -> tuple[Room, int, Playlist]:
+        """/vod/{room}/{version}/… 共用：房间必须存在、是 vod、版本是当前版本；播放列表没缓存就取一次。
+        不满足 → 404；取不到 → 502，正文是给用户看的原因。"""
         room = self.rooms.get(request.match_info["room_id"])
         try:
             version = int(request.match_info["version"])
@@ -639,7 +643,29 @@ class WatchServer:
                     if room.closed or room.version != version:
                         raise web.HTTPNotFound()
                     self._playlists[key] = playlist
+        return room, version, playlist
+
+    async def _vod(self, request: web.Request) -> web.StreamResponse:
+        _room, _version, playlist = await self._vod_lookup(request)
         return web.Response(text=playlist.text, content_type="application/vnd.apple.mpegurl",
+                            headers={"Cache-Control": "no-store"})
+
+    async def _vod_key(self, request: web.Request) -> web.StreamResponse:
+        """播放列表里第 n 把密钥：按 (房间, 版本, n) 缓存，只向播放列表里记下的地址取。"""
+        room, version, playlist = await self._vod_lookup(request)
+        index = int(request.match_info["index"])
+        if index >= len(playlist.keys):
+            raise web.HTTPNotFound()
+        cache_key = (room.room_id, version, index)
+        data = self._keys.get(cache_key)
+        if data is None:
+            try:
+                data = await fetch_key(self._vod_http(), playlist.keys[index], self.allow_http)
+            except PlaylistError as e:
+                log.warning("watch vod key unavailable (room=%s): %s", room.room_id, e.detail)
+                raise web.HTTPBadGateway(text=e.text)
+            self._keys[cache_key] = data
+        return web.Response(body=data, content_type="application/octet-stream",
                             headers={"Cache-Control": "no-store"})
 
     # ---------------- B 站转流 ----------------

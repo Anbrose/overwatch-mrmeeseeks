@@ -282,12 +282,13 @@
       adapter.failed = true;
       adapter.ready = false;
       failPlayer(VOD_FAILED_MSG, reason, hlsUrl, true, mode);
-      // Our own playlist route answers 4xx/5xx with the server-side reason in
-      // the body (e.g. which source lines failed and why); hls.js only keeps
-      // the status code, so fetch it once and add it to the stage.
+      // Our own playlist and key routes answer 4xx/5xx with the server-side
+      // reason in the body (e.g. which source lines failed and why); hls.js
+      // only keeps the status code, so fetch it once and add it to the stage.
       const code = data && data.response && data.response.code;
-      if (data && /manifest|level/i.test(String(data.details || "")) && code >= 400) {
-        fetch(hlsUrl, { cache: "no-store" }).then((r) => r.text()).then((t) => {
+      const failedUrl = data ? errorUrl(data) : "";
+      if (data && code >= 400 && failedUrl && sameOrigin(failedUrl)) {
+        fetch(failedUrl, { cache: "no-store" }).then((r) => r.text()).then((t) => {
           t = (t || "").trim();
           if (player === adapter && t && t.length < 600 && !t.startsWith("#")) {
             setStageMessage(stageText + "\n服务器说：" + t);
@@ -321,11 +322,26 @@
   // ---- why a player failed, in words the viewer (and whoever reads the server
   // log) can act on: which step, the HTTP status, the host, then the raw code.
 
+  // The URL whose request failed. For key errors that is the key's URL (from
+  // the response, or the fragment's decrypt data), not the fragment's.
+  function errorUrl(data) {
+    const resp = data.response || {};
+    const frag = data.frag || {};
+    if (/key/i.test(String(data.details || ""))) {
+      return resp.url || (frag.decryptdata && frag.decryptdata.uri) || data.url || "";
+    }
+    return frag.url || resp.url || data.url || "";
+  }
+
+  function sameOrigin(url) {
+    try { return new URL(url, location.href).origin === location.origin; } catch { return false; }
+  }
+
   function describeHlsError(data) {
     const details = String(data.details || data.type || "unknown");
     const resp = data.response || {};
     const code = typeof resp.code === "number" ? resp.code : null;
-    const url = (data.frag && data.frag.url) || resp.url || data.url || "";
+    const url = errorUrl(data);
     const step = /manifest|level|playlist/i.test(details) ? "播放列表"
       : /key/i.test(details) ? "密钥" : /frag/i.test(details) ? "片段" : details;
     let why = "";
