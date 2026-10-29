@@ -317,19 +317,37 @@ class ChannelTable:
 
     async def refresh(self) -> None:
         session = self.session_factory()
+        unrecovered: set[int] = set()   # 失败且内存里没有上次条目的列表（比如刚启动）
         try:
             for i, url in enumerate(self.lists):
                 try:
                     self._last_entries[i] = parse_m3u(await self._download(session, url), i)
-                except Exception as e:      # Blocked/TooLarge/ClientError/超时等，一个列表失败不影响其它
+                    unrecovered.discard(i)
+                except Exception as e:
+                    if i not in self._last_entries:
+                        unrecovered.add(i)      # Blocked/TooLarge/ClientError/超时等，一个列表失败不影响其它
                     log.warning("TV list %d download failed (%s: %s)%s", i, type(e).__name__, e,
-                                "; reusing the previous entries" if i in self._last_entries else "")
+                                "; reusing the previous entries" if i not in unrecovered
+                                else "; keeping the saved table's candidates")
         finally:
             await session.close()
         entries = [e for i in sorted(self._last_entries) if i < len(self.lists)
                    for e in self._last_entries[i]]
         previous = {c.url: c for ch in self.channels.values() for c in ch.candidates}
+        old = self.channels
         self.channels = build_channels(entries, previous)
+        # 启动后第一次刷新就失败的列表：沿用状态文件里该列表的候选源（含探测结果），不让表被清空
+        if unrecovered:
+            keep = {c.url: (key, och.name, c) for key, och in old.items() for c in och.candidates
+                    if c.list_index in unrecovered}
+            for ch in self.channels.values():     # 同一地址只算一次，列表序号小的优先
+                ch.candidates = [c for c in ch.candidates if c.url not in keep]
+            for url, (key, name, c) in keep.items():
+                ch = self.channels.setdefault(key, Channel(key, name, []))
+                ch.candidates.append(c)
+            for key in {k for k, _, _ in keep.values()}:
+                self.channels[key].candidates.sort(key=lambda c: c.list_index)    # 稳定排序
+            self.channels = {k: ch for k, ch in self.channels.items() if ch.candidates}
         self.updated_at = self.clock()
         self._save()
         sem = asyncio.Semaphore(PROBE_CONCURRENCY)
@@ -339,6 +357,7 @@ class ChannelTable:
                 try:
                     c.ok = bool(await self.prober(c))
                 except Exception:
+                    log.debug("TV probe raised for %s", c.url, exc_info=True)
                     c.ok = False
                 c.checked_at = self.clock()
 

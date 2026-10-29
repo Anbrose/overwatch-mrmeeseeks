@@ -215,6 +215,47 @@ async def test_table():
         finally:
             await server.close()
 
+    # 启动后第一次刷新全部失败 / 部分失败：状态文件里的表和探测结果不能丢
+    with tempfile.TemporaryDirectory() as d:
+        path = Path(d) / "tv_channels.json"
+        state = {}
+        server = await fixture_server(state)
+        base = f"http://127.0.0.1:{server.port}"
+        def by_key(doc):   # 保留的候选源会重新探测，checked_at 会变，其它都不变
+            return {c["key"]: (c["name"], [{k: v for k, v in x.items() if k != "checked_at"}
+                                           for x in c["candidates"]]) for c in doc["channels"]}
+
+        def shape(channels):
+            return {k: (c.name, [(x.url, x.ua, x.list_index, x.is_4k, x.ok) for x in c.candidates])
+                    for k, c in channels.items()}
+        sf = lambda: tv_net.make_session(ip_allowed=allow)  # noqa: E731
+
+        async def prober2(c):
+            return "63.141" in c.url
+        try:
+            seed = ChannelTable(path, [f"{base}/{i}.m3u" for i in range(3)], prober2,
+                                session_factory=sf, ip_allowed=allow)
+            await seed.refresh()
+            saved = json.loads(path.read_text(encoding="utf-8"))
+
+            state["fail0"] = True
+            t = ChannelTable(path, [f"{base}/{i}.m3u" for i in range(3)], prober2,
+                             session_factory=sf, ip_allowed=allow)
+            await t.refresh()
+            check("one list failing at startup keeps its channels", shape(t.channels) == shape(seed.channels))
+            check("... and the file", by_key(json.loads(path.read_text(encoding="utf-8"))) == by_key(saved))
+
+            async def never(c):
+                raise AssertionError("not reached")
+            allfail = ChannelTable(path, [f"{base}/9.m3u"] * 3, prober2, session_factory=sf, ip_allowed=allow)
+            await allfail.refresh()    # /9.m3u -> 404 或 ValueError，三个列表都失败
+            check("all lists failing at startup keeps the table", shape(allfail.channels) == shape(seed.channels))
+            check("... probe results kept", all(c.ok is not None for ch in allfail.channels.values()
+                                               for c in ch.candidates))
+            check("... and the file", by_key(json.loads(path.read_text(encoding="utf-8"))) == by_key(saved))
+        finally:
+            await server.close()
+
     async def boom(c):
         raise RuntimeError("x")
     t4 = ChannelTable(None, ["http://127.0.0.1:9/x.m3u"], boom)   # 被默认规则拦截，沿用上次的条目
