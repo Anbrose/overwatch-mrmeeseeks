@@ -367,6 +367,8 @@ python client\client.py --help
 
 ### Discord 指令
 
+下表的指令也可以私信 bot 使用，私信里不用写 `@mrmeeseeks`，直接发问题或指令（如 `卡西迪最近被削了吗`、`一起看 湖南卫视`），回复只有自己看得到。只发图片或贴纸时 bot 回帮助；配对要明说 `connect`。给服务器频道做设置的指令（`esports`、`patches`、`region`、`live`、`announce`、`predictions reset`）在私信里会被拒绝。私信里开的一起看房间，卡片发在私信里，把公开链接转给朋友即可；看到第几集按私信单独记。只有和 bot 在同一个服务器的人才能私信它。
+
 | 指令 | 作用 |
 |---|---|
 | `@mrmeeseeks` 或 `@mrmeeseeks connect` | 连接客户端：选择标识，私下收到 8 位配对码 |
