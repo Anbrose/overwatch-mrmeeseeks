@@ -427,7 +427,7 @@ def thread_message(thread, author, text="<@1> x"):
     async def reply(content, **kw):
         replies.append(content)
 
-    return NS(channel=thread, author=author, content=text, mentions=[NS(id=1)], reply=reply), replies
+    return NS(channel=thread, author=author, content=text, mentions=[NS(id=1)], guild=NS(), reply=reply), replies
 
 
 def test_plan_text():
@@ -587,7 +587,7 @@ def channel_message(channel, text="<@1> help", author=None):
     async def reply(content, **kw):
         replies.append(content)
 
-    return NS(author=author or member(7), mentions=[NS(id=1)], content=text, channel=channel, reply=reply), replies
+    return NS(author=author or member(7), mentions=[NS(id=1)], content=text, channel=channel, guild=NS(), reply=reply), replies
 
 
 async def test_bot_routing():

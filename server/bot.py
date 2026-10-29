@@ -109,6 +109,7 @@ HELP_TEXT = (
     "(needs Manage Channels); `patches status` shows the latest patch\n"
     "`@mrmeeseeks 一起看 <Bilibili/YouTube link, show name or TV channel>` (or `watch`) Open a watch-together room with synced playback\n"
     "`@mrmeeseeks help` Show this help\n"
+    "In DMs, no `@mrmeeseeks` needed\n"
     "`@mrmeeseeks wishes [game] [7d]` (admins) Get feature wishes with their votes as a CSV by DM\n"
     "`@mrmeeseeks announce` (admins) Post an announcement with buttons to read it in "
     "简体中文 / 繁體中文 / English / 日本語 / 한국어\n"
@@ -120,6 +121,9 @@ ARG_COMMANDS = ("player", "esports", "patches", "wishes", "region", "live", "pre
 LIVE_USAGE = ("Usage: `@mrmeeseeks live add <region> <Bilibili room url or id> [label]`, "
               "`live remove <room url or id>` or `live list`. Bind the region's channel first with `@mrmeeseeks region <region>`.")
 ASK_COOLDOWN_SECONDS = 5
+# 私信里不能用的指令：都是给服务器频道做设置的（predictions 只有 reset 不行，见 on_message）
+GUILD_ONLY = ("esports", "patches", "region", "live", "announce")
+DM_GUILD_ONLY = "This command only works in a server channel, not in DMs."
 WATCH_USAGE = "用法：@mrmeeseeks 一起看 <B站或YouTube链接、片名或台名>"
 _WATCH_PREFIX = re.compile(r"watch(?=\s|http)", re.IGNORECASE)     # \s 含全角空格
 
@@ -328,13 +332,14 @@ class MeeseeksBot(discord.Client):
                 and self.wish_plans.requests_review(message)):
             await self.wish_plans.review_requested(message)
             return
-        if self.user not in message.mentions:
+        dm = message.guild is None      # 私信：每条消息都是指令，不用 @
+        if self.user not in message.mentions and not dm:
             return
         if message.channel.id == self.wish_channel_id:
             return      # 许愿频道只走表单，不响应 @ 指令
         text = message.content
         tokens = (f"<@{self.user.id}>", f"<@!{self.user.id}>")
-        explicit = any(t in text for t in tokens)
+        explicit = dm or any(t in text for t in tokens)
         for token in tokens:
             text = text.replace(token, "")
         if self._in_wish_thread(message.channel):
@@ -342,6 +347,11 @@ class MeeseeksBot(discord.Client):
                 await self._wish_thread(message, text)
             return
         cmd, arg = parse_command(text, explicit)
+        if dm and not text.strip():
+            cmd = "help"        # 私信里只发了图片、贴纸等：显示帮助，不进入配对
+        if dm and (cmd in GUILD_ONLY or (cmd == "predictions" and arg.strip().lower() == "reset")):
+            await message.reply(DM_GUILD_ONLY)
+            return
 
         if cmd == "connect":
             await self._connect_flow(message)
