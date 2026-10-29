@@ -27,7 +27,7 @@ from tv_stream import (StreamError, absolutize, fetch_playlist_text, media_seque
 
 log = logging.getLogger("mrmeeseeks.watch")
 
-SEGMENT_CACHE = 30
+SEGMENT_CACHE = 12
 MAX_SEGMENT_BYTES = 20 * 1024 * 1024
 COALESCE_SECONDS = 1.0
 DEAD_SECONDS = 10.0
