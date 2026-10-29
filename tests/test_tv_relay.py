@@ -101,6 +101,9 @@ class Upstream:
         app.router.add_get("/other/3.ts", seg(b"SEG3" * 500, "video/mp2t"))
         app.router.add_get("/live/key.bin", seg(b"K" * 16, "application/octet-stream"))
         app.router.add_get("/live/bad{n}.ts", bad)
+        app.router.add_get("/live/evil.ts", seg(b"<script>alert(1)</script>", "text/html"))
+        app.router.add_get("/live/aac.ts", seg(b"AAC" * 10, "audio/aac"))
+        app.router.add_get("/live/master_again.m3u8", master)
         app.router.add_get("/live/big.ts", big)
         self.server = TestServer(app, host="127.0.0.1")
         await self.server.start_server()
@@ -168,18 +171,22 @@ async def test_rewrite(up, stream):
 
     # 换片：旧的编号不变，新分片拿新编号
     up.seq = 101
-    up.body = ("#EXT-X-MAP:URI=\"init.mp4\"\n#EXT-X-STREAM-INF:BANDWIDTH=1\n"
+    up.body = ("#EXT-X-MAP:URI=\"init.mp4\"\n#EXT-X-I-FRAME-STREAM-INF:BANDWIDTH=1,URI=\"iframe.m3u8\"\n"
                "#EXT-X-PART:DURATION=1,URI=\"part.ts\"\n# http://evil.example/x.ts\n"
-               "#EXTINF:5,\n/abs/2.ts\n#EXTINF:5,\nnew.ts\n")
+               "#EXT-X-DATERANGE:ID=\"ad\",START-DATE=\"2026-10-30T00:00:00Z\",X-AD=\"http://ads.example/a\"\n"
+               "#EXTINF:5,\n/abs/2.ts\n#EXTINF:5.005,see http://title.example/x\nnew.ts\n")
     clk.t += 1.1
     text3 = await s.playlist()
     ids3 = seg_ids(text3)
     check("rewrite: kept segment keeps id", ids3[0] == ids1[1])
     check("rewrite: new segment new id", ids3[1] not in ids1 + [k1])
     check("rewrite: MAP URI rewritten", re.search(r'#EXT-X-MAP:URI="/tv/R/1/s/\d+"', text3) is not None)
-    check("rewrite: STREAM-INF dropped", "STREAM-INF" not in text3)
+    check("rewrite: I-FRAME-STREAM-INF dropped", "STREAM-INF" not in text3 and "iframe" not in text3)
     check("rewrite: no upstream names at all",
-          "init.mp4" not in text3 and "part.ts" not in text3 and "evil" not in text3)
+          "init.mp4" not in text3 and "part.ts" not in text3 and "evil" not in text3
+          and "http" not in text3 and "example" not in text3)
+    check("rewrite: EXTINF title dropped, duration kept", "#EXTINF:5.005,\n" in text3)
+    check("rewrite: DATERANGE dropped", "DATERANGE" not in text3)
 
     # 编号表有上限：比最新编号小 200 以上的忘掉
     for i in range(250):
@@ -232,11 +239,48 @@ async def test_reresolve(up, stream):
         check("resolve: 404 raises StreamError", False)
     except StreamError:
         check("resolve: 404 raises StreamError", True)
-    clk.t += 0.1
+    clk.t += 0.5
+    try:
+        await s.playlist()
+        check("resolve: failure shared within 1 s", False)
+    except StreamError:
+        check("resolve: failure shared within 1 s", up.hits["/master.m3u8"] == 1)
+    clk.t += 0.6
     text = await s.playlist()
     check("resolve: next call re-resolves master", up.hits["/master.m3u8"] == 2)
     check("resolve: and succeeds", len(seg_ids(text)) == 3)
     check("resolve: failure did not set dead", s.dead_reason is None)
+
+    # 5 个并发撞上 500：只打一次上游，5 个都报错；1.1 s 后再打
+    reset(up)
+    clk = FakeClock()
+    s = stream(clk)
+    up.media_status = 500
+    res = await asyncio.gather(*(s.playlist() for _ in range(5)), return_exceptions=True)
+    check("resolve: 5 concurrent failures -> 1 media hit", up.hits["/live/media.m3u8"] == 1)
+    check("resolve: all 5 raise StreamError", all(isinstance(r, StreamError) for r in res))
+    clk.t += 1.1
+    try:
+        await s.playlist()
+    except StreamError:
+        pass
+    check("resolve: after 1.1 s hits upstream again", up.hits["/live/media.m3u8"] == 2)
+
+    # 重新取媒体列表时拿到的是主列表 -> StreamError，下次重新解析
+    reset(up)
+    clk = FakeClock()
+    s = stream(clk)
+    await s.playlist()
+    s._media_url = up.base + "/live/master_again.m3u8"
+    clk.t += 1.1
+    try:
+        await s.playlist()
+        check("resolve: master at media url -> StreamError", False)
+    except StreamError:
+        check("resolve: master at media url -> StreamError", True)
+    clk.t += 1.1
+    text = await s.playlist()
+    check("resolve: then re-resolves", up.hits["/master.m3u8"] == 2 and len(seg_ids(text)) == 3)
 
 
 async def test_segments(up, stream):
@@ -256,6 +300,19 @@ async def test_segments(up, stream):
     kbody, kctype = await s.segment(key_id(text))
     check("segment: key served with upstream type", kbody == b"K" * 16 and kctype == "application/octet-stream")
     check("segment: total hits", up.total() == before + 3)
+
+    up.body = "#EXTINF:5,\nevil.ts\n#EXTINF:5,\naac.ts\n"
+    sx = stream()
+    ex, aac = seg_ids(await sx.playlist())
+    body, ctype = await sx.segment(ex)
+    check("segment: text/html upstream -> video/mp2t", ctype == "video/mp2t")
+    _, ctype = await sx.segment(aac)
+    check("segment: audio/* kept", ctype == "audio/aac")
+    check("safe_type strips params", tv_relay.safe_type("Video/MP2T; charset=x") == "video/mp2t")
+    check("safe_type missing -> mp2t", tv_relay.safe_type(None) == "video/mp2t")
+    check("safe_type octet-stream kept", tv_relay.safe_type("application/octet-stream") == "application/octet-stream")
+    check("safe_type svg -> mp2t", tv_relay.safe_type("image/svg+xml") == "video/mp2t")
+    up.body = None
 
     before = up.total()
     for n in (99999, -1, max(ids) + 1):

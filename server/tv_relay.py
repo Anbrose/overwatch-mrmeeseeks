@@ -22,7 +22,8 @@ import aiohttp
 
 from tv_channels import Candidate
 from tv_net import Blocked, TooLarge, is_public_ip, open_url, read_capped
-from tv_stream import StreamError, _fetch_playlist, absolutize, media_sequence, resolve_media
+from tv_stream import (StreamError, absolutize, fetch_playlist_text, media_sequence, parse_master,
+                       resolve_media)
 
 log = logging.getLogger("mrmeeseeks.watch")
 
@@ -35,8 +36,20 @@ ID_WINDOW = 200
 
 NET_ERRORS = (Blocked, TooLarge, aiohttp.ClientError, asyncio.TimeoutError, OSError, ValueError)
 URI_TAGS = ("#EXT-X-KEY:", "#EXT-X-MAP:", "#EXT-X-MEDIA:")
-DROP_TAGS = ("#EXT-X-STREAM-INF", "#EXT-X-I-FRAME-STREAM-INF")
+DROP_TAGS = ("#EXT-X-STREAM-INF", "#EXT-X-I-FRAME-STREAM-INF", "#EXT-X-DATERANGE")
+# 上游不可信：只放行媒体类型，别的（比如 text/html）一律当 video/mp2t，免得在本站域名下被当网页执行
+SAFE_TYPES = {"video/mp2t", "video/mp4", "video/iso.segment", "application/octet-stream",
+              "application/vnd.apple.mpegurl", "audio/mpegurl", "application/x-mpegurl",
+              "binary/octet-stream"}
 URI_RE = re.compile(r'URI="([^"]*)"')
+
+
+def safe_type(ctype: str | None) -> str:
+    """上游 Content-Type 去掉参数后在白名单里（或是 audio/*）才沿用，否则 video/mp2t。"""
+    t = (ctype or "").split(";", 1)[0].strip().lower()
+    if t in SAFE_TYPES or (t.startswith("audio/") and len(t) > 6):
+        return t
+    return "video/mp2t"
 
 
 class LiveStream:
@@ -54,6 +67,9 @@ class LiveStream:
         self._text: str | None = None        # 上次改写好的列表
         self._last_ok: float | None = None
         self._fail_since: float | None = None
+        self._fetches = 0                    # 已发起的列表请求次数，用来认出“我排队时有人刚失败过”
+        self._last_err: StreamError | None = None
+        self._err_at: float | None = None
         self._progress = None                # 上次看到的序号（没有序号时用最后一个分片地址）
         self._progress_since: float | None = None
 
@@ -72,20 +88,30 @@ class LiveStream:
     # ---------- 媒体列表 ----------
 
     async def playlist(self) -> str:
+        entry = self._fetches
         async with self._lock:
-            if (self._text is not None and self._last_ok is not None
-                    and self._clock() - self._last_ok < COALESCE_SECONDS):
+            now = self._clock()
+            err = self._last_err
+            if err is not None:
+                # 排队期间那次请求失败了，或者刚失败不到 COALESCE_SECONDS：共用这个失败，不再打上游
+                if self._fetches != entry or now - self._err_at < COALESCE_SECONDS:
+                    self._check_playlist_dead(now)
+                    raise StreamError(str(err)) from err
+            elif (self._text is not None and self._last_ok is not None
+                    and now - self._last_ok < COALESCE_SECONDS):
                 return self._text
+            self._fetches += 1
             try:
                 final, text = await self._fetch_media()
-            except StreamError:
+            except StreamError as e:
                 now = self._clock()
+                self._last_err, self._err_at = e, now
                 if self._fail_since is None:
                     self._fail_since = now
-                if now - self._fail_since >= DEAD_SECONDS:
-                    self._mark_dead("playlist")
+                self._check_playlist_dead(now)
                 raise
             now = self._clock()
+            self._last_err = self._err_at = None
             self._fail_since = None
             out, last_url = self._rewrite(text, final)
             seq = media_sequence(text)
@@ -99,6 +125,10 @@ class LiveStream:
             self._last_ok = now
             return out
 
+    def _check_playlist_dead(self, now: float) -> None:
+        if self._fail_since is not None and now - self._fail_since >= DEAD_SECONDS:
+            self._mark_dead("playlist")
+
     async def _fetch_media(self) -> tuple[str, str]:
         """返回 (最终地址, 列表内容)；第一次或上次失败之后重新从候选地址解析（顺便刷新带 IP 的令牌）。"""
         cand = self._cand
@@ -108,7 +138,11 @@ class LiveStream:
                                                   ip_allowed=self._ip_allowed)
                 self._media_url = final
                 return final, text
-            return await _fetch_playlist(self._session, self._media_url, cand.ua, self._ip_allowed)
+            final, text = await fetch_playlist_text(self._session, self._media_url, cand.ua,
+                                                    self._ip_allowed)
+            if parse_master(text, final) is not None:
+                raise StreamError("media url returned a master playlist")
+            return final, text
         except StreamError:
             self._media_url = None
             raise
@@ -146,7 +180,9 @@ class LiveStream:
                 continue
             if not ln.startswith("#EXT") or ln.startswith(DROP_TAGS):
                 continue  # 注释行可能带上游地址；主列表的标签不该出现在媒体列表里
-            if ln.startswith(URI_TAGS):
+            if ln.startswith("#EXTINF:"):
+                ln = ln.split(",", 1)[0] + ","  # 标题可能带上游地址，只留时长
+            elif ln.startswith(URI_TAGS):
                 ln = URI_RE.sub(lambda m: f'URI="{local(absolutize(m.group(1), base))}"', ln)
             elif "URI=" in ln:
                 continue  # 低延迟 PART/PRELOAD-HINT 等：不支持，丢掉免得漏出上游地址
@@ -188,7 +224,7 @@ class LiveStream:
             try:
                 if resp.status != 200:
                     raise StreamError(f"segment http {resp.status}")
-                ctype = resp.headers.get("Content-Type") or "video/mp2t"
+                ctype = safe_type(resp.headers.get("Content-Type"))
                 body = await read_capped(resp, MAX_SEGMENT_BYTES)
             finally:
                 resp.release()

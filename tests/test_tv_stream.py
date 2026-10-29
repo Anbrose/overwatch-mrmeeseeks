@@ -161,6 +161,8 @@ async def test_probe():
 
         url, text = await ts.resolve_media(session, base + "/redir", None, ip_allowed=ALLOW)
         check("resolve_media final url", url == base + "/media_ok.m3u8" and "seg_ok.ts" in text)
+        url, text = await ts.fetch_playlist_text(session, base + "/redir", None, ALLOW)
+        check("fetch_playlist_text follows redirect", url == base + "/master.m3u8" and "STREAM-INF" in text)
         try:
             await ts.resolve_media(session, base + "/html.m3u8", None, ip_allowed=ALLOW)
             check("resolve_media non-m3u8 raises", False)

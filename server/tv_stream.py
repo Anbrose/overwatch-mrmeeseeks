@@ -154,7 +154,8 @@ def ts_has_hevc(data: bytes) -> bool:
     return False
 
 
-async def _fetch_playlist(session, url, ua, ip_allowed) -> tuple[str, str]:
+async def fetch_playlist_text(session, url, ua, ip_allowed) -> tuple[str, str]:
+    """GET 一个 m3u8，返回 (重定向后的最终地址, 内容)；不是 200 或不是 m3u8 就 StreamError（网络异常原样抛出）。"""
     resp = await open_url(session, url, ua, ip_allowed=ip_allowed)
     try:
         if resp.status != 200:
@@ -175,7 +176,7 @@ async def resolve_media(session, url: str, ua: str | None, *,
     cur = url
     try:
         for _ in range(MAX_MASTER_LEVELS + 1):
-            final, text = await _fetch_playlist(session, cur, ua, ip_allowed)
+            final, text = await fetch_playlist_text(session, cur, ua, ip_allowed)
             variants = parse_master(text, final)
             if variants is None:
                 return final, text
