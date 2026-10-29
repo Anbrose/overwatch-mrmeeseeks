@@ -378,6 +378,19 @@ def test_tv_limit():
     check("满员时 YouTube 换 tv 被拒绝", raises(TvRoomsFull, lambda: m.change_video(
         r1.room_id, h.viewer_id, tv("CCTV9"))))
     check("拒绝后视频没变", r1.video.source == "youtube" and h4)
+    m5 = RoomManager(clock, max_tv_rooms=1)
+    m5.check_tv()
+    check("check_tv 没满不抛", True)
+    r5 = m5.create(1, 9, "a", tv("CCTV1"))
+    err = None
+    try:
+        m5.check_tv()
+    except TvRoomsFull as e:
+        err = e
+    check("check_tv 满了抛 TvRoomsFull", err is not None and err.limit == 1)
+    m5.close(r5.room_id)
+    m5.check_tv()
+    check("check_tv 关房后又可以", True)
 
 
 def test_tv_control_and_switch():

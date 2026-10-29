@@ -771,11 +771,38 @@ def test_tv_exact():
     ui, rooms, clock, edits = make_ui(max_tv=2)
     for _ in range(2):
         rooms.create(1, 1, "a", tv_video(TvInfo(ch, ch.ordered(), 0)))
-    b = make_bot(ui, FakeSources(yt()), FakeVodSearch([]), FakeTvServer(), None, FakeTable(exact=ch))
+    ws = FakeTvServer()
+    b = make_bot(ui, FakeSources(yt()), FakeVodSearch([]), ws, None, FakeTable(exact=ch))
     msg = FakeMessage()
     asyncio.run(b._watch(msg, "湖南"))
-    check("直播房间已满", len(rooms.active()) == 2 and len(edits) == 1
-          and "直播房间已满（最多 2 个）" in edits[0][2] and edits[0][2] == "直播房间已满（最多 2 个），请稍后再试")
+    check("直播房间已满：直接回复、不探测", len(rooms.active()) == 2 and edits == [] and ws.tv_prepared == []
+          and [r[0] for r in msg.replies] == ["直播房间已满（最多 2 个），请稍后再试"]
+          and msg.replies[0][2] is not None and msg.replies[0][2].users is False)
+
+    # 选单里选台时已满：改搜索消息，不探测
+    b, ui, rooms, clock, edits, ws, msg, vs = setup_tv(FakeTable(partial=[ch]), shows=[show()], max_tv=1)
+    rooms.create(1, 1, "a", tv_video(TvInfo(ch, ch.ordered(), 0)))
+
+    async def pick_full():
+        it, _ = make_pick_interaction(42)
+        it.data = {"values": ["tv0"]}
+        await ui.on_pick(it, token_of(msg))
+    asyncio.run(pick_full())
+    check("选台时已满：改搜索消息、不探测", ws.tv_prepared == [] and len(rooms.active()) == 1
+          and edits == [(555, 7001, "正在准备…", None), (555, 7001, "直播房间已满（最多 1 个），请稍后再试", None)])
+
+    # create 仍然把关：探测期间名额被占满
+    ui, rooms, clock, edits = make_ui(max_tv=1)
+
+    class RacingServer(FakeTvServer):
+        async def prepare_tv(self, channel, order=None, start=0, bad=frozenset()):
+            rooms.create(1, 1, "a", tv_video(TvInfo(ch, ch.ordered(), 0)))
+            return await super().prepare_tv(channel, order, start, bad)
+    b = make_bot(ui, FakeSources(yt()), None, RacingServer(), None, FakeTable(exact=ch))
+    msg = FakeMessage()
+    asyncio.run(b._watch(msg, "湖南"))
+    check("探测期间满了仍由 create 拒绝", len(rooms.active()) == 1
+          and edits == [(555, 7001, "直播房间已满（最多 1 个），请稍后再试", None)])
 
     # 卡片发不出去：关房
     ui, rooms, clock, edits = make_ui()

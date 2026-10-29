@@ -199,6 +199,11 @@ class RoomManager:
         if video.source == "tv" and self._tv_count(exclude) >= self.max_tv_rooms:
             raise TvRoomsFull(self.max_tv_rooms)
 
+    def check_tv(self) -> None:
+        """直播名额已满就抛 TvRoomsFull。bot 在探测前先查一次，免得白等；create 仍然再查（防并发）。"""
+        if self._tv_count() >= self.max_tv_rooms:
+            raise TvRoomsFull(self.max_tv_rooms)
+
     def _ensure_host(self, room: Room) -> bool:
         """房主不在房间里就交给最早进来的人；房间空了就没有房主。返回房主是否变了。"""
         present = room.present()

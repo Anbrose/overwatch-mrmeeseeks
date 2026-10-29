@@ -33,7 +33,7 @@ import time
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, Sequence
 
 import discord
 import numpy as np
@@ -626,7 +626,7 @@ class MeeseeksBot(discord.Client):
         room.message_id = card.id
         ui.cards.add(message.channel.id, card.id)
 
-    async def _watch_search(self, message: discord.Message, arg: str, channels: list[Channel] = ()) -> None:
+    async def _watch_search(self, message: discord.Message, arg: str, channels: Sequence[Channel] = ()) -> None:
         """按片名搜影视；channels 是部分匹配的电视台，和影视结果放在同一个选单里（台在前）。"""
         ui, search = self.watch_ui, self.vod_search
         channels = list(channels)
@@ -692,6 +692,11 @@ class MeeseeksBot(discord.Client):
     async def _open_tv(self, message: discord.Message, channel: Channel) -> None:
         """台名精确匹配：先回一条「正在准备…」，探到能播的源再建房发卡片，最后把那条改成结果。"""
         try:
+            self.watch_ui.rooms.check_tv()       # 名额已满就别让人等探测
+        except TvRoomsFull as e:
+            await message.reply(str(e), allowed_mentions=discord.AllowedMentions.none())
+            return
+        try:
             status = await message.reply(PICK_PREPARING, allowed_mentions=discord.AllowedMentions.none())
         except discord.HTTPException:
             log.exception("Could not reply in channel %s", message.channel.id)
@@ -714,6 +719,7 @@ class MeeseeksBot(discord.Client):
                         set_status: Callable[[str], Awaitable[None]]) -> None:
         ui, server = self.watch_ui, self.watch_server
         try:
+            ui.rooms.check_tv()                  # 探测前先查名额；create 里还会再查一次（防并发）
             video = await server.prepare_tv(channel)
             room = ui.rooms.create(origin.channel.id, origin.author.id, origin.author.display_name, video)
         except TvUnavailable as e:
