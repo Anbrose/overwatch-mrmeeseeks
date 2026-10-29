@@ -1278,6 +1278,8 @@ async def test_tv_switch():
         for w in (a, b, c):
             await drain(w)
         up.fail = {"ok1", "ok2", "ok3"}
+        ws_mod.STALL_COOLDOWN = orig_cooldown
+        server._tv_last_switch.pop(rid, None)     # 让这次 tv_stall 不被前面成功换源的冷却挡住
         await b.send_json({"type": "tv_stall", "version": v})
         ea = await recv_type(a, "error", 5)
         ec = await recv_type(c, "error", 5)
@@ -1285,6 +1287,17 @@ async def test_tv_switch():
         check("全坏时自动换源 → 所有人收到“这个台暂时没有能播的源”、版本不变",
               ea and ea["message"] == "这个台暂时没有能播的源" and ec and ec["message"] == "这个台暂时没有能播的源"
               and room.version == v)
+        eb = [m for m in await drain(b, 0.2) if m["type"] == "error"]
+        await drain(a, 0.05)
+        await drain(c, 0.05)
+        check("第一次全坏只广播一次错误", len(eb) == 1)
+        n_up, n_stall = up.total(), seen["tv_stall"]
+        await b.send_json({"type": "tv_stall", "version": v})
+        ok = await wait_until(lambda: seen["tv_stall"] == n_stall + 1)
+        got = [m for w in (a, b, c) for m in await drain(w, 0.3)]
+        check("全坏后冷却内再 tv_stall → 不再探测、不再广播错误", ok and tv_idle(server, rid)
+              and up.total() == n_up and not any(m["type"] == "error" for m in got) and room.version == v)
+        ws_mod.STALL_COOLDOWN = 0.0
         try:
             await server.prepare_tv(tv_channel(up.base))
             raised = None

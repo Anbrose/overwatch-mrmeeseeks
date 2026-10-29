@@ -756,6 +756,9 @@ class WatchServer:
             video = await self.prepare_tv(info.channel, info.order, start=start, bad=bad)
         except TvUnavailable as e:
             log.info("watch tv switch: no playable source (room=%s, manual=%s)", room_id, manual)
+            if not manual:
+                # 失败的自动换源也计入冷却，否则全坏的台每次 tv_stall 都会重新探测、重复广播错误
+                self._tv_last_switch[room_id] = time.monotonic()
             msg = {"type": "error", "message": e.message}
             for c in self._tv_conns(room_id, host_only=manual):
                 c.push(msg)
