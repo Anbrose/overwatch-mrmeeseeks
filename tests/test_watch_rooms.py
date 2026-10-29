@@ -399,6 +399,7 @@ def test_tv_control_and_switch():
     check("非 tv 房间 switch_tv 无效", not m5.switch_tv(r5.room_id, r5.version, tv()))
     check("tv_video 字段", v2.source == "tv" and v2.id == "CCTV2" and v2.page == 1 and v2.duration is None
           and v2.url == v2.tv.order[0].url and v2.tv.bad == set())
+    check("直播不接受时长", not m.set_duration(r.room_id, 90.0) and r.video.duration is None)
 
 
 def test_tick_no_finished_for_tv():

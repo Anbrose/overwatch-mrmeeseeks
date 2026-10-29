@@ -364,9 +364,9 @@ class RoomManager:
         return True
 
     def set_duration(self, room_id: str, value: float) -> bool:
-        """播放器报告时长：只在视频还没有时长时接受（有限正数）。"""
+        """播放器报告时长：只在视频还没有时长时接受（有限正数）；直播没有时长，一律不收。"""
         room = self.get(room_id)
-        if room is None or room.video.duration is not None:
+        if room is None or room.video.duration is not None or room.video.source == "tv":
             return False
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
             return False

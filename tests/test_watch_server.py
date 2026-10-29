@@ -1164,6 +1164,30 @@ async def test_tv_routes():
         check("别的房间（不是 tv）→ 404", r.status == 404 and r2.status == 404)
         check("404 们都没碰上游", up.total() == n)
 
+        # 另一个 tv 房间发出去的分片编号，拿到本房间来要 → 404、不碰上游
+        import tv_relay
+        ids1 = {int(ln.rsplit("/", 1)[1]) for ln in segs}
+        other = rooms.create(1, 2, "x", await server.prepare_tv(ch))
+        orig_coalesce = tv_relay.COALESCE_SECONDS
+        tv_relay.COALESCE_SECONDS = 0.0      # 让另一个房间多取几次列表，编号走到本房间没发过的范围
+        try:
+            ids2 = set()
+            for _ in range(3):
+                r = await client.get(f"/tv/{other.room_id}/0/index.m3u8")
+                ids2 |= {int(ln.rsplit("/", 1)[1]) for ln in (await r.text()).splitlines()
+                         if ln.startswith(f"/tv/{other.room_id}/0/s/")}
+        finally:
+            tv_relay.COALESCE_SECONDS = orig_coalesce
+        foreign = sorted(ids2 - ids1)
+        n = up.total()
+        statuses = []
+        for k in foreign:
+            r = await client.get(f"/tv/{rid}/0/s/{k}")
+            statuses.append(r.status)
+        check(f"别的 tv 房间发出的编号 {foreign} 在本房间 → 404、不碰上游",
+              foreign and all(st == 404 for st in statuses) and up.total() == n)
+        rooms.close(other.room_id)
+
         a, _ = await hello(client, rid, key=room.owner_key)
         s = await recv_type(a, "state")
         v = s and s["video"]
@@ -1203,7 +1227,7 @@ async def test_tv_switch():
         for w in (a, b, c):
             await drain(w)
         r = await client.get(f"/tv/{rid}/0/index.m3u8")
-        await r.read()
+        old_segs = [ln for ln in (await r.text()).splitlines() if ln.startswith(f"/tv/{rid}/0/s/")]
         seen = count_handled(server, ("tv_next", "tv_stall"))
 
         await b.send_json({"type": "tv_next"})
@@ -1221,6 +1245,13 @@ async def test_tv_switch():
         check("换源后旧版本的直播流被清掉", (rid, 0) not in server._tv_streams)
         r = await client.get(f"/tv/{rid}/0/index.m3u8")
         check("旧版本号 404", r.status == 404)
+        n_up = up.total()
+        statuses = []
+        for path in old_segs:
+            r = await client.get(path)
+            statuses.append(r.status)
+        check("换源后旧版本真实发过的分片 → 404、不碰上游", old_segs and all(st == 404 for st in statuses)
+              and up.total() == n_up)
 
         await a.send_json({"type": "tv_next"})
         s = await recv_type(a, "state", 5)
@@ -1388,6 +1419,56 @@ async def test_tv_dead_auto_switch():
         await up.server.close()
 
 
+async def test_tv_stale_error_and_duration():
+    up, rooms, server, client = await make_tv()
+    orig_cooldown = ws_mod.STALL_COOLDOWN
+    try:
+        ws_mod.STALL_COOLDOWN = 0.0
+        room = rooms.create(1, 2, "发起人", await server.prepare_tv(tv_channel(up.base, ("bad", "ok1"))))
+        rid = room.room_id
+        a, wa = await hello(client, rid, key=room.owner_key)
+        b, _ = await hello(client, rid)
+        await drain(a)
+        await drain(b)
+
+        seen = count_handled(server, ("duration",))
+        await a.send_json({"type": "duration", "value": 120.0})
+        ok = await wait_until(lambda: seen["duration"] == 1)
+        got = await drain(b, 0.3)
+        check("直播房间不接受 duration", ok and room.video.duration is None and room.version == 0
+              and not any(m["type"] == "state" for m in got))
+
+        # 自动换源找源期间房主换成了 YouTube：失败后不发过时的错误、不记冷却
+        up.fail = {"ok1"}
+        up.delay = 0.3
+        await b.send_json({"type": "tv_stall", "version": 0})
+        await wait_until(lambda: rid in server._tv_switching)
+        check("换成 YouTube", rooms.change_video(rid, wa["viewer_id"], yt()))
+        await wait_until(lambda: tv_idle(server, rid))
+        got = [m for w in (a, b) for m in await drain(w, 0.3)]
+        check("视频已换走 → 换源失败不广播错误、不记冷却", room.video.source == "youtube"
+              and not any(m["type"] == "error" for m in got) and rid not in server._tv_last_switch)
+
+        # 找源期间房间被关：同样静默
+        up.delay = 0.0
+        room2 = rooms.create(1, 2, "发起人", await server.prepare_tv(tv_channel(up.base, ("bad", "ok2", "ok1"))))
+        rid2 = room2.room_id
+        c, _ = await hello(client, rid2)
+        await drain(c)
+        up.fail = {"ok1", "ok2"}
+        up.delay = 0.3
+        await c.send_json({"type": "tv_stall", "version": 0})
+        await wait_until(lambda: rid2 in server._tv_switching)
+        rooms.close(rid2)
+        await wait_until(lambda: tv_idle(server, rid2))
+        check("房间已关 → 换源失败不记冷却", rid2 not in server._tv_last_switch)
+    finally:
+        ws_mod.STALL_COOLDOWN = orig_cooldown
+        up.delay = 0.0
+        await client.close()
+        await up.server.close()
+
+
 async def main():
     await test_ws_flow()
     await test_duration_and_change_video()
@@ -1408,6 +1489,7 @@ async def main():
     await test_tv_routes()
     await test_tv_switch()
     await test_tv_dead_auto_switch()
+    await test_tv_stale_error_and_duration()
 
 
 if __name__ == "__main__":
