@@ -8,11 +8,15 @@
 - GET /bili/{room_id}/{version}/{video|audio}  转发 B 站 CDN（只请求 Sources 给的地址）
 - GET /vod/{room_id}/{version}/index.m3u8      改写过（去广告、地址绝对）的 vod 播放列表；
                                                片段由浏览器直接从资源站 CDN 取，本服务器只取房间当前集的 m3u8
+- GET /vod/{room_id}/{version}/key{n}          播放列表里第 n 把 AES 密钥，由本服务器向资源站取后中转
+                                               （有些地区连不上资源站的密钥域名；见 vod_playlist）
 
 vod 房间额外的客户端消息（当前视频不是 vod 时一律忽略）：
 - {"type": "episode", "index": int}   房主选集（从 0 开始），停在开头、暂停，优先用当前片源线路
 - {"type": "next_line"}               房主换一个片源：同一集、下一条线路（绕圈），保持当前位置和播放/暂停状态
 - {"type": "resume"}                  房主或有控制权的人：跳到建房时的进度快照（需要时先换集），暂停
+任何房间都接受 {"type": "report", "detail": str, "url": str, "env": str}：网页端播放失败的回报，只记 WARNING 日志
+（带房间号、成员公开 id、当前视频地址、播放器模式和浏览器 UA），不改房间状态；每个连接最多 MAX_REPORTS 条。
 播完（rooms 的 "finished" 事件）自动换下一集并开始播放；期间有人手动换过就作废（按版本号）。
 准备一集（找线路、取 m3u8、探测片段）整体最多 VOD_PREPARE_TIMEOUT 秒，超时按“没有能播的片源”处理。
 """
@@ -32,7 +36,7 @@ import aiohttp
 from aiohttp import web
 
 from live_watch import USER_AGENT
-from vod_playlist import NO_PLAYABLE, Playlist, PlaylistError, fetch_playlist, find_playable
+from vod_playlist import NO_PLAYABLE, Playlist, PlaylistError, fetch_key, fetch_playlist, find_playable
 from vod_search import Show
 from watch_progress import ProgressRecorder, resume_line
 from watch_rooms import Room, RoomManager, RoomsFull, Video, VodInfo, vod_video
@@ -47,6 +51,8 @@ CHUNK = 64 * 1024
 VOD_PREPARE_TIMEOUT = 45     # 准备一集的总时限（秒）；网页端的“正在准备…”要比它久
 SEND_QUEUE_MAX = 256         # 单个连接积压的待发消息上限，超过就断开
 MAX_URL_LEN = 2000
+MAX_REPORTS = 5              # 每个连接最多记几条网页端的失败回报
+REPORT_MAX_CHARS = 500
 STATIC_FILES = {
     "index.html": "text/html",
     "player.js": "application/javascript",
@@ -91,6 +97,12 @@ def build_mpd(s: DashStreams, room_id: str, version: int) -> str:
             ' <Period start="PT0S">\n' + video + audio + ' </Period>\n</MPD>\n')
 
 
+def _one_line(text: str, limit: int) -> str:
+    """日志里用：压成一行、截断。"""
+    text = " ".join(text.split())
+    return text if len(text) <= limit else text[:limit - 1] + "…"
+
+
 def _finite(v) -> bool:
     return not isinstance(v, bool) and isinstance(v, (int, float)) and math.isfinite(v)
 
@@ -105,6 +117,8 @@ class _Conn:
     last_you: tuple | None = None
     writer: asyncio.Task | None = None
     busy: asyncio.Task | None = None     # 正在处理的换视频（change_video / episode / next_line / resume）
+    reports: int = 0                     # 已记录的失败回报数
+    ua: str = ""                         # 浏览器 User-Agent，只在失败回报的日志里用
 
     def push(self, msg: dict | None) -> None:
         try:
@@ -137,6 +151,7 @@ class WatchServer:
         self._streams: dict[tuple[str, int], DashStreams] = {}
         self._stream_locks: dict[tuple[str, int], asyncio.Lock] = {}
         self._playlists: dict[tuple[str, int], Playlist] = {}
+        self._keys: dict[tuple[str, int, int], bytes] = {}      # (room, version, n) → 密钥
         self._playlist_locks: dict[tuple[str, int], asyncio.Lock] = {}
         self._tasks: set[asyncio.Task] = set()     # 自动下一集的后台任务
         self._session: aiohttp.ClientSession | None = None
@@ -151,6 +166,7 @@ class WatchServer:
         self.app.router.add_get("/ws/{room_id}", self._ws)
         self.app.router.add_get("/bili/{room_id}/{version}/{name}", self._bili)
         self.app.router.add_get("/vod/{room_id}/{version}/index.m3u8", self._vod)
+        self.app.router.add_get(r"/vod/{room_id}/{version}/key{index:\d+}", self._vod_key)
         self._sockets: set[web.WebSocketResponse] = set()
         self.app.on_shutdown.append(self._shutdown)
         self.app.on_cleanup.append(self._cleanup)
@@ -252,7 +268,7 @@ class WatchServer:
         if v.vod is not None:
             show = v.vod.show
             video.update(episode=v.vod.episode, episode_count=show.episode_count,
-                         line_name=show.lines[v.vod.line].name, line_count=len(show.lines), show_title=show.title)
+                         line=v.vod.line, line_count=len(show.lines), show_title=show.title)
             snap = v.vod.resume
             if snap is not None:
                 resume = {"episode": snap.episode, "position": snap.position,
@@ -315,12 +331,10 @@ class WatchServer:
             self._start_auto_next(room)
 
     def _evict(self, room_id: str, keep: int | None = None) -> None:
-        """清掉这个房间除 keep 版本以外的 B 站地址和 vod 播放列表缓存。"""
-        for cache, locks in ((self._streams, self._stream_locks), (self._playlists, self._playlist_locks)):
+        """清掉这个房间除 keep 版本以外的 B 站地址、vod 播放列表和密钥缓存。"""
+        for cache in (self._streams, self._stream_locks, self._playlists, self._playlist_locks, self._keys):
             for key in [k for k in cache if k[0] == room_id and k[1] != keep]:
                 cache.pop(key, None)
-            for key in [k for k in locks if k[0] == room_id and k[1] != keep]:
-                locks.pop(key, None)
 
     async def _writer(self, conn: _Conn) -> None:
         try:
@@ -347,11 +361,11 @@ class WatchServer:
         await ws.prepare(request)
         self._sockets.add(ws)
         try:
-            return await self._ws_session(ws, room_id)
+            return await self._ws_session(ws, room_id, request.headers.get("User-Agent", ""))
         finally:
             self._sockets.discard(ws)
 
-    async def _ws_session(self, ws: web.WebSocketResponse, room_id: str) -> web.WebSocketResponse:
+    async def _ws_session(self, ws: web.WebSocketResponse, room_id: str, ua: str = "") -> web.WebSocketResponse:
         async def end():
             try:
                 await ws.send_str(json.dumps({"type": "ended"}))
@@ -379,7 +393,7 @@ class WatchServer:
             return ws
         member = self.rooms.connect(room_id, viewer_id if isinstance(viewer_id, str) else None,
                                     key if isinstance(key, str) else None)
-        conn = _Conn(ws, room_id, member.viewer_id)
+        conn = _Conn(ws, room_id, member.viewer_id, ua=ua[:300])
         try:
             self.conns.setdefault(room_id, set()).add(conn)
             conn.writer = asyncio.get_running_loop().create_task(self._writer(conn))
@@ -453,6 +467,24 @@ class WatchServer:
             self._start_busy(conn, self._change_video(conn, url))
         elif kind in ("episode", "next_line", "resume"):
             self._handle_vod(conn, kind, data)
+        elif kind == "report":
+            self._report(conn, data)
+
+    def _report(self, conn: _Conn, data: dict) -> None:
+        """网页端播放失败的回报：只记日志，让服务器日志里能看到是哪个房间、哪个视频、浏览器报了什么。"""
+        detail = data.get("detail")
+        if not isinstance(detail, str) or conn.reports >= MAX_REPORTS:
+            return
+        conn.reports += 1
+        room = self.rooms.get(conn.room_id)
+        member = room.members.get(conn.viewer_id) if room is not None else None
+        url, env = data.get("url"), data.get("env")
+        log.warning("watch client playback failed (room=%s member=%s video=%s src=%s env=%s ua=%s): %s",
+                    conn.room_id, member.public_id if member is not None else "?",
+                    room.video.url if room is not None else "?",
+                    _one_line(url, 300) if isinstance(url, str) else "",
+                    _one_line(env, 300) if isinstance(env, str) else "", _one_line(conn.ua, 300),
+                    _one_line(detail, REPORT_MAX_CHARS))
 
     def _start_busy(self, conn: _Conn, coro) -> None:
         """每个连接同一时刻只换一次视频；正在换就提示请稍候。"""
@@ -507,7 +539,7 @@ class WatchServer:
                 self.vod_prepare_timeout)
         except asyncio.TimeoutError:
             log.info("watch vod prepare timed out (%r episode %d)", show.title, episode)
-            raise PlaylistError(NO_PLAYABLE) from None
+            raise PlaylistError(NO_PLAYABLE, f"{self.vod_prepare_timeout:g} 秒内没找到能播的线路，资源站太慢") from None
         return vod_video(VodInfo(show, episode, line, resume), playlist.duration), playlist
 
     def attach_playlist(self, room: Room, playlist: Playlist) -> None:
@@ -550,7 +582,7 @@ class WatchServer:
             if ok:
                 self.attach_playlist(room, playlist)
         except PlaylistError as e:
-            conn.push({"type": "error", "message": e.message})
+            conn.push({"type": "error", "message": e.message, "detail": e.detail})
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -574,8 +606,8 @@ class WatchServer:
     async def _auto_next(self, room_id: str, expected_version: int, info: VodInfo) -> None:
         try:
             video, playlist = await self.prepare_vod(info.show, info.episode + 1, info.line, info.resume)
-        except PlaylistError:
-            log.info("watch auto-next: no playable source for next episode (room=%s)", room_id)
+        except PlaylistError as e:
+            log.info("watch auto-next: no playable source for next episode (room=%s): %s", room_id, e.detail)
             return
         except asyncio.CancelledError:
             raise
@@ -586,7 +618,9 @@ class WatchServer:
         if room is not None and self.rooms.advance(room_id, expected_version, video):
             self.attach_playlist(room, playlist)
 
-    async def _vod(self, request: web.Request) -> web.StreamResponse:
+    async def _vod_lookup(self, request: web.Request) -> tuple[Room, int, Playlist]:
+        """/vod/{room}/{version}/… 共用：房间必须存在、是 vod、版本是当前版本；播放列表没缓存就取一次。
+        不满足 → 404；取不到 → 502，正文是给用户看的原因。"""
         room = self.rooms.get(request.match_info["room_id"])
         try:
             version = int(request.match_info["version"])
@@ -604,12 +638,34 @@ class WatchServer:
                     try:
                         playlist = await fetch_playlist(self._vod_http(), room.video.url, self.allow_http)
                     except PlaylistError as e:
-                        log.warning("watch vod playlist unavailable (room=%s)", room.room_id)
-                        raise web.HTTPBadGateway(text=e.message)
+                        log.warning("watch vod playlist unavailable (room=%s): %s", room.room_id, e.detail)
+                        raise web.HTTPBadGateway(text=e.text)
                     if room.closed or room.version != version:
                         raise web.HTTPNotFound()
                     self._playlists[key] = playlist
+        return room, version, playlist
+
+    async def _vod(self, request: web.Request) -> web.StreamResponse:
+        _room, _version, playlist = await self._vod_lookup(request)
         return web.Response(text=playlist.text, content_type="application/vnd.apple.mpegurl",
+                            headers={"Cache-Control": "no-store"})
+
+    async def _vod_key(self, request: web.Request) -> web.StreamResponse:
+        """播放列表里第 n 把密钥：按 (房间, 版本, n) 缓存，只向播放列表里记下的地址取。"""
+        room, version, playlist = await self._vod_lookup(request)
+        index = int(request.match_info["index"])
+        if index >= len(playlist.keys):
+            raise web.HTTPNotFound()
+        cache_key = (room.room_id, version, index)
+        data = self._keys.get(cache_key)
+        if data is None:
+            try:
+                data = await fetch_key(self._vod_http(), playlist.keys[index], self.allow_http)
+            except PlaylistError as e:
+                log.warning("watch vod key unavailable (room=%s): %s", room.room_id, e.detail)
+                raise web.HTTPBadGateway(text=e.text)
+            self._keys[cache_key] = data
+        return web.Response(body=data, content_type="application/octet-stream",
                             headers={"Cache-Control": "no-store"})
 
     # ---------------- B 站转流 ----------------

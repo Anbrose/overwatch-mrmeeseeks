@@ -210,7 +210,7 @@
       setVolume: (v, m) => { video.volume = v; video.muted = m; },
       destroy: () => {
         try { dash.off(window.dashjs.MediaPlayer.events.ERROR, onError); } catch { /* ignore */ }
-        video.removeEventListener("error", onError);
+        video.removeEventListener("error", onVideoError);
         try { dash.reset(); } catch { /* ignore */ }
         video.removeAttribute("src");
         video.remove();
@@ -218,15 +218,15 @@
     };
     // MPD 502 (B站 refused the stream) or a broken media segment: tell the
     // viewer instead of leaving a black stage, and stop syncing this player.
-    function onError() {
+    function onError(e) {
       if (player !== adapter || adapter.failed) return;
       adapter.failed = true;
       adapter.ready = false;
-      setStageMessage(UNPLAYABLE_MSG);
-      renderStartButton();
+      failPlayer(UNPLAYABLE_MSG, describeDashError(e) || describeMediaError(video.error), mpdUrl, false, "dash.js");
     }
+    const onVideoError = () => onError(null);
     dash.on(window.dashjs.MediaPlayer.events.ERROR, onError);
-    video.addEventListener("error", onError);
+    video.addEventListener("error", onVideoError);
     dash.initialize(video, mpdUrl, false);
     return adapter;
   }
@@ -240,8 +240,11 @@
     video.setAttribute("playsinline", "");
     video.preload = "auto";
     ui.host.appendChild(video);
-    const native = !!video.canPlayType(HLS_MIME);
+    const useHls = !!(window.Hls && window.Hls.isSupported());
+    const native = !useHls && !!video.canPlayType(HLS_MIME);
+    const mode = useHls ? `hls.js ${window.Hls.version || "?"}` : native ? "native HLS" : "no HLS support";
     let hls = null;
+    let lastHlsError = "";   // last non-fatal hls.js error: context when the <video> errors first
 
     const adapter = {
       source: "vod",
@@ -264,33 +267,126 @@
       setRate: (r) => { if (video.playbackRate !== r) video.playbackRate = r; },
       setVolume: (v, m) => { video.volume = v; video.muted = m; },
       destroy: () => {
-        video.removeEventListener("error", onError);
+        video.removeEventListener("error", onVideoError);
         if (hls) { try { hls.destroy(); } catch { /* ignore */ } }
         video.removeAttribute("src");
         try { video.load(); } catch { /* ignore */ }  // stop native HLS downloading
         video.remove();
       },
     };
-    function onError() {
+    // `reason` says which step failed and why (see describeHlsError); it goes on
+    // the stage and to the server log so the failure can be triaged without the
+    // viewer's console.
+    function onError(reason, data) {
       if (player !== adapter || adapter.failed) return;
       adapter.failed = true;
       adapter.ready = false;
-      setStageMessage(VOD_FAILED_MSG);
-      renderStartButton();
+      failPlayer(VOD_FAILED_MSG, reason, hlsUrl, true, mode);
+      // Our own playlist and key routes answer 4xx/5xx with the server-side
+      // reason in the body (e.g. which source lines failed and why); hls.js
+      // only keeps the status code, so fetch it once and add it to the stage.
+      const code = data && data.response && data.response.code;
+      const failedUrl = data ? errorUrl(data) : "";
+      if (data && code >= 400 && failedUrl && sameOrigin(failedUrl)) {
+        fetch(failedUrl, { cache: "no-store" }).then((r) => r.text()).then((t) => {
+          t = (t || "").trim();
+          if (player === adapter && t && t.length < 600 && !t.startsWith("#")) {
+            setStageMessage(stageText + "\n服务器说：" + t);
+          }
+        }).catch(() => { /* already failed; nothing more to say */ });
+      }
     }
-    video.addEventListener("error", onError);
-    if (native) {
-      video.src = hlsUrl;
-    } else if (window.Hls && window.Hls.isSupported()) {
+    const onVideoError = () => onError(describeMediaError(video.error)
+      + (lastHlsError ? `；hls.js 之前的错误：${lastHlsError}` : ""));
+    video.addEventListener("error", onVideoError);
+    if (useHls) {
       hls = new window.Hls();
-      hls.on(window.Hls.Events.ERROR, (_event, data) => { if (data && data.fatal) onError(); });
+      hls.on(window.Hls.Events.ERROR, (_event, data) => {
+        if (!data) return;
+        // Non-fatal errors are retried by hls.js; keep them in the console for triage.
+        console.warn("[watch] hls.js error" + (data.fatal ? " (fatal)" : ""), data.details, data);
+        if (data.fatal) onError(describeHlsError(data), data);
+        else lastHlsError = describeHlsError(data);
+      });
       hls.loadSource(hlsUrl);
       hls.attachMedia(video);
+    } else if (native) {
+      video.src = hlsUrl;
     } else {
       // No way to play HLS here; report once the caller has installed us.
-      Promise.resolve().then(onError);
+      Promise.resolve().then(() => onError("这个浏览器不支持 HLS 播放"));
     }
     return adapter;
+  }
+
+  // ---- why a player failed, in words the viewer (and whoever reads the server
+  // log) can act on: which step, the HTTP status, the host, then the raw code.
+
+  // The URL whose request failed. For key errors that is the key's URL (from
+  // the response, or the fragment's decrypt data), not the fragment's.
+  function errorUrl(data) {
+    const resp = data.response || {};
+    const frag = data.frag || {};
+    if (/key/i.test(String(data.details || ""))) {
+      return resp.url || (frag.decryptdata && frag.decryptdata.uri) || data.url || "";
+    }
+    return frag.url || resp.url || data.url || "";
+  }
+
+  function sameOrigin(url) {
+    try { return new URL(url, location.href).origin === location.origin; } catch { return false; }
+  }
+
+  function describeHlsError(data) {
+    const details = String(data.details || data.type || "unknown");
+    const resp = data.response || {};
+    const code = typeof resp.code === "number" ? resp.code : null;
+    const url = errorUrl(data);
+    const step = /manifest|level|playlist/i.test(details) ? "播放列表"
+      : /key/i.test(details) ? "密钥" : /frag/i.test(details) ? "片段" : details;
+    let why = "";
+    if (data.type === "networkError") {
+      if (/timeout/i.test(details)) why = "超时";
+      else if (code === null || code === 0) why = "请求被拦截或连不上（跨域 CORS、网络或广告拦截器）";
+      else why = `HTTP ${code}`;
+    } else if (data.type === "mediaError") {
+      why = /parsing|demux|fragParsing/i.test(details) ? "内容不是有效的视频片段" : "无法解码";
+    } else if (data.type === "muxError") {
+      why = "转封装失败";
+    } else if (data.error && data.error.message) {
+      why = String(data.error.message);
+    }
+    return `${step} ${why}`.trim() + hostSuffix(url) + ` [${details}]`;
+  }
+
+  function describeDashError(e) {
+    const err = e && e.error;
+    if (!err) return "";
+    if (typeof err === "string") return err;
+    return [err.code, err.message].filter(Boolean).join(" ");
+  }
+
+  function describeMediaError(err) {
+    if (!err) return "";
+    const names = { 1: "加载被中止", 2: "网络错误", 3: "解码失败", 4: "格式不支持" };
+    return (names[err.code] || `MediaError ${err.code}`) + (err.message ? `：${err.message}` : "");
+  }
+
+  function hostSuffix(url) {
+    try { return url ? ` · ${new URL(url, location.href).host}` : ""; } catch { return ""; }
+  }
+
+  // Shows "<msg>：<reason>" on the stage, logs it, and sends it to the server
+  // as `report` (with the player mode and browser) so it lands in the server
+  // log with the room and video. Never changes room state; others are not told.
+  function failPlayer(msg, reason, srcUrl, hostCanSwitch, mode) {
+    const text = reason ? `${msg}：${reason}` : msg;
+    console.error("[watch] " + text, srcUrl || "", mode || "");
+    const hint = hostCanSwitch && me.isHost ? "\n房主可以在 🔑 面板里「换一个片源」" : "";
+    setStageMessage(text + hint);
+    renderStartButton();
+    send({ type: "report", detail: text, url: String(srcUrl || "").slice(0, 300),
+           env: `${mode || "?"}; ${navigator.userAgent}`.slice(0, 300) });
   }
 
   function createYouTubePlayer(videoId, version, onReady) {
@@ -391,10 +487,16 @@
         player = createBiliPlayer(video.mpd);
         onPlayerReady(player);
       } else if (video.source === "vod") {
-        if (!document.createElement("video").canPlayType(HLS_MIME)) {
+        // Prefer hls.js (MSE) wherever it works: browsers that claim native HLS
+        // (Android Chrome, some TVs) often fail on real streams with a bare
+        // "format not supported". Native is only for browsers without MSE
+        // (iPhone Safari), or when the hls.js script cannot be loaded.
+        try {
           await loadScript(HLS_SRC);
-          if (token !== buildToken) return;
+        } catch (err) {
+          if (!document.createElement("video").canPlayType(HLS_MIME)) throw err;
         }
+        if (token !== buildToken) return;
         player = createVodPlayer(video.hls);
         onPlayerReady(player);
       } else if (video.source === "youtube") {
@@ -516,7 +618,7 @@
     const playing = room && room.playing;
     ui.play.textContent = playing ? "⏸" : "▶";
     ui.play.setAttribute("aria-label", playing ? "暂停" : "播放");
-    ui.me.textContent = me.name ? `你是「${me.name}」` : "";
+    ui.me.textContent = me.name ? `ID：「${me.name}」` : "";
     ui.permBtn.hidden = !me.isHost || ended;
     if (!me.isHost || ended) {
       ui.panel.hidden = true;
@@ -585,7 +687,8 @@
       if (current) btn.setAttribute("aria-current", "true"); else btn.removeAttribute("aria-current");
       btn.disabled = preparing;
     });
-    ui.lineLabel.textContent = `片源：${v.line_name || ""}（共 ${v.line_count || 0} 个）`;
+    // Sources are numbered, never named: viewers should not see which site a stream comes from.
+    ui.lineLabel.textContent = `来源${(Number(v.line) || 0) + 1}（共 ${v.line_count || 0} 个）`;
     ui.nextLine.disabled = preparing || (Number(v.line_count) || 0) <= 1;
   }
 
@@ -803,7 +906,7 @@
         break;
       case "error":
         stopPreparing();
-        toast(String(msg.message || "出错了"));
+        toast(String(msg.message || "出错了") + (msg.detail ? `（${msg.detail}）` : ""));
         revertOptimistic();
         break;
       case "ended":

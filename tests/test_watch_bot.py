@@ -1,4 +1,4 @@
-"""一起看的 Discord 接入：指令路由、房间卡片文字、「我是房主」按钮、卡片编辑节流、重启后的遗留卡片。
+"""一起看的 Discord 接入：指令路由、房间卡片文字、房主链接私下发给发起人、卡片编辑节流、重启后的遗留卡片。
 用假的 Discord 对象，不连 Discord、不联网。
 
 运行：python tests/test_watch_bot.py
@@ -99,10 +99,16 @@ class FakeSources:
 
 
 class FakeMessage:
-    def __init__(self, uid=1, name="小明", channel_id=555):
-        self.author = NS(id=uid, display_name=name, bot=False)
+    def __init__(self, uid=1, name="小明", channel_id=555, dm_error=None):
+        self.author = NS(id=uid, display_name=name, bot=False, send=self._dm)
         self.channel = NS(id=channel_id)
-        self.replies = []
+        self.replies, self.dms, self.dm_error = [], [], dm_error
+
+    async def _dm(self, content):
+        if self.dm_error:
+            raise self.dm_error
+        self.dms.append(content)
+        return NS(id=9000 + len(self.dms))
 
     async def reply(self, content, view=None, allowed_mentions=None):
         self.replies.append((content, view, allowed_mentions))
@@ -176,12 +182,11 @@ def test_build_view():
     r = rooms.create(555, 1, "小明", yt())
     view = wui.build_view(r, PUBLIC)
     items = view.children
-    check("两个按钮", len(items) == 2)
+    check("只有一个按钮：没有「我是房主」", len(items) == 1 and not hasattr(wui, "HostButton"))
     check("进入房间是链接按钮", items[0].style == discord.ButtonStyle.link and items[0].url == f"{PUBLIC}/r/{r.room_id}"
-          and items[0].label == "进入房间")
-    host = items[1]
-    check("我是房主是持久按钮", isinstance(host, wui.HostButton) and host.item.custom_id == f"watch:host:{r.room_id}"
-          and host.item.label == "我是房主" and view.timeout is None)
+          and items[0].label == "进入房间" and view.timeout is None)
+    text = wui.host_link_text(PUBLIC, r)
+    check("房主链接文案", text == f"房主链接：{PUBLIC}/r/{r.room_id}?k={r.owner_key}\n（请勿分享，单次有效）")
 
 
 def test_watch_command():
@@ -207,6 +212,20 @@ def test_watch_command():
               and room.message_id == 7001 and room.creator_id == 42 and room.creator_name == "小红"
               and room.channel_id == 555)
         check("卡片不 ping 人", mentions is not None and mentions.everyone is False and mentions.users is False)
+        check("房主链接私信给发起人，频道里只有公开链接", msg.dms == [wui.host_link_text(PUBLIC, room)]
+              and len(msg.replies) == 1 and len(view.children) == 1 and view.children[0].url == f"{PUBLIC}/r/{room.room_id}"
+              and room.owner_key not in text)
+
+        # 私信关了：卡片照发，再回一条说明；房间照常，最先进房的人是房主
+        msg = FakeMessage(uid=43, name="小绿", dm_error=discord.Forbidden(NS(status=403, reason="Forbidden"), "dm closed"))
+        asyncio.run(b._watch(msg, "https://youtu.be/dQw4w9WgXcQ"))
+        room2 = [r for r in rooms.active() if r.creator_id == 43][0]
+        check("私信失败 → 频道里说明、不泄露密钥", msg.dms == [] and len(msg.replies) == 2
+              and msg.replies[0][0].startswith("🎬 **一起看**") and msg.replies[1][0] == wui.HOST_LINK_FAILED
+              == "房主链接没法私信给你（可能关了私信），这次谁先进房间谁就是房主。"
+              and room2.owner_key not in msg.replies[1][0] and msg.replies[1][2] is not None)
+        m = rooms.connect(room2.room_id, None, None)
+        check("没用房主链接时最先进房的人是房主", room2.host_id == m.viewer_id)
         check("卡片记录写到文件", json.loads(Path(path).read_text(encoding="utf-8")) == {"cards": [[555, 7001]]})
         check("重新读取卡片记录", wui.CardStore(Path(path)).all() == [(555, 7001)])
 
@@ -254,38 +273,23 @@ def test_card_store_corrupt():
         check("增删、不重复", s.all() == [(3, 4)] and wui.CardStore(p).all() == [(3, 4)])
 
 
-def test_host_button():
+def test_send_host_link():
     ui, rooms, _, _ = make_ui()
+    b = make_bot(ui, FakeSources(yt()))
     r = rooms.create(555, 42, "小红", yt())
-    rid = r.room_id
-    it, sent = make_interaction(42)
-    asyncio.run(ui.on_host(it, rid))
-    check("发起人拿到 ephemeral 房主链接", sent.ephemeral and f"{PUBLIC}/r/{rid}?k={r.owner_key}" in sent.content)
-    it, sent = make_interaction(7)
-    asyncio.run(ui.on_host(it, rid))
-    check("别人点提示不是房主", sent.content == "你不是这个房间的房主。" and sent.ephemeral)
-    m = rooms.connect(rid, None, r.owner_key)
-    rooms.connect(rid, None, None)
-    rooms.disconnect(rid, m.viewer_id)
-    it, sent = make_interaction(42)
-    asyncio.run(ui.on_host(it, rid))
-    check("链接用过后提示", sent.content == f"房主链接已经用过了，房主身份现在在房间里的「{r.host_name()}」手上。"
-          and sent.ephemeral)
-    it, sent = make_interaction(42)
-    asyncio.run(ui.on_host(it, "zzzzzz"))
-    check("房间不存在", sent.content == "这个房间已经结束了。" and sent.ephemeral)
-
-    # 按钮回调走 handler；没有 handler 时提示没启用
-    btn = wui.HostButton(rid)
-    it, sent = make_interaction(42)
-    wui.HostButton.handler = None
-    asyncio.run(btn.callback(it))
-    check("没 handler 提示没启用", sent.content == "一起看功能没有启用。" and sent.ephemeral)
-    wui.HostButton.handler = ui
-    it, sent = make_interaction(42)
-    asyncio.run(btn.callback(it))
-    check("按钮回调交给 handler", "房主链接已经用过了" in sent.content)
-    wui.HostButton.handler = None
+    msg = FakeMessage(uid=42)
+    check("没有交互 → 私信", asyncio.run(b._send_host_link(r, msg.author)) is True
+          and msg.dms == [wui.host_link_text(PUBLIC, r)])
+    it, sent = make_pick_interaction(42)
+    msg = FakeMessage(uid=42)
+    check("有交互 → ephemeral 回复，不私信", asyncio.run(b._send_host_link(r, msg.author, it)) is True
+          and sent.followups == [(wui.host_link_text(PUBLIC, r), True)] and msg.dms == [])
+    it, sent = make_pick_interaction(42, followup_error=discord.HTTPException(NS(status=404, reason="x"), "gone"))
+    msg = FakeMessage(uid=42)
+    check("ephemeral 失败 → 退回私信", asyncio.run(b._send_host_link(r, msg.author, it)) is True
+          and sent.followups == [] and len(msg.dms) == 1)
+    msg = FakeMessage(uid=42, dm_error=discord.Forbidden(NS(status=403, reason="Forbidden"), "dm closed"))
+    check("都失败 → False", asyncio.run(b._send_host_link(r, msg.author, it)) is False and msg.dms == [])
 
 
 def test_throttle_and_close():
@@ -389,9 +393,9 @@ def test_bot_edit_and_setup_hook():
     b.watch_ui = ui
     b.vod_search = b.watch_server = b.progress = None
     asyncio.run(b.setup_hook())
-    check("启动时注册房主按钮和选单并设置 handler", added == [wui.HostButton, wui.PickSelect]
-          and wui.HostButton.handler is ui and wui.PickSelect.handler is ui and ui.create_vod_room == b._create_vod_room)
-    wui.HostButton.handler = wui.PickSelect.handler = None
+    check("启动时只注册搜索选单并设置 handler", added == [wui.PickSelect]
+          and wui.PickSelect.handler is ui and ui.create_vod_room == b._create_vod_room)
+    wui.PickSelect.handler = None
 
 
 # ---------------------------------------------------------------- 按片名搜索
@@ -427,15 +431,21 @@ class FakeWatchServer:
         self.attached.append((room.room_id, playlist))
 
 
-def make_pick_interaction(uid, index=0):
+def make_pick_interaction(uid, index=0, followup_error=None):
     it, sent = make_interaction(uid)
-    deferred = []
+    deferred, followups = [], []
 
     async def defer():
         deferred.append(True)
+
+    async def followup_send(content, ephemeral=False):
+        if followup_error:
+            raise followup_error
+        followups.append((content, ephemeral))
     it.response.defer = defer
+    it.followup = NS(send=followup_send)
     it.data = {"values": [str(index)]}
-    sent.deferred = deferred
+    sent.deferred, sent.followups = deferred, followups
     return it, sent
 
 
@@ -521,10 +531,26 @@ def test_pick_flow():
     check("选中后先改成正在准备…并去掉选单", edits[0] == (555, 7001, "正在准备…", None) and wui.PICK_PREPARING == "正在准备…")
     check("搜索消息改成已选择且去掉选单", edits[1:] == [(555, 7001, "已选择：绝命毒师 第一季", None)])
     text, view, mentions = msg.replies[1]
-    check("卡片回复在原消息下并记录", text.startswith("🎬 **一起看**") and "片源：量子" in text and view is not None
+    check("卡片回复在原消息下并记录", text.startswith("🎬 **一起看**") and "（来源1）" in text and "量子" not in text
+          and view is not None
           and room.message_id == 7002 and ui.cards.all() == [(555, 7002)]
           and mentions is not None and mentions.users is False)
+    check("房主链接 ephemeral 回给选的人，卡片只有公开链接", sent.followups == [(wui.host_link_text(PUBLIC, room), True)]
+          and msg.dms == [] and len(view.children) == 1 and room.owner_key not in text)
     check("没有进度时 resume 为空", room.video.vod.resume is None)
+
+    # ephemeral 和私信都发不出去：搜索消息里说明
+    b, ui, rooms, clock, edits, ws, msg = setup_search(uid=44)
+    msg.dm_error = discord.Forbidden(NS(status=403, reason="Forbidden"), "dm closed")
+
+    async def go_fail():
+        it, sent = make_pick_interaction(44, followup_error=discord.HTTPException(NS(status=404, reason="x"), "gone"))
+        await ui.on_pick(it, token_of(msg))
+        return sent
+    sent = asyncio.run(go_fail())
+    room = rooms.active()[0]
+    check("房主链接发不出去 → 已选择后面附说明", edits[-1] == (555, 7001, f"已选择：绝命毒师 第一季\n{wui.HOST_LINK_FAILED}", None)
+          and room.owner_key not in edits[-1][2] and len(msg.replies) == 2)
 
 
 def tok_done(ui, tok):
@@ -711,7 +737,7 @@ if __name__ == "__main__":
     test_build_view()
     test_watch_command()
     test_card_store_corrupt()
-    test_host_button()
+    test_send_host_link()
     test_throttle_and_close()
     test_edit_failure_logged()
     test_stale_cards_on_ready()

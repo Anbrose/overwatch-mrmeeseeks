@@ -1,7 +1,8 @@
-"""一起看的 Discord 部分：房间卡片文字、[进入房间]（链接按钮）+ [我是房主]（持久按钮）、卡片编辑节流、遗留卡片记录。
+"""一起看的 Discord 部分：房间卡片文字、[进入房间]（链接按钮）、卡片编辑节流、遗留卡片记录。
 
-- 「我是房主」是 discord.ui.DynamicItem，custom_id 模板 `watch:host:<room_id>`；bot 启动时 add_dynamic_items(HostButton)。
-  发起人点 → 只回复他（ephemeral）带房主密钥的链接；别人点 → 提示不是房主。
+- 频道里只有公开链接。带密钥的房主链接（host_link_text）由 bot 在建房时单独发给发起人：
+  贴链接建房 → 私信；按片名搜索 → 对选单那次交互回 ephemeral（失败再试私信）。都发不出去（私信关了）
+  就在频道里说明：最先进房的人会成为房主。
 - WatchUI.on_change 登记在 RoomManager.listeners 里（同步回调），卡片编辑交给事件循环异步执行：
   同一房间距上次编辑不到 MIN_EDIT_INTERVAL 秒就排一次延后编辑，期间的变化合并（编辑时才读房间状态）。
   closed 立即编辑成"已结束"、去掉按钮，并从 CardStore 删除。
@@ -31,12 +32,10 @@ from watch_rooms import Room, RoomManager
 log = logging.getLogger("mrmeeseeks.watch_ui")
 
 MIN_EDIT_INTERVAL = 15.0
-TEMPLATE = r"watch:host:(?P<room>[23456789a-z]{6})"
 SOURCE_LABEL = {"bilibili": "B 站", "youtube": "YouTube"}
 TITLE_MAX = 200
 NOT_ENABLED = "一起看功能没有启用。"
-NOT_HOST = "你不是这个房间的房主。"
-ROOM_GONE = "这个房间已经结束了。"
+HOST_LINK_FAILED = "房主链接没法私信给你（可能关了私信），这次谁先进房间谁就是房主。"
 PICK_TEMPLATE = r"watch:pick:(?P<token>[A-Za-z0-9_-]{8,32})"
 PICK_TIMEOUT = 120.0
 PICK_EXPIRED = "选择已过期"
@@ -83,7 +82,7 @@ def card_text(room: Room, now: float, ended: bool = False, reason: str = "") -> 
         state = "▶ 播放中" if room.playback.playing else "⏸ 已暂停"
     vod = room.video.vod
     if vod is not None and 0 <= vod.line < len(vod.show.lines):
-        source = f"片源：{vod.show.lines[vod.line].name}"
+        source = f"来源{vod.line + 1}"       # 不写线路名：用户不需要知道资源站
     else:
         source = SOURCE_LABEL.get(room.video.source, room.video.source)
     return (f"🎬 **一起看**\n"
@@ -96,31 +95,16 @@ def room_url(public_url: str, room_id: str) -> str:
     return f"{public_url}/r/{room_id}"
 
 
-class HostButton(discord.ui.DynamicItem[discord.ui.Button], template=TEMPLATE):
-    handler: "WatchUI | None" = None     # bot 启动时设置
-
-    def __init__(self, room_id: str):
-        super().__init__(discord.ui.Button(label="我是房主", custom_id=f"watch:host:{room_id}",
-                                           style=discord.ButtonStyle.secondary))
-        self.room_id = room_id
-
-    @classmethod
-    async def from_custom_id(cls, interaction: discord.Interaction, item: discord.ui.Button,
-                             match: re.Match[str]) -> "HostButton":
-        return cls(match["room"])
-
-    async def callback(self, interaction: discord.Interaction) -> None:
-        if HostButton.handler is None:
-            await interaction.response.send_message(NOT_ENABLED, ephemeral=True)
-            return
-        await HostButton.handler.on_host(interaction, self.room_id)
+def host_link_text(public_url: str, room: Room) -> str:
+    """只发给发起人的那条消息：带一次性密钥的房主链接。"""
+    return f"房主链接：{room_url(public_url, room.room_id)}?k={room.owner_key}\n（请勿分享，单次有效）"
 
 
 def build_view(room: Room, public_url: str) -> discord.ui.View:
+    """卡片上只有公开的 [进入房间] 链接按钮。"""
     view = discord.ui.View(timeout=None)
     view.add_item(discord.ui.Button(label="进入房间", style=discord.ButtonStyle.link,
                                     url=room_url(public_url, room.room_id)))
-    view.add_item(HostButton(room.room_id))
     return view
 
 
@@ -135,6 +119,7 @@ class PendingSearch:
     origin_message: discord.Message
     created_at: float
     done: bool = False
+    interaction: discord.Interaction | None = None   # 发起人选中选项的那次交互：用它 ephemeral 回房主链接
 
 
 def option_label(show: Show) -> str:
@@ -248,23 +233,6 @@ class WatchUI:
         self._tasks: set[asyncio.Task] = set()   # 保留引用，避免任务被回收
         rooms.listeners.append(self.on_change)
 
-    # ---------------- 按钮 ----------------
-    async def on_host(self, interaction: discord.Interaction, room_id: str) -> None:
-        room = self.rooms.get(room_id)
-        if room is None:
-            await interaction.response.send_message(ROOM_GONE, ephemeral=True)
-            return
-        if interaction.user.id != room.creator_id:
-            await interaction.response.send_message(NOT_HOST, ephemeral=True)
-            return
-        if room.key_used:
-            await interaction.response.send_message(
-                f"房主链接已经用过了，房主身份现在在房间里的「{room.host_name()}」手上。", ephemeral=True)
-            return
-        await interaction.response.send_message(
-            f"你的房主链接（别发给别人，只能用一次）：\n{room_url(self.public_url, room.room_id)}?k={room.owner_key}",
-            ephemeral=True)
-
     # ---------------- 搜索选单 ----------------
     def add_search(self, p: PendingSearch) -> None:
         self.pending[p.token] = p
@@ -300,6 +268,7 @@ class WatchUI:
             await interaction.response.send_message(PICK_GONE, ephemeral=True)
             return
         p.done = True            # 第一个 await 之前就占位：连点只有一次生效
+        p.interaction = interaction
         await interaction.response.defer()
         if self.create_vod_room is None:
             return

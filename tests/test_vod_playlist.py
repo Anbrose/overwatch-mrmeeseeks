@@ -103,8 +103,20 @@ def test_rewrite_uris():
     check("相对 / 根 / 协议相对 / 带参数",
           uris(out) == ["https://h.example.com/p/q/a.ts", "https://h.example.com/root/b.ts",
                         "https://cdn.example.com/c.ts", "https://x.example.com/d.ts?t=1"])
-    check("KEY URI", 'URI="https://h.example.com/p/q/key.key"' in out)
+    check("KEY URI 换成本服务器中转的 key0", 'URI="key0"' in out and "key.key" not in out)
     check("MAP URI", 'URI="https://h.example.com/p/q/init.mp4"' in out)
+    check("原密钥地址记在 keys 里",
+          vp.rewrite_media(text, "https://h.example.com/p/q/index.m3u8").keys == ["https://h.example.com/p/q/key.key"])
+    two = ("#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI=\"k1.key\"\n#EXTINF:5,\na.ts\n"
+           "#EXT-X-KEY:METHOD=AES-128,URI=\"k2.key\"\n#EXTINF:5,\nb.ts\n"
+           "#EXT-X-KEY:METHOD=AES-128,URI=\"k1.key\"\n#EXTINF:5,\nc.ts\n#EXT-X-ENDLIST\n")
+    pl2 = vp.rewrite_media(two, "https://h.example.com/p/index.m3u8")
+    check("多把密钥按出现顺序编号，同一把只记一次",
+          pl2.keys == ["https://h.example.com/p/k1.key", "https://h.example.com/p/k2.key"]
+          and [ln for ln in pl2.text.splitlines() if ln.startswith("#EXT-X-KEY")]
+          == ['#EXT-X-KEY:METHOD=AES-128,URI="key0"', '#EXT-X-KEY:METHOD=AES-128,URI="key1"',
+              '#EXT-X-KEY:METHOD=AES-128,URI="key0"'])
+    check("没有密钥时 keys 为空", vp.rewrite_media("#EXTM3U\n#EXTINF:5,\na.ts\n", "https://h.example.com/i.m3u8").keys == [])
     check("METHOD 保留", "#EXT-X-KEY:METHOD=AES-128," in out)
     try:
         vp.rewrite_media("#EXTM3U\n#EXTINF:5,\nhttp://h.example.com/a.ts\n", "https://h.example.com/i.m3u8")
@@ -122,8 +134,11 @@ def test_rewrite_tag_between_extinf_and_uri():
     text = ("#EXTM3U\n#EXTINF:10,\n#EXT-X-KEY:METHOD=AES-128,URI=\"k/key.key\"\na.ts\n"
             "#EXTINF:10,\n#EXT-X-BYTERANGE:100@0\nb.ts\n#EXT-X-ENDLIST\n")
     out = vp.rewrite_media(text, "https://h.example.com/p/index.m3u8").text
-    check("EXTINF 和地址之间的 KEY URI 也绝对化", 'URI="https://h.example.com/p/k/key.key"' in out
-          and 'URI="k/key.key"' not in out and "#EXT-X-BYTERANGE:100@0" in out)
+    pl = vp.rewrite_media(text, "https://h.example.com/p/index.m3u8")
+    out = pl.text
+    check("EXTINF 和地址之间的 KEY 也换成 key0、原地址绝对化", 'URI="key0"' in out
+          and 'URI="k/key.key"' not in out and "#EXT-X-BYTERANGE:100@0" in out
+          and pl.keys == ["https://h.example.com/p/k/key.key"])
     try:
         vp.rewrite_media("#EXTM3U\n#EXTINF:10,\n#EXT-X-KEY:METHOD=AES-128,URI=\"http://h.example.com/k.key\"\na.ts\n",
                          "https://h.example.com/p/index.m3u8")
@@ -193,12 +208,12 @@ async def test_redirect_checks():
     check("全程 https 的跳转可以，按最终地址解析", uris(ok.text) == ["https://h2.example.com/q/a.ts"])
     seg = vp.Playlist("", 5.0, "https://h.example.com/p/a.ts", 0)
     origin = "https://watch.example.com"
-    check("片段跳到 http → probe False",
+    check("片段跳到 http → probe 给出原因",
           await vp.probe(_FakeSession(_FakeResp("http://evil.example.com/a.ts", [seg.first_segment], 206)), seg, origin)
-          is False)
-    check("片段全程 https → probe True",
+          == "地址不是 https：evil.example.com")
+    check("片段全程 https → probe 能播",
           await vp.probe(_FakeSession(_FakeResp("https://cdn.example.com/a.ts", [seg.first_segment], 206)), seg, origin)
-          is True)
+          is None)
 
 
 async def serve(routes):
@@ -238,6 +253,43 @@ def redirect_handler(to):
     async def h(request):
         raise web.HTTPFound(to)
     return h
+
+
+async def test_fetch_key():
+    def body(data, status=200):
+        async def h(request):
+            return web.Response(body=data, status=status)
+        return h
+    srv = await serve({"/k": body(b"0123456789abcdef"), "/403": body(b"", 403),
+                       "/big": body(b"x" * (vp.MAX_KEY_BYTES + 1)), "/empty": body(b""),
+                       "/redir": redirect_handler("/k")})
+    base = f"http://127.0.0.1:{srv.port}"
+    async with aiohttp.ClientSession() as s:
+        check("密钥原样返回", await vp.fetch_key(s, f"{base}/k", allow_http=True) == b"0123456789abcdef")
+        check("跟随跳转", await vp.fetch_key(s, f"{base}/redir", allow_http=True) == b"0123456789abcdef")
+        for name, path, want in [("403", "/403", f"密钥 HTTP 403（127.0.0.1:{srv.port}）"),
+                                 ("太大", "/big", f"密钥大小不对（127.0.0.1:{srv.port}）"),
+                                 ("空", "/empty", f"密钥大小不对（127.0.0.1:{srv.port}）")]:
+            try:
+                await vp.fetch_key(s, f"{base}{path}", allow_http=True)
+                check(f"密钥 {name} 报错", False)
+            except PlaylistError as e:
+                check(f"密钥 {name} 报错", e.message == NO_PLAYABLE and e.detail == want)
+        try:
+            await vp.fetch_key(s, f"{base}/k")
+            check("不允许 http 时密钥地址被拒", False)
+        except PlaylistError as e:
+            check("不允许 http 时密钥地址被拒", e.detail.startswith("地址不是 https"))
+    await srv.close()
+
+    class _Timeout:
+        def get(self, url, **kw):
+            raise asyncio.TimeoutError()
+    try:
+        await vp.fetch_key(_Timeout(), "https://h.example.com/k")
+        check("超时 → 原因", False)
+    except PlaylistError as e:
+        check("超时 → 原因", e.detail == "密钥取不到：超时（h.example.com）")
 
 
 async def test_fetch_playlist():
@@ -292,15 +344,21 @@ async def test_probe():
     async with aiohttp.ClientSession() as s:
         def pl(path):
             return vp.Playlist("", 1.0, base + path, 0)
-        check("206 + ACAO * → True", await vp.probe(s, pl("/star"), origin, allow_http=True) is True)
+        check("206 + ACAO * → 能播（None）", await vp.probe(s, pl("/star"), origin, allow_http=True) is None)
         check("发了 Range 和 Origin", seen["range"] == "bytes=0-1023" and seen["origin"] == origin)
-        check("无 ACAO → False", await vp.probe(s, pl("/none"), origin, allow_http=True) is False)
-        check("403 → False", await vp.probe(s, pl("/403"), origin, allow_http=True) is False)
-        check("ACAO = origin → True", await vp.probe(s, pl("/origin"), origin, allow_http=True) is True)
-        check("ACAO 是别人 → False", await vp.probe(s, pl("/other"), origin, allow_http=True) is False)
-        check("没有片段 → False", await vp.probe(s, vp.Playlist("", 0.0, None, 0), origin, allow_http=True) is False)
+        r = await vp.probe(s, pl("/none"), origin, allow_http=True)
+        check("无 ACAO → 原因说明跨域", r == f"片段不允许跨域（CORS 无，127.0.0.1:{srv.port}）")
+        r = await vp.probe(s, pl("/403"), origin, allow_http=True)
+        check("403 → 原因带状态码和域名", r == f"片段 HTTP 403（127.0.0.1:{srv.port}）")
+        check("ACAO = origin → 能播", await vp.probe(s, pl("/origin"), origin, allow_http=True) is None)
+        r = await vp.probe(s, pl("/other"), origin, allow_http=True)
+        check("ACAO 是别人 → 原因带对方的 ACAO", r and r.startswith("片段不允许跨域（CORS https://other.example.com"))
+        check("没有片段 → 原因", await vp.probe(s, vp.Playlist("", 0.0, None, 0), origin, allow_http=True) == "m3u8 里没有片段")
         dead = vp.Playlist("", 1.0, "http://127.0.0.1:1/x.ts", 0)
-        check("连不上 → False 不抛", await vp.probe(s, dead, origin, allow_http=True) is False)
+        r = await vp.probe(s, dead, origin, allow_http=True)
+        check("连不上 → 原因、不抛", r and r.startswith("片段取不到：") and "127.0.0.1:1" in r)
+        evil = vp.Playlist("", 1.0, "http://evil.example.com/a.ts", 0)
+        check("非 https 片段 → 原因", await vp.probe(s, evil, origin) == "地址不是 https：evil.example.com")
     await srv.close()
 
 
@@ -332,6 +390,14 @@ async def test_find_playable():
             check("全不可播报错", False)
         except PlaylistError as e:
             check("全不可播报错", e.message == "这一集暂时没有能播的片源")
+            check("原因按线路列出，线路只写序号", e.detail == f"来源1：片段 HTTP 403（127.0.0.1:{srv.port}）；"
+                  f"来源2：m3u8 HTTP 404（127.0.0.1:{srv.port}）；来源3：没有第 1 集"
+                  and "甲" not in e.detail)
+            check("text = message + 括号里的原因", e.text == f"这一集暂时没有能播的片源（{e.detail}）")
+        check("没有 detail 时 text 就是 message", PlaylistError("x").text == "x")
+        long = vp.join_reasons(["甲：" + "很长" * 300])
+        check("原因过长会截断", len(long) == vp.DETAIL_MAX_CHARS and long.endswith("…"))
+        check("没有线路", vp.join_reasons([]) == "没有片源线路")
     await srv.close()
 
 
@@ -344,6 +410,7 @@ if __name__ == "__main__":
     test_rewrite_tag_between_extinf_and_uri()
     test_rewrite_zero_duration()
     asyncio.run(test_redirect_checks())
+    asyncio.run(test_fetch_key())
     asyncio.run(test_fetch_playlist())
     asyncio.run(test_probe())
     asyncio.run(test_find_playable())
