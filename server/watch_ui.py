@@ -6,6 +6,7 @@
   同一房间距上次编辑不到 MIN_EDIT_INTERVAL 秒就排一次延后编辑，期间的变化合并（编辑时才读房间状态）。
   closed 立即编辑成"已结束"、去掉按钮，并从 CardStore 删除。
 - 按片名搜索：bot 发出带 PickSelect（DynamicItem，custom_id `watch:pick:<token>`）的结果消息，WatchUI.pending 记着待选项；
+  部分匹配的电视台排在影视前面（选项值 `tv<i>`，影视仍是 `<i>`），选台交给 create_tv_room，选影视交给 create_vod_room；
   只有发起人能选，选一次就作废（on_pick 在第一个 await 之前就标记 done），2 分钟没选消息改成"选择已过期"。
 - CardStore（STATE_DIR/watch_cards.json）记下还开着的房间卡片；房间都在内存里，重启后 bot 把这些卡片编辑成
   "已结束（服务器重启）"。
@@ -18,12 +19,13 @@ import logging
 import os
 import re
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Awaitable, Callable
 
 import discord
 
+from tv_channels import Channel
 from vod_search import Show
 from watch_progress import ProgressStore
 from watch_rooms import Room, RoomManager
@@ -73,6 +75,12 @@ def card_text(room: Room, now: float, ended: bool = False, reason: str = "") -> 
     title = _title(room)
     if ended:
         return ended_text(title, reason)
+    if room.video.source == "tv":         # 直播：没有进度和总长
+        state = "▶ 直播中" if room.playback.playing else "⏸ 已暂停"
+        return (f"🎬 **一起看**\n"
+                f"正在播放：**📺 {title}**（直播）\n"
+                f"{state} · 👥 {room.viewer_count()} 人在看\n"
+                f"房主：{discord.utils.escape_markdown(room.host_name())}")
     duration = room.video.duration
     pos = fmt_time(room.playback.position_at(now, duration))
     if duration is not None:
@@ -135,6 +143,7 @@ class PendingSearch:
     origin_message: discord.Message
     created_at: float
     done: bool = False
+    channels: list[Channel] = field(default_factory=list)    # 部分匹配的电视台，选项值 tv<i>
 
 
 def option_label(show: Show) -> str:
@@ -145,6 +154,10 @@ def option_label(show: Show) -> str:
         parts.append(show.type_name)
     parts.append(f"{show.episode_count} 集")
     return " · ".join(parts)[:OPTION_MAX]
+
+
+def channel_label(channel: Channel) -> str:
+    return f"📺 {channel.name} · 直播"[:OPTION_MAX]
 
 
 def search_header(query: str, mention: str) -> str:
@@ -172,7 +185,7 @@ class PickSelect(discord.ui.DynamicItem[discord.ui.Select], template=PICK_TEMPLA
 
 
 def build_pick_view(p: PendingSearch, progress: ProgressStore | None) -> discord.ui.View:
-    options = []
+    options = [discord.SelectOption(label=channel_label(ch), value=f"tv{i}") for i, ch in enumerate(p.channels)]
     for i, show in enumerate(p.shows):
         seen = progress.get(p.channel_id, show.key) if progress is not None else None
         options.append(discord.SelectOption(label=option_label(show), value=str(i),
@@ -242,6 +255,7 @@ class WatchUI:
         self.min_edit_interval, self.sleep = min_edit_interval, sleep
         self.edit: EditFn | None = None          # bot 注入 (channel_id, message_id, text, view)
         self.create_vod_room: Callable[[PendingSearch, int], Awaitable[None]] | None = None   # bot 注入
+        self.create_tv_room: Callable[[PendingSearch, Channel], Awaitable[None]] | None = None   # bot 注入
         self.pending: dict[str, PendingSearch] = {}
         self._last_edit: dict[str, float] = {}
         self._pending: dict[str, asyncio.Task] = {}
@@ -293,15 +307,18 @@ class WatchUI:
             await interaction.response.send_message(PICK_GONE, ephemeral=True)
             return
         try:
-            index = int(interaction.data["values"][0])
-            if not 0 <= index < len(p.shows):
+            value = str(interaction.data["values"][0])
+            is_tv = value.startswith("tv")
+            index = int(value[2:] if is_tv else value)
+            if not 0 <= index < len(p.channels if is_tv else p.shows):
                 raise ValueError(index)
         except (KeyError, IndexError, TypeError, ValueError):
             await interaction.response.send_message(PICK_GONE, ephemeral=True)
             return
         p.done = True            # 第一个 await 之前就占位：连点只有一次生效
         await interaction.response.defer()
-        if self.create_vod_room is None:
+        create = self.create_tv_room if is_tv else self.create_vod_room
+        if create is None:
             return
         if self.edit is not None and p.message_id is not None:
             try:                 # 找片源可能要几十秒：先去掉选单、告诉大家在准备
@@ -309,9 +326,12 @@ class WatchUI:
             except Exception:
                 log.exception("Could not edit search message %s", p.message_id)
         try:
-            await self.create_vod_room(p, index)
+            if is_tv:
+                await create(p, p.channels[index])
+            else:
+                await create(p, index)
         except Exception:
-            log.exception("Could not create a vod room for %r", p.query)
+            log.exception("Could not create a %s room for %r", "tv" if is_tv else "vod", p.query)
 
     # ---------------- 卡片编辑 ----------------
     def _spawn(self, coro) -> asyncio.Task | None:
