@@ -9,7 +9,10 @@
 <body>
   <main class="page">
     <header class="topbar">
-      <span id="title" class="title">一起看</span>
+      <span class="title-wrap">
+        <span id="title" class="title">一起看</span>
+        <span id="live-badge" class="live-badge" hidden>直播</span>
+      </span>
       <span id="conn" class="conn" hidden>连接中…</span>
       <button id="perm-btn" class="perm-btn" type="button" hidden aria-expanded="false" aria-controls="perm-panel">🔑 权限</button>
     </header>
@@ -44,6 +47,12 @@
           <div class="line-row">
             <span id="line-label" class="line-label"></span>
             <button id="next-line" class="line-btn" type="button">换一个片源</button>
+          </div>
+        </div>
+        <div id="tv-panel" class="vod-panel" hidden>
+          <div class="line-row">
+            <span id="tv-line-label" class="line-label"></span>
+            <button id="tv-next" class="line-btn" type="button">换一个源</button>
           </div>
         </div>
         <div class="perm-title">谁能控制播放</div>

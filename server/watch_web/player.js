@@ -5,6 +5,11 @@
 // (play/pause/seeked/onStateChange) to send anything, so state the server pushes
 // to us can never bounce back. The native YouTube controls are off, the <video>
 // has no `controls`, and a transparent shield covers the video area.
+//
+// Live TV (video.source === "tv"): the same HLS player, but no position. The
+// room only says playing/paused; play jumps to the live edge. Any viewer whose
+// stream stops moving sends `tv_stall` (once per version); the host can send
+// `tv_next`. The server answers a switch with a new version and a `notice`.
 "use strict";
 
 (() => {
@@ -25,6 +30,10 @@
   const PREPARING_MSG = "正在准备…";
   const PREPARING_TIMEOUT_MS = 50000;   // outlasts the server's 45 s VOD_PREPARE_TIMEOUT
   const RESUME_NEAR = 30;    // seconds: resume line hidden this close to the snapshot
+  const LIVE_STALL_MS = 10000; // live: currentTime stuck this long while playing → tv_stall
+  const LIVE_RETRY_MS = 5000;  // live: rebuild a failed player (same version) after this
+  const NOTICE_MS = 3000;
+  const TOAST_MS = 3500;
 
   const $ = (id) => document.getElementById(id);
   const ui = {
@@ -35,6 +44,7 @@
     changeForm: $("change-form"), changeUrl: $("change-url"), toast: $("toast"),
     resume: $("resume"), vodPanel: $("vod-panel"), episodes: $("episodes"),
     lineLabel: $("line-label"), nextLine: $("next-line"),
+    liveBadge: $("live-badge"), tvPanel: $("tv-panel"), tvLineLabel: $("tv-line-label"), tvNext: $("tv-next"),
   };
 
   // ---------------------------------------------------------------- storage
@@ -75,6 +85,12 @@
   let preparing = false;      // host asked for an episode/source switch, awaiting state or error
   let preparingTimer = null;
   let episodesKey = null;     // which show/episode count the episode grid was built for
+  // Live TV, reset by buildPlayer:
+  let liveWasPlaying = false; // room was playing at the last live sync tick
+  let liveEdgePending = false; // jump to the live edge as soon as the player knows where it is
+  let stallSentFor = null;    // version we already sent tv_stall for (kept across same-version rebuilds)
+  let stallLastTime = -1;     // currentTime at the last advance check
+  let stallSince = 0;         // performance.now() when currentTime last moved (or the check restarted)
 
   // ---------------------------------------------------------------- clock sync
 
@@ -122,6 +138,7 @@
 
   function syncTick() {
     if (!started || !room || !player || !player.ready || ended) return;
+    if (player.live) { syncLive(); return; }
     const target = expectedPosition(room);
     const dur = currentDuration();
     // Calling play() on an ended video restarts it from 0; don't.
@@ -145,6 +162,43 @@
       return;
     }
     player.setRate(chooseRate(drift, player.getRate(), RATE_STEPS[player.source]));
+  }
+
+  // Live: follow playing/paused only; no position, no drift correction.
+  function syncLive() {
+    player.setRate(1);
+    if (!room.playing) {
+      liveWasPlaying = false;
+      if (!player.isPaused()) player.pause();
+      resetStallCheck();
+      return;
+    }
+    if (!liveWasPlaying) { liveWasPlaying = true; liveEdgePending = true; }
+    if (liveEdgePending && player.seekLive()) liveEdgePending = false;
+    if (player.isPaused()) player.play();
+    checkLiveStall();
+  }
+
+  function resetStallCheck() {
+    stallLastTime = -1;
+    stallSince = performance.now();
+  }
+
+  // Called every sync tick while the room plays. A hidden tab may be throttled
+  // or paused by the browser, so it neither counts nor reports.
+  function checkLiveStall() {
+    if (document.visibilityState !== "visible") { resetStallCheck(); return; }
+    const t = player.getTime();
+    if (t !== stallLastTime) { stallLastTime = t; stallSince = performance.now(); return; }
+    if (performance.now() - stallSince >= LIVE_STALL_MS) reportStall();
+  }
+
+  function reportStall() {
+    const version = playerVersion;
+    if (version === null || stallSentFor === version) return;
+    if (!room || !room.video || room.video.version !== version) return;
+    stallSentFor = version;
+    send({ type: "tv_stall", version });
   }
 
   // ---------------------------------------------------------------- script loading
@@ -232,9 +286,10 @@
   }
 
   // Searched shows: an HLS playlist served (rewritten) by our server. Native HLS
-  // where the browser has it (Safari/iOS), hls.js elsewhere. Failures are local
-  // only: we show a message and never tell the server.
-  function createVodPlayer(hlsUrl) {
+  // where the browser has it (Safari/iOS), hls.js elsewhere. Vod failures are
+  // local only: we show a message and never tell the server. With `live` (TV)
+  // the playlist is our relay's live window; a failure also reports tv_stall.
+  function createVodPlayer(hlsUrl, live = false) {
     const video = document.createElement("video");
     video.playsInline = true;
     video.setAttribute("playsinline", "");
@@ -247,11 +302,24 @@
     let lastHlsError = "";   // last non-fatal hls.js error: context when the <video> errors first
 
     const adapter = {
-      source: "vod",
+      source: live ? "tv" : "vod",
+      live,
       ready: true,
       failed: false,
       failMsg: VOD_FAILED_MSG,
       video,
+      // Jump to the live edge; false while the player doesn't know it yet.
+      seekLive: () => {
+        let edge = null;
+        if (hls) {
+          edge = hls.liveSyncPosition;
+        } else if (video.seekable && video.seekable.length) {
+          edge = video.seekable.end(video.seekable.length - 1);
+        }
+        if (typeof edge !== "number" || !Number.isFinite(edge)) return false;
+        video.currentTime = edge;
+        return true;
+      },
       getTime: () => video.currentTime || 0,
       getDuration: () => (Number.isFinite(video.duration) ? video.duration : 0),
       isPaused: () => video.paused,
@@ -281,7 +349,17 @@
       if (player !== adapter || adapter.failed) return;
       adapter.failed = true;
       adapter.ready = false;
-      failPlayer(VOD_FAILED_MSG, reason, hlsUrl, true, mode);
+      failPlayer(VOD_FAILED_MSG, reason, hlsUrl, !live, mode);
+      if (live) {
+        reportStall();
+        // The server may not switch (cooldown, no other source) and the network
+        // may come back: try the same stream again instead of staying dead.
+        const version = playerVersion;
+        setTimeout(() => {
+          if (player === adapter && !ended && room && room.video.version === version) buildPlayer(room.video);
+        }, LIVE_RETRY_MS);
+        return;
+      }
       // Our own playlist and key routes answer 4xx/5xx with the server-side
       // reason in the body (e.g. which source lines failed and why); hls.js
       // only keeps the status code, so fetch it once and add it to the stage.
@@ -300,7 +378,7 @@
       + (lastHlsError ? `；hls.js 之前的错误：${lastHlsError}` : ""));
     video.addEventListener("error", onVideoError);
     if (useHls) {
-      hls = new window.Hls();
+      hls = new window.Hls(live ? { liveSyncDurationCount: 3 } : {});
       hls.on(window.Hls.Events.ERROR, (_event, data) => {
         if (!data) return;
         // Non-fatal errors are retried by hls.js; keep them in the console for triage.
@@ -478,6 +556,9 @@
     destroyPlayer();
     const token = buildToken;
     playerVersion = video.version;
+    liveWasPlaying = false;
+    liveEdgePending = false;
+    resetStallCheck();
     setStageMessage("加载中…");
     renderStartButton();
     try {
@@ -486,7 +567,7 @@
         if (token !== buildToken) return;
         player = createBiliPlayer(video.mpd);
         onPlayerReady(player);
-      } else if (video.source === "vod") {
+      } else if (video.source === "vod" || video.source === "tv") {
         // Prefer hls.js (MSE) wherever it works: browsers that claim native HLS
         // (Android Chrome, some TVs) often fail on real streams with a bare
         // "format not supported". Native is only for browsers without MSE
@@ -497,7 +578,7 @@
           if (!document.createElement("video").canPlayType(HLS_MIME)) throw err;
         }
         if (token !== buildToken) return;
-        player = createVodPlayer(video.hls);
+        player = createVodPlayer(video.hls, video.source === "tv");
         onPlayerReady(player);
       } else if (video.source === "youtube") {
         await loadYouTubeApi();
@@ -545,6 +626,7 @@
     preparingTimer = setTimeout(stopPreparing, PREPARING_TIMEOUT_MS);
     renderStageMessage();
     renderVodPanel();
+    renderTvPanel();
   }
 
   function stopPreparing() {
@@ -554,6 +636,7 @@
     preparing = false;
     renderStageMessage();
     renderVodPanel();
+    renderTvPanel();
   }
 
   function showStartOverlay() {
@@ -583,7 +666,7 @@
   function currentDuration() {
     const d = room && room.video && room.video.duration;
     if (d) return d;
-    if (room && room.video && room.video.source === "vod") return 0; // only the server's value
+    if (isVod() || isLive()) return 0; // vod: only the server's value; live: none
     return player && player.ready ? player.getDuration() : 0;
   }
 
@@ -597,6 +680,7 @@
   }
 
   function renderProgress() {
+    if (isLive()) return;
     const dur = currentDuration();
     if (seeking) {
       const pos = (ui.seek.value / 1000) * dur;
@@ -615,6 +699,10 @@
     const can = me.canControl && !ended && !!room;
     ui.play.disabled = !can;
     ui.seek.disabled = !can;
+    const live = isLive();
+    ui.seek.hidden = live;
+    ui.time.hidden = live;
+    ui.liveBadge.hidden = !live;
     const playing = room && room.playing;
     ui.play.textContent = playing ? "⏸" : "▶";
     ui.play.setAttribute("aria-label", playing ? "暂停" : "播放");
@@ -627,10 +715,15 @@
     ui.conn.hidden = connected || ended;
     renderResume();
     renderVodPanel();
+    renderTvPanel();
   }
 
   function isVod() {
     return !!(room && room.video && room.video.source === "vod");
+  }
+
+  function isLive() {
+    return !!(room && room.video && room.video.source === "tv");
   }
 
   // "上次一起看到…": hidden when the room is already at the snapshot.
@@ -639,7 +732,7 @@
     const atSnapshot = r && isVod() && room.video.episode === r.episode
       && Math.abs(expectedPosition(room) - r.position) < RESUME_NEAR;
     ui.resume.textContent = "";
-    ui.resume.hidden = !r || ended || atSnapshot;
+    ui.resume.hidden = !r || ended || atSnapshot || isLive();
     if (ui.resume.hidden) return;
     const text = String(r.text || "");
     if (me.canControl) {
@@ -692,6 +785,17 @@
     ui.nextLine.disabled = preparing || (Number(v.line_count) || 0) <= 1;
   }
 
+  // Host-only source switch for live TV, inside the 🔑 panel.
+  function renderTvPanel() {
+    const tv = me.isHost && !ended && isLive();
+    ui.tvPanel.hidden = !tv;
+    if (!tv) return;
+    const count = Number(room.video.line_count) || 0;
+    const index = Number(room.video.line) || 0;
+    ui.tvLineLabel.textContent = `直播源：第 ${index + 1} 个（共 ${count} 个）`;
+    ui.tvNext.disabled = preparing || count <= 1;
+  }
+
   function renderMembers(members) {
     ui.members.textContent = "";
     if (!members.length) {
@@ -722,11 +826,12 @@
   }
 
   let toastTimer = null;
-  function toast(text) {
+  function toast(text, opts) {
     ui.toast.textContent = text;
+    ui.toast.classList.toggle("info", !!(opts && opts.info));
     ui.toast.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { ui.toast.hidden = true; }, 3500);
+    toastTimer = setTimeout(() => { ui.toast.hidden = true; }, (opts && opts.ms) || TOAST_MS);
   }
 
   function showEnded() {
@@ -743,6 +848,10 @@
 
   function sendControl(action, position) {
     if (!me.canControl || !room) return;
+    if (isLive()) {
+      if (action === "seek") return;   // the server refuses it anyway
+      position = 0;
+    }
     send({ type: "control", action, position });
     // Apply optimistically; the server's broadcast `state` confirms it. A rejected
     // control gets a fresh `state` sent back to us only, which snaps us back.
@@ -802,7 +911,13 @@
     started = true;
     ui.start.hidden = true;
     // Call play inside the click handler so the browser counts it as a gesture.
-    if (room && room.playing) {
+    if (player.live) {
+      if (room && room.playing) {
+        liveWasPlaying = true;
+        liveEdgePending = !player.seekLive();
+        player.play();
+      }
+    } else if (room && room.playing) {
       if (clockReady()) player.seek(expectedPosition(room));
       player.play();
     } else if (room) {
@@ -820,6 +935,12 @@
   ui.nextLine.addEventListener("click", () => {
     if (preparing) return;
     send({ type: "next_line" });
+    startPreparing();
+  });
+
+  ui.tvNext.addEventListener("click", () => {
+    if (preparing) return;
+    send({ type: "tv_next" });
     startPreparing();
   });
 
@@ -903,6 +1024,9 @@
         break;
       case "members":
         renderMembers(Array.isArray(msg.members) ? msg.members : []);
+        break;
+      case "notice":
+        toast(String(msg.message || ""), { info: true, ms: NOTICE_MS });
         break;
       case "error":
         stopPreparing();
