@@ -77,8 +77,9 @@ from watch_progress import ProgressRecorder, ProgressStore
 from watch_rooms import RoomManager, RoomsFull, TvRoomsFull
 from watch_server import TvUnavailable, WatchServer
 from watch_sources import QUALITY_QN, Sources, VideoUnavailable, find_link
-from watch_ui import (PICK_PREPARING, CardStore, HostButton, PendingSearch, PickSelect, WatchUI, build_pick_view,
-                      search_header, card_text, build_view as build_watch_view)
+from watch_ui import (HOST_LINK_FAILED, PICK_PREPARING, CardStore, PendingSearch, PickSelect, WatchUI, build_pick_view,
+                      host_link_text, search_header,
+                      card_text, build_view as build_watch_view)
 from ws_server import WSServer
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
@@ -293,11 +294,10 @@ class MeeseeksBot(discord.Client):
             LangButton.handler = self.announce_desk
             self.add_dynamic_items(LangButton)      # 公告的语言按钮：重启前发的公告照样能点
         if self.watch_ui:
-            HostButton.handler = self.watch_ui
             PickSelect.handler = self.watch_ui
             self.watch_ui.create_vod_room = self._create_vod_room
             self.watch_ui.create_tv_room = self._create_tv_room
-            self.add_dynamic_items(HostButton, PickSelect)      # 一起看的「我是房主」按钮和搜索选单
+            self.add_dynamic_items(PickSelect)      # 一起看的搜索选单
 
     async def on_ready(self) -> None:
         log.info("Logged in to Discord as %s", self.user)
@@ -616,6 +616,7 @@ class MeeseeksBot(discord.Client):
         except RoomsFull as e:
             await message.reply(f"B 站房间已满（最多 {e.limit} 个），请稍后再试或换 YouTube 视频")
             return
+        delivered = await self._send_host_link(room, message.author)
         try:
             card = await message.reply(card_text(room, ui.rooms.clock()), view=build_watch_view(room, ui.public_url),
                                        allowed_mentions=discord.AllowedMentions.none())
@@ -625,6 +626,27 @@ class MeeseeksBot(discord.Client):
             return
         room.message_id = card.id
         ui.cards.add(message.channel.id, card.id)
+        if not delivered:
+            try:
+                await message.reply(HOST_LINK_FAILED, allowed_mentions=discord.AllowedMentions.none())
+            except discord.HTTPException:
+                log.exception("Could not post the host-link notice in channel %s", message.channel.id)
+
+    async def _send_host_link(self, room, user: discord.abc.User, interaction: discord.Interaction | None = None) -> bool:
+        """把房主链接单独发给发起人：有交互就 ephemeral 回复，否则（或失败时）私信。发不出去返回 False。"""
+        text = host_link_text(self.watch_ui.public_url, room)
+        if interaction is not None:
+            try:
+                await interaction.followup.send(text, ephemeral=True)
+                return True
+            except discord.HTTPException:
+                log.info("Ephemeral host link failed for room %s, trying a DM", room.room_id)
+        try:
+            await user.send(text)
+            return True
+        except discord.HTTPException:      # 私信关了（Forbidden）等
+            log.info("Could not DM the host link for room %s to user %s", room.room_id, user.id)
+            return False
 
     async def _watch_search(self, message: discord.Message, arg: str, channels: Sequence[Channel] = ()) -> None:
         """按片名搜影视；channels 是部分匹配的电视台，和影视结果放在同一个选单里（台在前）。"""
@@ -669,13 +691,14 @@ class MeeseeksBot(discord.Client):
             video, playlist = await server.prepare_vod(show, 0, resume=resume)
             room = ui.rooms.create(p.channel_id, p.requester_id, p.origin_message.author.display_name, video)
         except PlaylistError as e:
-            await self._edit_search(p, e.message)
+            await self._edit_search(p, e.text)      # 带上每条线路不能播的原因
             return
         except Exception:
             log.exception("Could not prepare a vod room for %r", show.title)
             await self._edit_search(p, "出错了，请稍后再试")
             return
         server.attach_playlist(room, playlist)
+        delivered = await self._send_host_link(room, p.origin_message.author, p.interaction)
         try:
             card = await p.origin_message.reply(card_text(room, ui.rooms.clock()),
                                                 view=build_watch_view(room, ui.public_url),
@@ -687,7 +710,7 @@ class MeeseeksBot(discord.Client):
             return
         room.message_id = card.id
         ui.cards.add(p.channel_id, card.id)
-        await self._edit_search(p, f"已选择：{show.title}")
+        await self._edit_search(p, f"已选择：{show.title}" + ("" if delivered else f"\n{HOST_LINK_FAILED}"))
 
     async def _open_tv(self, message: discord.Message, channel: Channel) -> None:
         """台名精确匹配：先回一条「正在准备…」，探到能播的源再建房发卡片，最后把那条改成结果。"""
@@ -713,10 +736,11 @@ class MeeseeksBot(discord.Client):
         """搜索选单里选了台：和 _open_tv 一样，只是结果写回搜索消息。"""
         async def set_status(text: str) -> None:
             await self._edit_search(p, text)
-        await self._start_tv(p.origin_message, channel, set_status)
+        await self._start_tv(p.origin_message, channel, set_status, p.interaction)
 
     async def _start_tv(self, origin: discord.Message, channel: Channel,
-                        set_status: Callable[[str], Awaitable[None]]) -> None:
+                        set_status: Callable[[str], Awaitable[None]],
+                        interaction: discord.Interaction | None = None) -> None:
         ui, server = self.watch_ui, self.watch_server
         try:
             ui.rooms.check_tv()                  # 探测前先查名额；create 里还会再查一次（防并发）
@@ -732,6 +756,7 @@ class MeeseeksBot(discord.Client):
             log.exception("Could not prepare a tv room for %r", channel.name)
             await set_status("出错了，请稍后再试")
             return
+        delivered = await self._send_host_link(room, origin.author, interaction)
         try:
             card = await origin.reply(card_text(room, ui.rooms.clock()), view=build_watch_view(room, ui.public_url),
                                       allowed_mentions=discord.AllowedMentions.none())
@@ -742,7 +767,7 @@ class MeeseeksBot(discord.Client):
             return
         room.message_id = card.id
         ui.cards.add(origin.channel.id, card.id)
-        await set_status(f"已选择：📺 {channel.name}")
+        await set_status(f"已选择：📺 {channel.name}" + ("" if delivered else f"\n{HOST_LINK_FAILED}"))
 
     async def _edit_search(self, p: PendingSearch, text: str) -> None:
         """改搜索结果消息（去掉选单），尽力而为：失败只记日志。"""

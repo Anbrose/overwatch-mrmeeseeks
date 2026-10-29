@@ -5,6 +5,7 @@
 """
 import asyncio
 import json
+import logging
 import os
 import sys
 import time
@@ -619,11 +620,16 @@ def _fixture(name):
 
 
 class VodUpstream:
-    """假资源站 CDN：/{line}/{ep}/index.m3u8 → master，/…/1000k/hls/mixed.m3u8 → 带广告的变体，片段带 ACAO *。"""
+    """假资源站 CDN：/{line}/{ep}/index.m3u8 → master，/…/1000k/hls/mixed.m3u8 → 带广告的变体（带一把 AES 密钥
+    enc.key），片段带 ACAO *。"""
 
     def __init__(self):
         self.master = _fixture("vod_master.m3u8")
-        self.variant = _fixture("vod_variant_ads.m3u8")
+        self.variant = _fixture("vod_variant_ads.m3u8").replace(
+            "#EXTM3U\n", '#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI="enc.key",IV=0x0\n', 1)
+        self.key = b"0123456789abcdef"
+        self.dead_keys = set()       # 这些线路的密钥返回 403
+        self.key_requests = []
         self.dead_lines = set()      # 这些线路的 m3u8 返回 404
         self.delays = {}             # 集数 → 取 master 前等几秒
         self.m3u8_requests = []
@@ -634,6 +640,11 @@ class VodUpstream:
         line, ep, tail = request.match_info["line"], request.match_info["ep"], request.match_info["tail"]
         if tail.endswith(".ts"):
             return web.Response(status=206, body=b"x" * 1024, headers={"Access-Control-Allow-Origin": "*"})
+        if tail.endswith(".key"):
+            self.key_requests.append(request.path)
+            if line in self.dead_keys:
+                return web.Response(status=403, text="no")
+            return web.Response(body=self.key)
         self.m3u8_requests.append(request.path)
         if line in self.dead_lines:
             return web.Response(status=404, text="gone")
@@ -690,6 +701,24 @@ async def test_vod_playlist_route():
               and r.headers.get("Cache-Control") == "no-store" and body.startswith("#EXTM3U"))
         check("播放列表去掉了广告、地址绝对", AD_SEGMENT not in body and f"{base}/l0/0/1000k/hls/" in body)
         check("命中缓存不再取上游", len(up.m3u8_requests) == n_req)
+        check("密钥地址换成本服务器的 key0", 'URI="key0"' in body and "enc.key" not in body)
+        r = await client.get(f"/vod/{rid}/0/key0")
+        check("密钥由本服务器中转", r.status == 200 and await r.read() == up.key
+              and r.content_type == "application/octet-stream" and r.headers.get("Cache-Control") == "no-store"
+              and up.key_requests == ["/l0/0/1000k/hls/enc.key"])
+        r = await client.get(f"/vod/{rid}/0/key0")
+        await r.read()
+        check("密钥缓存，不再取上游", r.status == 200 and len(up.key_requests) == 1)
+        check("没有的密钥序号 404", (await client.get(f"/vod/{rid}/0/key1")).status == 404)
+        check("密钥旧版本号 404", (await client.get(f"/vod/{rid}/1/key0")).status == 404)
+        check("密钥序号非数字 404", (await client.get(f"/vod/{rid}/0/keyx")).status == 404)
+        check("不存在的房间没有密钥", (await client.get("/vod/zzzzzz/0/key0")).status == 404)
+        server._keys.clear()
+        up.dead_keys.add("l0")
+        r = await client.get(f"/vod/{rid}/0/key0")
+        check("密钥取不到 502 带原因", r.status == 502
+              and (await r.text()) == f"这一集暂时没有能播的片源（密钥 HTTP 403（{base.split('//')[1]}））")
+        up.dead_keys.clear()
         check("vod 旧版本号 404", (await client.get(f"/vod/{rid}/1/index.m3u8")).status == 404)
         check("vod 版本号非数字 404", (await client.get(f"/vod/{rid}/x/index.m3u8")).status == 404)
         check("vod 不存在的房间 404", (await client.get("/vod/zzzzzz/0/index.m3u8")).status == 404)
@@ -708,7 +737,9 @@ async def test_vod_playlist_route():
         server._playlists.clear()
         up.dead_lines.add("l0")
         r = await client.get(f"/vod/{rid}/0/index.m3u8")
-        check("重取失败 502 带提示", r.status == 502 and (await r.text()) == "这一集暂时没有能播的片源")
+        body = await r.text()
+        check("重取失败 502 带提示和原因", r.status == 502 and body.startswith("这一集暂时没有能播的片源（")
+              and "HTTP 404" in body and body.endswith("）"))
         up.dead_lines.clear()
 
         bad = vod_show(base)
@@ -720,6 +751,8 @@ async def test_vod_playlist_route():
             raised = e
         check("所有线路都不能播 → prepare_vod 抛 PlaylistError", raised is not None
               and type(raised).__name__ == "PlaylistError" and raised.message == "这一集暂时没有能播的片源")
+        check("PlaylistError 按线路带原因", raised is not None and raised.detail.count("HTTP 404") == 3
+              and raised.detail.count("；") == 2)
         up.dead_lines.clear()
         up.dead_lines.add("l0")
         video, _ = await server.prepare_vod(show, 1, 0)
@@ -749,7 +782,7 @@ async def test_vod_state_message():
         s = await recv_type(a, "state")
         v = s and s["video"]
         check("vod state.video 字段", v and v["source"] == "vod" and v["hls"] == f"/vod/{room.room_id}/0/index.m3u8"
-              and v["episode"] == 0 and v["episode_count"] == 3 and v["line_name"] == "线路A"
+              and v["episode"] == 0 and v["episode_count"] == 3 and v["line"] == 0 and "line_name" not in v
               and v["line_count"] == 3 and v["show_title"] == "测试剧" and v["mpd"] is None
               and v["title"] == "测试剧 · 第 1 集")
         check("没有进度快照 → resume 是 null", s and "resume" in s and s["resume"] is None)
@@ -796,7 +829,7 @@ async def test_vod_episode_switch():
         s1, s2 = await recv_type(a, "state"), await recv_type(b, "state")
         check("房主选集 → 所有人切到第 2 集", s1 and s2 and s1["video"]["episode"] == 1 and s2["video"]["episode"] == 1
               and s2["video"]["version"] == 1 and s2["video"]["hls"] == f"/vod/{rid}/1/index.m3u8"
-              and s2["playing"] is False and s2["position"] == 0 and s2["video"]["line_name"] == "线路A")
+              and s2["playing"] is False and s2["position"] == 0 and s2["video"]["line"] == 0)
         check("新版本播放列表已缓存、旧的被清掉", (rid, 1) in server._playlists and (rid, 0) not in server._playlists)
         n_req = len(up.m3u8_requests)
         r = await client.get(f"/vod/{rid}/1/index.m3u8")
@@ -834,7 +867,7 @@ async def test_vod_next_line():
 
         await a.send_json({"type": "next_line"})
         s = await recv_type(b, "state")
-        check("换片源 → 下一条线路、同一集、位置不变、暂停", s and s["video"]["line_name"] == "线路B"
+        check("换片源 → 下一条线路、同一集、位置不变、暂停", s and s["video"]["line"] == 1
               and s["video"]["episode"] == 0 and s["position"] == 300.0 and s["playing"] is False
               and s["video"]["version"] == 1 and room.video.url == f"{base}/l1/0/index.m3u8")
         check("换片源后缓存新版本", (rid, 1) in server._playlists)
@@ -853,14 +886,14 @@ async def test_vod_next_line():
         s = await recv_type(a, "state")
         await a.send_json({"type": "next_line"})
         s = await recv_type(a, "state")
-        check("最后一条线路换片源绕回第一条", s and s["video"]["line_name"] == "线路A" and room.video.vod.line == 0)
+        check("最后一条线路换片源绕回第一条", s and s["video"]["line"] == 0 and room.video.vod.line == 0)
 
         # 播放中换片源 → 从当前位置继续播
         rooms.control(rid, wa["viewer_id"], "play", 600.0)
         await drain(a)
         await a.send_json({"type": "next_line"})
         s = await recv_type(a, "state")
-        check("播放中换片源 → 保持播放、从当前位置继续", s and s["video"]["line_name"] == "线路B"
+        check("播放中换片源 → 保持播放、从当前位置继续", s and s["video"]["line"] == 1
               and s["playing"] is True and room.playback.playing is True and 600.0 <= s["position"] < 605.0)
     finally:
         await client.close()
@@ -968,6 +1001,7 @@ async def test_vod_prepare_timeout():
         check(f"片源太慢 → 超时按没有能播的片源（{took:.2f}s）", raised is not None
               and type(raised).__name__ == "PlaylistError" and raised.message == "这一集暂时没有能播的片源"
               and took < 1.5)
+        check("超时的原因说明时限", raised is not None and raised.detail == "0.3 秒内没找到能播的线路，资源站太慢")
 
         # 网页上的选集也走同一个时限
         room = await vod_room(rooms, server, show)
@@ -977,9 +1011,53 @@ async def test_vod_prepare_timeout():
         e = await recv_type(a, "error")
         check("选集超时 → 提示没有能播的片源、不换集", e and e["message"] == "这一集暂时没有能播的片源"
               and room.version == 0 and room.video.vod.episode == 0)
+        check("error 消息带 detail", e and e["detail"] == "0.3 秒内没找到能播的线路，资源站太慢")
     finally:
         await client.close()
         await up_client.close()
+
+
+async def test_client_report():
+    """网页端播放失败的回报只进日志：带房间、成员公开 id、视频地址；每个连接最多 MAX_REPORTS 条。"""
+    rooms, sources, server, client = await make()
+    records = []
+
+    class Grab(logging.Handler):
+        def emit(self, record):
+            records.append(record)
+
+    handler = Grab()
+    ws_mod.log.addHandler(handler)
+    try:
+        room = rooms.create(1, 2, "发起人", yt(duration=300.0))
+        rid = room.room_id
+        a, wa = await hello(client, rid)
+        await drain(a)
+        pub = rooms.get(rid).members[wa["viewer_id"]].public_id
+        await a.send_json({"type": "report", "detail": "视频加载失败：片段 HTTP 403 · cdn.example.com [fragLoadError]\n第二行",
+                           "url": "/vod/x/0/index.m3u8", "env": "hls.js 1.5.20; Mozilla/5.0 (Android)"})
+        await a.send_json({"type": "ping", "t": 1})
+        check("回报后连接仍开着", (await recv_type(a, "pong")) is not None)
+        msgs = [r.getMessage() for r in records if r.levelno == logging.WARNING and "playback failed" in r.getMessage()]
+        check("回报记成一条 WARNING，带房间、成员、视频、原因（压成一行）", len(msgs) == 1 and f"room={rid}" in msgs[0]
+              and f"member={pub}" in msgs[0] and "video=https://www.youtube.com/watch?v=dQw4w9WgXcQ" in msgs[0]
+              and "src=/vod/x/0/index.m3u8" in msgs[0] and "片段 HTTP 403 · cdn.example.com [fragLoadError] 第二行" in msgs[0]
+              and wa["viewer_id"] not in msgs[0])
+        check("日志带网页报的播放器模式和连接的 User-Agent", "env=hls.js 1.5.20; Mozilla/5.0 (Android)" in msgs[0]
+              and "ua=Python/" in msgs[0] and "aiohttp" in msgs[0])
+        check("房间状态没变", rooms.get(rid).version == 0 and not rooms.get(rid).playback.playing)
+        await a.send_json({"type": "report", "detail": 123})
+        await a.send_json({"type": "report"})
+        for i in range(10):
+            await a.send_json({"type": "report", "detail": f"again {i}"})
+        await a.send_json({"type": "ping", "t": 2})
+        await recv_type(a, "pong")
+        n = len([r for r in records if "playback failed" in r.getMessage()])
+        check("非字符串被忽略；每个连接最多记 MAX_REPORTS 条", n == ws_mod.MAX_REPORTS == 5)
+        await a.close()
+    finally:
+        ws_mod.log.removeHandler(handler)
+        await client.close()
 
 
 async def test_vod_auto_next():
@@ -1192,7 +1270,7 @@ async def test_tv_routes():
         s = await recv_type(a, "state")
         v = s and s["video"]
         check("tv state.video 字段", v and v["source"] == "tv" and v["live"] is True
-              and v["hls"] == f"/tv/{rid}/0/index.m3u8" and v["line_count"] == 3 and v["line_index"] == 1
+              and v["hls"] == f"/tv/{rid}/0/index.m3u8" and v["line_count"] == 3 and v["line"] == 1
               and v["mpd"] is None and s["position"] == 0)
         await a.send_json({"type": "control", "action": "play", "position": 0})
         s = await recv_type(a, "state")
@@ -1239,7 +1317,7 @@ async def test_tv_switch():
         n = await recv_type(a, "notice", 5)
         nb = await recv_type(b, "notice", 5)
         check("房主 tv_next → 下一个源（下标 2）、版本 +1", s and s["video"]["version"] == 1
-              and s["video"]["line_index"] == 2 and s["video"]["hls"] == f"/tv/{rid}/1/index.m3u8"
+              and s["video"]["line"] == 2 and s["video"]["hls"] == f"/tv/{rid}/1/index.m3u8"
               and s["position"] == 0)
         check("换源后所有人收到“已切换片源”", n and n["message"] == "已切换片源" and nb and nb["message"] == "已切换片源")
         check("换源后旧版本的直播流被清掉", (rid, 0) not in server._tv_streams)
@@ -1255,12 +1333,12 @@ async def test_tv_switch():
 
         await a.send_json({"type": "tv_next"})
         s = await recv_type(a, "state", 5)
-        check("再 tv_next → 最后一个源（下标 3）", s and s["video"]["version"] == 2 and s["video"]["line_index"] == 3)
+        check("再 tv_next → 最后一个源（下标 3）", s and s["video"]["version"] == 2 and s["video"]["line"] == 3)
         bad_hits = up.hits["/bad/index.m3u8"]
         await a.send_json({"type": "tv_next"})
         s = await recv_type(a, "state", 5)
         check("最后一个源再 tv_next → 绕回、跳过探测失败的 0", s and s["video"]["version"] == 3
-              and s["video"]["line_index"] == 1 and room.video.tv.index == 1 and room.video.tv.bad == {0}
+              and s["video"]["line"] == 1 and room.video.tv.index == 1 and room.video.tv.bad == {0}
               and up.hits["/bad/index.m3u8"] > bad_hits)
         await wait_until(lambda: tv_idle(server, rid))
         for w in (a, b, c):
@@ -1498,11 +1576,11 @@ async def test_tv_bad_memory():
         up.fail = set()
         await a.send_json({"type": "tv_next"})
         s = await recv_type(a, "state", 5)
-        check("手动换到 ok2", s and s["video"]["line_index"] == 2 and room.video.tv.bad == {0})
+        check("手动换到 ok2", s and s["video"]["line"] == 2 and room.video.tv.bad == {0})
         bad_hits = up.hits["/bad/index.m3u8"]
         await a.send_json({"type": "tv_next"})
         s = await recv_type(a, "state", 5)
-        check("手动绕回开头：清空 bad、重新探测坏源", s and s["video"]["line_index"] == 1
+        check("手动绕回开头：清空 bad、重新探测坏源", s and s["video"]["line"] == 1
               and up.hits["/bad/index.m3u8"] > bad_hits and room.video.tv.bad == {0})
     finally:
         ws_mod.STALL_COOLDOWN = orig_cooldown
