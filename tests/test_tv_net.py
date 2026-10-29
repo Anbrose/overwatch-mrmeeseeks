@@ -7,6 +7,7 @@ import asyncio
 import os
 import sys
 
+import aiohttp
 from aiohttp import web
 from aiohttp.test_utils import TestServer
 
@@ -129,10 +130,93 @@ async def test_open():
         await server.close()
 
 
+async def test_unicode_hosts():
+    """Unicode / 非常规写法的 IP 主机：默认 ip_allowed 下一律拦住，本地服务器零命中。"""
+    hits = {"target": 0, "src": 0}
+
+    async def target(request):
+        hits["target"] += 1
+        return web.Response(text="secret")
+
+    tapp = web.Application()
+    tapp.router.add_get("/x", target)
+    tserver = TestServer(tapp, host="127.0.0.1")
+    await tserver.start_server()
+    port = tserver.port
+
+    fullwidth = f"http://１２７.０.０.１:{port}/x"
+    ideographic = f"http://127。0。0。1:{port}/x"
+
+    async def redir(request):
+        hits["src"] += 1
+        which = request.match_info["which"]
+        loc = fullwidth if which == "fw" else ideographic
+        return web.Response(status=302, headers={"Location": loc})
+
+    sapp = web.Application()
+    sapp.router.add_get("/r/{which}", redir)
+    sserver = TestServer(sapp, host="127.0.0.1")
+    await sserver.start_server()
+
+    session = tv_net.make_session()
+    try:
+        cases = [("fullwidth digits", fullwidth), ("ideographic full stop", ideographic),
+                 ("hex int", f"http://0x7f000001:{port}/x"),
+                 ("short dotted", f"http://127.1:{port}/x"),
+                 ("v4-mapped v6", f"http://[::ffff:127.0.0.1]:{port}/x")]
+        for name, url in cases:
+            before = hits["target"]
+            try:
+                resp = await tv_net.open_url(session, url, None)
+                resp.release()
+                ok = False
+            except Blocked:
+                ok = True
+            except (aiohttp.ClientError, OSError) as e:
+                # 非 Unicode 写法交给解析器过滤，报连接错误也算拦住
+                ok = name in ("hex int", "short dotted", "v4-mapped v6")
+                print(f"  {name}: {type(e).__name__}", flush=True)
+            if name in ("fullwidth digits", "ideographic full stop", "v4-mapped v6"):
+                ok = ok and _raised_blocked(url)
+            check(f"unicode/odd host blocked: {name}", ok and hits["target"] == before)
+    finally:
+        await session.close()
+
+    # 重定向：源站通过“解析器映射的主机名”放行，Location 指向 Unicode 写法的 127.0.0.1
+    src_resolver = FilteringResolver(lambda ip: ip == "127.0.0.1", FakeInner(["127.0.0.1"]))
+    session = aiohttp.ClientSession(connector=aiohttp.TCPConnector(resolver=src_resolver))
+    try:
+        for which, name in (("fw", "fullwidth"), ("id", "ideographic")):
+            src_before = hits["src"]
+            try:
+                resp = await tv_net.open_url(session, f"http://src.test:{sserver.port}/r/{which}",
+                                             None)
+                resp.release()
+                ok = False
+            except Blocked:
+                ok = True
+            check(f"redirect to {name} host blocked", ok and hits["src"] == src_before + 1)
+        check("unicode target never hit", hits["target"] == 0)
+    finally:
+        await session.close()
+        await sserver.close()
+        await tserver.close()
+
+
+def _raised_blocked(url):
+    """_check_url 本身就该拒绝（不依赖连接失败）。"""
+    try:
+        tv_net._check_url(url, tv_net.is_public_ip)
+        return False
+    except Blocked:
+        return True
+
+
 if __name__ == "__main__":
     test_pure()
     asyncio.run(test_resolver())
     asyncio.run(test_open())
+    asyncio.run(test_unicode_hosts())
     bad = [n for n, ok in results if not ok]
     print(f"{len(results) - len(bad)}/{len(results)} passed")
     sys.exit(1 if bad else 0)

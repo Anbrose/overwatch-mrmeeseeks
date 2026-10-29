@@ -5,7 +5,8 @@
 - FilteringResolver：DNS 解析结果里不通过 ip_allowed 的记录直接丢掉，覆盖所有主机名，
   包括重定向之后才出现的主机名。
 - open_url：自己手动跟随重定向，每一跳都检查 scheme；aiohttp 对字面 IP 主机不走解析器，
-  所以字面 IP 由这里在每一跳连接之前检查。
+  所以字面 IP 由这里在每一跳连接之前检查；检查的是 yarl 规范化后的主机，
+  主机带非 ASCII 字符（全角数字、中文句号等）直接拒绝。
 - read_capped：按上限读取响应体，超出就报 TooLarge。
 
 ip_allowed 参数只给测试连本地 127.0.0.1 用，生产调用方不要传。
@@ -17,6 +18,7 @@ from typing import Callable
 
 import aiohttp
 import aiohttp.abc
+import yarl
 
 from live_watch import USER_AGENT
 
@@ -77,19 +79,36 @@ def make_session(ip_allowed: Callable[[str], bool] = is_public_ip) -> aiohttp.Cl
     return aiohttp.ClientSession(connector=connector)
 
 
-def _check_url(url: str, ip_allowed: Callable[[str], bool]) -> None:
+def _check_url(url: str, ip_allowed: Callable[[str], bool]) -> yarl.URL:
+    """检查一跳 URL，返回之后真正交给 aiohttp 的 yarl.URL。
+
+    检查的是 yarl 规范化之后的主机（aiohttp 连接用的正是它）：全角数字、中文句号
+    这类 Unicode 写法会被 NFKC/IDNA 规范成字面 IP，只看 urlsplit 的结果会漏掉。
+    另外主机里带非 ASCII 字符的 URL 直接拒绝，多一道保险。
+    """
     parts = urllib.parse.urlsplit(url)
     if parts.scheme not in ("http", "https"):
         raise Blocked(f"scheme not allowed: {parts.scheme!r}")
-    host = parts.hostname
+    if not parts.hostname:
+        raise Blocked("no host")
+    if not parts.hostname.isascii():
+        raise Blocked(f"non-ascii host: {parts.hostname!r}")
+    try:
+        u = yarl.URL(url)
+    except ValueError as e:
+        raise Blocked(f"bad url: {e}") from None
+    if u.scheme not in ("http", "https"):
+        raise Blocked(f"scheme not allowed: {u.scheme!r}")
+    host = u.raw_host
     if not host:
         raise Blocked("no host")
     try:
         ipaddress.ip_address(host)
     except ValueError:
-        return  # 主机名：交给 FilteringResolver
+        return u  # 主机名：交给 FilteringResolver
     if not ip_allowed(host):
         raise Blocked(f"address not allowed: {host}")
+    return u
 
 
 async def open_url(session: aiohttp.ClientSession, url: str, ua: str | None, *,
@@ -99,8 +118,8 @@ async def open_url(session: aiohttp.ClientSession, url: str, ua: str | None, *,
     headers = {"User-Agent": ua or USER_AGENT}
     cur = quote_url(url)
     for _ in range(max_redirects + 1):
-        _check_url(cur, ip_allowed)
-        resp = await session.get(cur, headers=headers, allow_redirects=False,
+        target = _check_url(cur, ip_allowed)
+        resp = await session.get(target, headers=headers, allow_redirects=False,
                                  timeout=aiohttp.ClientTimeout(total=timeout))
         if resp.status not in REDIRECT_STATUSES:
             return resp
