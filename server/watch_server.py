@@ -674,7 +674,8 @@ class WatchServer:
     async def prepare_tv(self, channel: Channel, order: list[Candidate] | None = None,
                          start: int = 0, bad: set[int] = frozenset()) -> Video:
         """从 order[start] 起依次（绕圈、跳过 bad、每个最多一次）探测，第一个能播的做成 tv 视频；
-        都不能播或超过 tv_prepare_timeout 秒抛 TvUnavailable。建房、手动换源、自动换源都走这里。"""
+        都不能播或超过 tv_prepare_timeout 秒抛 TvUnavailable。建房、手动换源、自动换源都走这里。
+        这次探测失败的源也记进返回的 TvInfo.bad，之后自动换源不再先去探它们（手动绕回开头时才清空）。"""
         order = list(channel.ordered() if order is None else order)
         bad = set(bad)
 
@@ -683,8 +684,11 @@ class WatchServer:
             n = len(order)
             for k in range(n):
                 i = (start + k) % n
-                if i not in bad and await probe(order[i]):
+                if i in bad:
+                    continue
+                if await probe(order[i]):
                     return i
+                bad.add(i)
             return None
 
         try:
@@ -770,6 +774,16 @@ class WatchServer:
             raise
         except Exception:
             log.exception("watch tv switch failed (room=%s)", room_id)
+            return
+        if manual and video.tv.index == info.index:
+            # 别的源全都不行，绕一圈又回到正在播的这个：不换版本、不说“已切换”，只告诉房主
+            log.info("watch tv switch: no other playable source (room=%s)", room_id)
+            room = self.rooms.get(room_id)
+            if room is None or room.version != version or room.video.tv is None:
+                return
+            msg = {"type": "error", "message": NO_TV_SOURCE}
+            for c in self._tv_conns(room_id, host_only=True):
+                c.push(msg)
             return
         if self.rooms.switch_tv(room_id, version, video):
             self._tv_last_switch[room_id] = time.monotonic()

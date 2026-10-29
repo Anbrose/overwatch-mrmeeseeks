@@ -1132,7 +1132,7 @@ async def test_tv_routes():
         video = await server.prepare_tv(ch)
         info = video.tv
         check("prepare_tv 跳过坏源，选 ok1（下标 1）", video.source == "tv" and info.index == 1
-              and video.url == f"{up.base}/ok1/index.m3u8" and info.bad == set()
+              and video.url == f"{up.base}/ok1/index.m3u8" and info.bad == {0}
               and [c.url for c in info.order] == [c.url for c in ch.ordered()])
         check("prepare_tv 探测过坏源", up.hits["/bad/index.m3u8"] >= 1)
         room = rooms.create(1, 2, "发起人", video)
@@ -1260,7 +1260,7 @@ async def test_tv_switch():
         await a.send_json({"type": "tv_next"})
         s = await recv_type(a, "state", 5)
         check("最后一个源再 tv_next → 绕回、跳过探测失败的 0", s and s["video"]["version"] == 3
-              and s["video"]["line_index"] == 1 and room.video.tv.index == 1 and room.video.tv.bad == set()
+              and s["video"]["line_index"] == 1 and room.video.tv.index == 1 and room.video.tv.bad == {0}
               and up.hits["/bad/index.m3u8"] > bad_hits)
         await wait_until(lambda: tv_idle(server, rid))
         for w in (a, b, c):
@@ -1424,7 +1424,8 @@ async def test_tv_stale_error_and_duration():
     orig_cooldown = ws_mod.STALL_COOLDOWN
     try:
         ws_mod.STALL_COOLDOWN = 0.0
-        room = rooms.create(1, 2, "发起人", await server.prepare_tv(tv_channel(up.base, ("bad", "ok1"))))
+        # 三个源：坏源在建房时已记进 bad，自动换源还得真去探 ok2，才有“正在找源”的窗口
+        room = rooms.create(1, 2, "发起人", await server.prepare_tv(tv_channel(up.base, ("bad", "ok1", "ok2"))))
         rid = room.room_id
         a, wa = await hello(client, rid, key=room.owner_key)
         b, _ = await hello(client, rid)
@@ -1439,7 +1440,7 @@ async def test_tv_stale_error_and_duration():
               and not any(m["type"] == "state" for m in got))
 
         # 自动换源找源期间房主换成了 YouTube：失败后不发过时的错误、不记冷却
-        up.fail = {"ok1"}
+        up.fail = {"ok1", "ok2"}
         up.delay = 0.3
         await b.send_json({"type": "tv_stall", "version": 0})
         await wait_until(lambda: rid in server._tv_switching)
@@ -1451,6 +1452,7 @@ async def test_tv_stale_error_and_duration():
 
         # 找源期间房间被关：同样静默
         up.delay = 0.0
+        up.fail = set()
         room2 = rooms.create(1, 2, "发起人", await server.prepare_tv(tv_channel(up.base, ("bad", "ok2", "ok1"))))
         rid2 = room2.room_id
         c, _ = await hello(client, rid2)
@@ -1465,6 +1467,73 @@ async def test_tv_stale_error_and_duration():
     finally:
         ws_mod.STALL_COOLDOWN = orig_cooldown
         up.delay = 0.0
+        await client.close()
+        await up.server.close()
+
+
+async def test_tv_bad_memory():
+    """prepare_tv 探测失败的源记进 bad：自动换源不再先探；手动绕回开头清空 bad 后会再试。"""
+    up, rooms, server, client = await make_tv()
+    orig_cooldown = ws_mod.STALL_COOLDOWN
+    try:
+        ws_mod.STALL_COOLDOWN = 0.0
+        room = rooms.create(1, 2, "发起人", await server.prepare_tv(tv_channel(up.base, ("bad", "ok1", "ok2"))))
+        rid = room.room_id
+        check("建房时探测失败的源记进 bad", room.video.tv.index == 1 and room.video.tv.bad == {0})
+        a, _ = await hello(client, rid, key=room.owner_key)
+        b, _ = await hello(client, rid)
+        await drain(a)
+        await drain(b)
+
+        up.fail = {"ok2"}
+        bad_hits = up.hits["/bad/index.m3u8"]
+        await b.send_json({"type": "tv_stall", "version": 0})
+        await wait_until(lambda: rid in server._tv_last_switch and tv_idle(server, rid))
+        check("自动换源不再探测已知坏源", up.hits["/bad/index.m3u8"] == bad_hits and room.version == 0
+              and room.video.tv.index == 1)
+        await drain(a)
+        await drain(b)
+
+        # 手动：ok1 → ok2（bad 保持 {0}），再手动就绕回开头
+        up.fail = set()
+        await a.send_json({"type": "tv_next"})
+        s = await recv_type(a, "state", 5)
+        check("手动换到 ok2", s and s["video"]["line_index"] == 2 and room.video.tv.bad == {0})
+        bad_hits = up.hits["/bad/index.m3u8"]
+        await a.send_json({"type": "tv_next"})
+        s = await recv_type(a, "state", 5)
+        check("手动绕回开头：清空 bad、重新探测坏源", s and s["video"]["line_index"] == 1
+              and up.hits["/bad/index.m3u8"] > bad_hits and room.video.tv.bad == {0})
+    finally:
+        ws_mod.STALL_COOLDOWN = orig_cooldown
+        await client.close()
+        await up.server.close()
+
+
+async def test_tv_manual_same():
+    """手动换源别的源全坏、绕回当前源：不换版本、不发“已切换片源”，只告诉房主没有能播的源。"""
+    up, rooms, server, client = await make_tv()
+    try:
+        room = rooms.create(1, 2, "发起人", await server.prepare_tv(tv_channel(up.base, ("ok1", "bad", "ok2"))))
+        rid = room.room_id
+        a, _ = await hello(client, rid, key=room.owner_key)
+        b, _ = await hello(client, rid)
+        await drain(a)
+        await drain(b)
+        up.fail = {"ok2"}
+        ok2_hits = up.hits["/ok2/index.m3u8"]
+        await a.send_json({"type": "tv_next"})
+        e = await recv_type(a, "error", 5)
+        await wait_until(lambda: tv_idle(server, rid))
+        got_a = await drain(a, 0.3)
+        got_b = await drain(b, 0.3)
+        check("绕回当前源 → 房主收到“这个台暂时没有能播的源”", e and e["message"] == "这个台暂时没有能播的源")
+        check("绕回当前源 → 版本不变、源不变", room.version == 0 and room.video.tv.index == 0
+              and up.hits["/ok2/index.m3u8"] > ok2_hits)
+        check("绕回当前源 → 没人收到“已切换片源”或新 state",
+              not any(m["type"] in ("notice", "state") for m in got_a + got_b)
+              and not any(m["type"] == "error" for m in got_b))
+    finally:
         await client.close()
         await up.server.close()
 
@@ -1490,6 +1559,8 @@ async def main():
     await test_tv_switch()
     await test_tv_dead_auto_switch()
     await test_tv_stale_error_and_duration()
+    await test_tv_bad_memory()
+    await test_tv_manual_same()
 
 
 if __name__ == "__main__":
