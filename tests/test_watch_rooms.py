@@ -14,6 +14,8 @@ sys.path.insert(0, os.path.join(ROOT, "server"))
 import watch_rooms as wr  # noqa: E402
 from watch_rooms import RoomManager, RoomsFull, Video, VodInfo, vod_title, vod_video  # noqa: E402
 from vod_search import Episode, Line, Show  # noqa: E402
+from tv_channels import Candidate, Channel  # noqa: E402
+from watch_rooms import TvInfo, TvRoomsFull, tv_video  # noqa: E402
 
 results = []
 now = [1000.0]
@@ -340,6 +342,74 @@ def test_tick_finished_not_for_youtube():
     check("YouTube 不通知 finished", finished_count() == 0)
 
 
+def tv(key="CCTV1", n=3):
+    ch = Channel(key, key, [Candidate(f"http://h{i}.example/{key}.m3u8", None, 0, False) for i in range(n)])
+    return tv_video(TvInfo(ch, ch.ordered(), 0))
+
+
+def test_tv_limit():
+    now[0] = 1000.0
+    m = RoomManager(clock, max_tv_rooms=2)
+    r1 = m.create(1, 9, "a", tv("CCTV1"))
+    m.create(1, 9, "a", tv("CCTV2"))
+    try:
+        m.create(1, 9, "a", tv("CCTV3"))
+        err = None
+    except TvRoomsFull as e:
+        err = e
+    check("第 3 个直播房间被拒绝", err is not None and err.limit == 2)
+    check("提示文案", err is not None and str(err) == "直播房间已满（最多 2 个），请稍后再试")
+    m2 = RoomManager(clock, max_bili_rooms=2, max_tv_rooms=2)
+    m2.create(1, 9, "a", bili("b1"))
+    m2.create(1, 9, "a", bili("b2"))
+    m2.create(1, 9, "a", tv("CCTV1"))
+    check("B 站房间不占直播名额", len(m2.active()) == 3)
+    m3 = RoomManager(clock, max_bili_rooms=1, max_tv_rooms=2)
+    m3.create(1, 9, "a", tv("CCTV1"))
+    m3.create(1, 9, "a", tv("CCTV2"))
+    m3.create(1, 9, "a", bili("b1"))
+    check("直播房间不占 B 站名额", len(m3.active()) == 3)
+    h = m.connect(r1.room_id, None, r1.owner_key)
+    check("tv 换 tv 不算多一个", m.change_video(r1.room_id, h.viewer_id, tv("CCTV5")))
+    check("换到 YouTube", m.change_video(r1.room_id, h.viewer_id, yt("y1")))
+    check("换走后可以再建直播房间", m.create(1, 9, "a", tv("CCTV3")) is not None)
+    r4 = m.active()[1]
+    h4 = m.connect(r4.room_id, None, r4.owner_key)
+    check("满员时 YouTube 换 tv 被拒绝", raises(TvRoomsFull, lambda: m.change_video(
+        r1.room_id, h.viewer_id, tv("CCTV9"))))
+    check("拒绝后视频没变", r1.video.source == "youtube" and h4)
+
+
+def test_tv_control_and_switch():
+    m, r = mk(tv())
+    h = m.connect(r.room_id, None, None)
+    check("tv 不能 seek", not m.control(r.room_id, h.viewer_id, "seek", 30.0))
+    check("tv 暂停", m.control(r.room_id, h.viewer_id, "pause", 55.0)
+          and r.playback.playing is False and r.playback.position == 0.0)
+    check("tv 播放", m.control(r.room_id, h.viewer_id, "play", 77.0)
+          and r.playback.playing is True and r.playback.position == 0.0)
+    v0 = r.version
+    v2 = tv("CCTV2")
+    check("switch_tv 版本对", m.switch_tv(r.room_id, v0, v2) and r.version == v0 + 1
+          and r.video is v2 and r.playback.playing is True and r.playback.position == 0.0)
+    check("switch_tv 旧版本被丢弃", not m.switch_tv(r.room_id, v0, tv("CCTV3")) and r.video is v2)
+    m.control(r.room_id, h.viewer_id, "pause", None)
+    check("switch_tv 保持暂停", m.switch_tv(r.room_id, r.version, tv("CCTV4")) and r.playback.playing is False)
+    m5, r5 = mk(yt("z"))
+    check("非 tv 房间 switch_tv 无效", not m5.switch_tv(r5.room_id, r5.version, tv()))
+    check("tv_video 字段", v2.source == "tv" and v2.id == "CCTV2" and v2.page == 1 and v2.duration is None
+          and v2.url == v2.tv.order[0].url and v2.tv.bad == set())
+
+
+def test_tick_no_finished_for_tv():
+    m, r = mk(tv())
+    h = m.connect(r.room_id, None, None)
+    m.control(r.room_id, h.viewer_id, "play", None)
+    now[0] += 100000
+    m.tick()
+    check("tv 不通知 finished", finished_count() == 0)
+
+
 if __name__ == "__main__":
     import logging
     logging.disable(logging.CRITICAL)
@@ -362,6 +432,9 @@ if __name__ == "__main__":
     test_tick_finished()
     test_tick_finished_needs_people()
     test_tick_finished_not_for_youtube()
+    test_tv_limit()
+    test_tv_control_and_switch()
+    test_tick_no_finished_for_tv()
     passed = sum(1 for _, ok in results if ok)
     print(f"\n{passed}/{len(results)} passed")
     sys.exit(0 if passed == len(results) else 1)
