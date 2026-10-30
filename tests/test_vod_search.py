@@ -104,6 +104,13 @@ def test_merge():
     x = vs.parse_detail({"list": [entry(name="同名", year="2000")]}, "甲")
     y = vs.parse_detail({"list": [entry(name="同名", year="2001")]}, "乙")
     check("同名不同年不合并", len(vs.merge_shows([x, y])) == 2)
+    p1 = vs.parse_detail({"list": [dict(entry(name="海报"), vod_pic=" https://img.example.com/a.jpg ")]}, "甲")
+    p2 = vs.parse_detail({"list": [dict(entry(name="海报"), vod_pic="http://img.example.com/b.jpg")]}, "乙")
+    p3 = vs.parse_detail({"list": [dict(entry(name="海报"), vod_pic=123)]}, "丙")
+    check("海报只认 https、去空白", p1[0].pic == "https://img.example.com/a.jpg" and p2[0].pic is None
+          and p3[0].pic is None and vs.parse_detail({"list": [entry()]}, "甲")[0].pic is None)
+    check("合并时补上海报", vs.merge_shows([p2, p1])[0].pic == "https://img.example.com/a.jpg"
+          and vs.merge_shows([p1, p2])[0].pic == "https://img.example.com/a.jpg")
 
 
 def test_rank():

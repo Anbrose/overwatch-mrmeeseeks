@@ -225,6 +225,27 @@ async def test_ws_flow():
         s = await recv_type(a, "state")
         check("超过时长夹到时长", s and s["position"] == 300.0)
 
+        # 房主交接
+        aid = wa["viewer_id"]
+        apub = rooms.get(rid).members[aid].public_id
+        await b.send_json({"type": "transfer", "target": apub})
+        got = await drain(a)
+        check("非房主发 transfer 无效", not any(m["type"] in ("you", "notice") for m in got) and room.host_id == aid)
+        await a.send_json({"type": "transfer", "target": bpub})
+        yb = await recv_type(b, "you")
+        ya = await recv_type(a, "you")
+        mb = await recv_type(b, "members")     # host 事件先发 you/members，notice 在后面
+        nb = await recv_type(b, "notice")
+        check("transfer：b 成房主、a 不再是房主但有控制权", yb and yb["is_host"] is True and ya and ya["is_host"] is False
+              and ya["can_control"] is True and room.host_id == bid)
+        check("所有人收到房主变更提示、新房主收到 members", nb and nb["message"] == "房主现在是「" + wb["name"] + "」"
+              and mb and [x["name"] for x in mb["members"]] == [wa["name"]])
+        await b.send_json({"type": "transfer", "target": apub})
+        ya = await recv_type(a, "you")
+        check("交回来", ya and ya["is_host"] is True and room.host_id == aid)
+        await drain(a)
+        await drain(b)
+
         # 普通观众发 grant 无效
         c, wc = await hello(client, rid)
         cid = wc["viewer_id"]

@@ -345,3 +345,7 @@ input[type="range"]:disabled::-moz-range-thumb { background: transparent; }
   line-height: 18px;
 }
 .toast.info { border-color: var(--accent); }
+
+/* 👑 把房主交给这个人 */
+.make-host { flex: none; background: none; border: 0; padding: 0 2px; cursor: pointer; opacity: .35; }
+.make-host:hover { opacity: 1; }

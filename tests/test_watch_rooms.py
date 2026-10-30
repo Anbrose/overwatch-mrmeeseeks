@@ -68,6 +68,20 @@ def test_defaults_and_permissions():
     check("公开 id 和 viewer_id 不同", b.public_id and b.public_id != b.viewer_id and a.public_id != b.public_id)
     check("用 viewer_id 当目标无效", not m.set_permission(r.room_id, a.viewer_id, b.viewer_id, True) and not b.can_control)
     check("房主给权限", m.set_permission(r.room_id, a.viewer_id, b.public_id, True) and b.can_control)
+    # 房主交接
+    c = m.connect(r.room_id, None, None)
+    check("普通观众不能交房主", m.transfer_host(r.room_id, b.viewer_id, c.public_id) is None and r.host_id == a.viewer_id)
+    check("交给自己 / 用 viewer_id / 不存在的人都无效",
+          m.transfer_host(r.room_id, a.viewer_id, a.public_id) is None
+          and m.transfer_host(r.room_id, a.viewer_id, c.viewer_id) is None
+          and m.transfer_host(r.room_id, a.viewer_id, "nobody") is None and r.host_id == a.viewer_id)
+    m.disconnect(r.room_id, c.viewer_id)
+    now[0] += 10 * 60
+    check("不在场的人不能当房主", m.transfer_host(r.room_id, a.viewer_id, c.public_id) is None)
+    check("房主交给 b：b 成房主，a 保留控制权", m.transfer_host(r.room_id, a.viewer_id, b.public_id) is b
+          and r.host_id == b.viewer_id and a.can_control and m.change_video(r.room_id, b.viewer_id, yt("x3"))
+          and not m.change_video(r.room_id, a.viewer_id, yt("x4")))
+    check("交回来", m.transfer_host(r.room_id, b.viewer_id, a.public_id) is a and r.host_id == a.viewer_id)
     check("有权限能播放", m.control(r.room_id, b.viewer_id, "play", None) and r.playback.playing)
     check("有权限的人不能换视频", not m.change_video(r.room_id, b.viewer_id, yt("x2")))
     check("房主能换视频", m.change_video(r.room_id, a.viewer_id, yt("x2")))
