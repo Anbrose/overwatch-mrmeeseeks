@@ -71,6 +71,8 @@ from wishes import (WISH_DAILY_LIMIT, WishDesk, WishEntryView, WishLog, WishQuot
 import tv_net
 import tv_stream
 from tv_channels import Channel, ChannelTable, parse_sources_env as parse_tv_lists
+import qa_log
+from qa_log import QaLog
 from vod_playlist import PlaylistError
 from vod_search import SearchUnavailable, VodSearch, parse_sources_env
 from watch_progress import ProgressRecorder, ProgressStore
@@ -98,7 +100,7 @@ HELP_TEXT = (
     "`@mrmeeseeks disconnect` Unpair the client bound to this channel\n"
     "`@mrmeeseeks esports here` / `esports off` Post OWCS schedule, reminders, results and news in this channel "
     "(needs Manage Channels); `esports status` shows the current setup; "
-    "`esports preview` posts sample posts for this channel right now (for testing)\n"
+    "`esports preview` posts samples here (for testing)\n"
     "`@mrmeeseeks predictions` Prediction leaderboard (this week, season, your rank); "
     "`predictions reset` starts a new season (needs Manage Server)\n"
     "`@mrmeeseeks region cn` Make this channel the home of one region (cn, asia, korea, japan, pacific, emea, na, world): "
@@ -109,7 +111,7 @@ HELP_TEXT = (
     "(needs Manage Channels); `patches status` shows the latest patch\n"
     "`@mrmeeseeks 一起看 <Bilibili/YouTube link, show name or TV channel>` (or `watch`) Open a watch-together room with synced playback\n"
     "`@mrmeeseeks help` Show this help\n"
-    "In DMs, no `@mrmeeseeks` needed\n"
+    "In DMs, no `@mrmeeseeks` needed (admins can read DMs)\n"
     "`@mrmeeseeks wishes [game] [7d]` (admins) Get feature wishes with their votes as a CSV by DM\n"
     "`@mrmeeseeks announce` (admins) Post an announcement with buttons to read it in "
     "简体中文 / 繁體中文 / English / 日本語 / 한국어\n"
@@ -228,6 +230,8 @@ class MeeseeksBot(discord.Client):
     watch_sources: Sources | None = None
     vod_search: VodSearch | None = None
     watch_server: WatchServer | None = None
+    qa_log: QaLog | None = None              # 英雄问答记录（STATE_DIR/qa_log.jsonl）
+    report_channel_id: int | None = None     # 私信汇报频道（QA_REPORT_CHANNEL_ID）
     progress: ProgressStore | None = None
     tv_table: ChannelTable | None = None     # 电视直播的频道表：WATCH_TV_LISTS 为空时为 None
     _watch_ready = False
@@ -243,7 +247,8 @@ class MeeseeksBot(discord.Client):
                  prediction_ui: PredictionUI | None = None, announce_desk: AnnounceDesk | None = None,
                  watch_ui: WatchUI | None = None, watch_sources: Sources | None = None,
                  vod_search: VodSearch | None = None, watch_server: WatchServer | None = None,
-                 progress: ProgressStore | None = None, tv_table: ChannelTable | None = None):
+                 progress: ProgressStore | None = None, tv_table: ChannelTable | None = None,
+                 qa_log: QaLog | None = None, report_channel_id: int | None = None):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents, allowed_mentions=discord.AllowedMentions(everyone=False, roles=False))
@@ -277,6 +282,7 @@ class MeeseeksBot(discord.Client):
         self.watch_sources = watch_sources
         self.vod_search, self.watch_server, self.progress = vod_search, watch_server, progress
         self.tv_table = tv_table
+        self.qa_log, self.report_channel_id = qa_log, report_channel_id
         if watch_ui is not None:
             watch_ui.edit = self.edit_watch
             watch_ui.create_vod_room = self._create_vod_room
@@ -349,6 +355,8 @@ class MeeseeksBot(discord.Client):
         cmd, arg = parse_command(text, explicit)
         if dm and not text.strip():
             cmd = "help"        # 私信里只发了图片、贴纸等：显示帮助，不进入配对
+        if dm and cmd != "ask":
+            await self._report(qa_log.dm_report(message.author.id, message.author.display_name, text))
         if dm and (cmd in GUILD_ONLY or (cmd == "predictions" and arg.strip().lower() == "reset")):
             await message.reply(DM_GUILD_ONLY)
             return
@@ -913,23 +921,41 @@ class MeeseeksBot(discord.Client):
                             view=StartView(self.announce_desk, message.author.id))
 
     async def _ask(self, message: discord.Message, question: str) -> None:
+        outcome, reply = await self._answer(message, question)
+        await message.reply(reply)
+        if self.qa_log is not None:
+            self.qa_log.record(user_id=message.author.id, user_name=message.author.display_name,
+                               guild_id=message.guild.id if message.guild else None, channel_id=message.channel.id,
+                               message_id=message.id, question=question, outcome=outcome, answer=reply)
+        if message.guild is None:       # 频道里的问答只记录，不汇报
+            await self._report(qa_log.qa_report(message.author.id, message.author.display_name,
+                                                question, outcome, reply))
+
+    async def _answer(self, message: discord.Message, question: str) -> tuple[str, str]:
+        """(结果, 回复文本)；结果是 qa_log 里的 ANSWERED / COOLDOWN 等。"""
         if self.hero_qa is None:
-            await message.reply("Hero Q&A needs ANTHROPIC_API_KEY to be set.")
-            return
+            return qa_log.NO_API_KEY, "Hero Q&A needs ANTHROPIC_API_KEY to be set."
         if self.store is None or not self.store.ready:
-            await message.reply("Hero data is not ready yet, try again in a minute.")
-            return
+            return qa_log.NOT_READY, "Hero data is not ready yet, try again in a minute."
         if not self.ask_cooldown.allow(message.author.id):
-            await message.reply(f"Please wait {ASK_COOLDOWN_SECONDS} seconds between questions.")
-            return
+            return qa_log.COOLDOWN, f"Please wait {ASK_COOLDOWN_SECONDS} seconds between questions."
         try:
             async with message.channel.typing():
                 answer = await self.hero_qa.answer(question)
         except Exception:
             log.exception("Hero Q&A failed for %r", question)
-            await message.reply("Sorry, I couldn't answer that right now. Please try again later.")
+            return qa_log.ERROR, "Sorry, I couldn't answer that right now. Please try again later."
+        return qa_log.ANSWERED, answer[:1990] or "I couldn't come up with an answer."
+
+    async def _report(self, text: str) -> None:
+        """发到私信汇报频道，尽力而为：没设置或发不出去只记日志。"""
+        if self.report_channel_id is None:
             return
-        await message.reply(answer[:1990] or "I couldn't come up with an answer.")
+        try:
+            channel = await self._channel(self.report_channel_id)
+            await channel.send(text, allowed_mentions=discord.AllowedMentions.none())
+        except Exception:
+            log.exception("Could not post a DM report to channel %s", self.report_channel_id)
 
     async def _player(self, message: discord.Message, arg: str) -> None:
         tag = overfast.normalize_battletag(arg)
@@ -1195,13 +1221,16 @@ async def main() -> None:
             log.info("Live TV enabled with %d channel lists", len(tv_lists))
         log.info("Watch together enabled at %s (max quality %s)", watch_url, quality)
 
+    # 私信汇报频道：私信里的问答和指令发到这里；频道里的问答只记进 qa_log.jsonl
+    report = os.environ.get("QA_REPORT_CHANNEL_ID", "").strip()
     registry = Registry()
     bot = MeeseeksBot(registry, analyzer, recognizer, labels, roster, store, hero_qa, esports_feed,
                       int(wish_channel) if wish_channel else None, wish_desk, wish_plans, patch_feed,
                       regions=regions, live_watcher=live_watcher, live_notify_offline=live_notify_offline,
                       predictions=prediction_store, prediction_ui=PredictionUI(prediction_store),
                       announce_desk=announce_desk, watch_ui=watch_ui, watch_sources=watch_sources,
-                      vod_search=vod_search, watch_server=watch_server, progress=progress, tv_table=tv_table)
+                      vod_search=vod_search, watch_server=watch_server, progress=progress, tv_table=tv_table,
+                      qa_log=QaLog(state_dir / "qa_log.jsonl"), report_channel_id=int(report) if report else None)
     patch_feed.icons = HeroEmojis(bot).for_patch     # 补丁摘要里英雄名旁边的头像
     ws = WSServer(
         registry, bot,

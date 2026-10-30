@@ -340,6 +340,7 @@ journalctl -u mrmeeseeks -f      # 查看日志
 | `WATCH_MAX_TV_ROOMS` | 否 | `2` | 同时存在的电视直播房间上限（服务器转发，占出口带宽） |
 | `HERO_DATA_PATH` | 否 | `server/herodata/heroes.json` | 英雄数据缓存文件。Docker 部署时位于 `herodata` 卷 |
 | `HERO_REFRESH_HOURS` | 否 | `24` | 每隔多少小时刷新英雄数据（Overwatch Wiki）和对位数据（counterwatch.gg）；对位数据缓存在同一目录的 `matchups.json` |
+| `QA_REPORT_CHANNEL_ID` | 否 | 空 | 私信汇报频道的 ID：私信里的英雄问答（谁问的、问题、回答或没答的原因）和其他指令发到这个频道，bot 要有发消息权限；留空不汇报。不管设不设，所有英雄问答（私信和频道里 @ 的）都会记进 `STATE_DIR/qa_log.jsonl`（一行一条 JSON：时间、私信/频道、用户、问题、结果、回答；超过 20 MB 改名成 `.1`），日后排查用 |
 | `WISH_CHANNEL_ID` | 否 | 空 | 功能许愿频道的 ID，留空不启用。见下方「功能许愿频道」 |
 | `WISH_GAMES` | 否 | 守望先锋 + 22 个热门游戏 | 许愿表单里「哪个游戏」的下拉选项，逗号分隔，最多 24 个；末尾自动加 `Other ｜ 其他` |
 | `WISH_DAILY_LIMIT` | 否 | `2` | 每人每天能许几个愿，悉尼时间 0 点重置。改了之后重启，置顶入口消息里的说明会自动更新 |
@@ -367,7 +368,7 @@ python client\client.py --help
 
 ### Discord 指令
 
-下表的指令也可以私信 bot 使用，私信里不用写 `@mrmeeseeks`，直接发问题或指令（如 `卡西迪最近被削了吗`、`一起看 湖南卫视`），回复只有自己看得到。只发图片或贴纸时 bot 回帮助；配对要明说 `connect`。给服务器频道做设置的指令（`esports`、`patches`、`region`、`live`、`announce`、`predictions reset`）在私信里会被拒绝。私信里开的一起看房间，卡片发在私信里，把公开链接转给朋友即可；看到第几集按私信单独记。只有和 bot 在同一个服务器的人才能私信它。
+下表的指令也可以私信 bot 使用，私信里不用写 `@mrmeeseeks`，直接发问题或指令（如 `卡西迪最近被削了吗`、`一起看 湖南卫视`）。私信内容管理员看得到：私信里的英雄问答（问题和回答）以及其他指令会汇报到 `QA_REPORT_CHANNEL_ID` 频道，用来改进回答。只发图片或贴纸时 bot 回帮助；配对要明说 `connect`。给服务器频道做设置的指令（`esports`、`patches`、`region`、`live`、`announce`、`predictions reset`）在私信里会被拒绝。私信里开的一起看房间，卡片发在私信里，把公开链接转给朋友即可；看到第几集按私信单独记。只有和 bot 在同一个服务器的人才能私信它。
 
 | 指令 | 作用 |
 |---|---|
