@@ -34,7 +34,7 @@
 | `server/watch_progress.py` | 一起看按频道的观看进度（`STATE_DIR/watch_progress.json`）：只记 vod 房间，少于 30 秒不记，房间里没人时不记（最后一个人宽限期结束时记最后一次），坏文件按空处理；生成「上次一起看到…」文案 |
 | `server/watch_server.py` | 一起看 HTTP / WebSocket 服务（aiohttp）：房间页、静态文件、同步协议、B 站转流和 MPD |
 | `server/watch_ui.py` | 一起看的 Discord 部分：房间卡片（只有公开链接）、房主链接文案（bot 私信或 ephemeral 发给发起人）、搜索选单（`DynamicItem`）、人数更新 |
-| `server/watch_web/` | 一起看网页：`index.html`、`player.js`（播放器、同步、权限面板）、`style.css`。vod 房间只要浏览器有 MSE 就用 hls.js，不信 `canPlayType` 的原生 HLS（Android Chrome 等常以「格式不支持」失败）；原生只给没有 MSE 的 iPhone Safari 或 hls.js 脚本加载不了时用 |
+| `server/watch_web/` | 一起看网页：`index.html`、`player.js`（播放器、同步、权限面板）、`style.css`。vod 房间只要浏览器有 MSE 就用 hls.js，不信 `canPlayType` 的原生 HLS（Android Chrome 等常以「格式不支持」失败）；原生只给没有 MSE 的 iPhone Safari 或 hls.js 脚本加载不了时用。房主的播放器在 vod 线路上失败时自动发 `next_line`（每集每条线路一次，`autoSwitch`），因为服务器的探测代表不了房主所在网络 |
 | `client/client.py` | 本地客户端：连接/重连、配对码输入、Tab 监听、两段截图、上传 |
 
 ## 客户端状态

@@ -74,6 +74,13 @@
   let stageText = "";         // stage message underneath the 正在准备… indicator
   let preparing = false;      // host asked for an episode/source switch, awaiting state or error
   let preparingTimer = null;
+  // Automatic source switch (host only): the server probes lines from where
+  // it runs, which says nothing about whether the host's own network can
+  // reach a CDN (geo-blocked segments, dead ports). So when the host's
+  // player fails on a vod line, the page asks for the next line itself,
+  // once per line per episode; when every line has been tried, or the server
+  // has no other line, the failure is shown as usual.
+  let autoSwitch = { episode: null, tried: [] };
   let episodesKey = null;     // which show/episode count the episode grid was built for
 
   // ---------------------------------------------------------------- clock sync
@@ -281,7 +288,7 @@
       if (player !== adapter || adapter.failed) return;
       adapter.failed = true;
       adapter.ready = false;
-      failPlayer(VOD_FAILED_MSG, reason, hlsUrl, true, mode);
+      if (failPlayer(VOD_FAILED_MSG, reason, hlsUrl, true, mode)) return;
       // Our own playlist and key routes answer 4xx/5xx with the server-side
       // reason in the body (e.g. which source lines failed and why); hls.js
       // only keeps the status code, so fetch it once and add it to the stage.
@@ -379,14 +386,46 @@
   // Shows "<msg>：<reason>" on the stage, logs it, and sends it to the server
   // as `report` (with the player mode and browser) so it lands in the server
   // log with the room and video. Never changes room state; others are not told.
+  // Returns true when the host's page asked the server for the next line
+  // instead (the failure is still logged); false when it is final.
   function failPlayer(msg, reason, srcUrl, hostCanSwitch, mode) {
     const text = reason ? `${msg}：${reason}` : msg;
     console.error("[watch] " + text, srcUrl || "", mode || "");
-    const hint = hostCanSwitch && me.isHost ? "\n房主可以在 🔑 面板里「换一个片源」" : "";
-    setStageMessage(text + hint);
-    renderStartButton();
     send({ type: "report", detail: text, url: String(srcUrl || "").slice(0, 300),
            env: `${mode || "?"}; ${navigator.userAgent}`.slice(0, 300) });
+    const switching = hostCanSwitch && tryAutoSwitch(reason);
+    // Stays under 正在准备… while the switch is pending; shown if the server
+    // answers that no other line can play.
+    setStageMessage(text + failHint(hostCanSwitch, switching));
+    renderStartButton();
+    return switching;
+  }
+
+  function failHint(hostCanSwitch, switching) {
+    if (!hostCanSwitch || !me.isHost) return "";
+    if (switching) return "\n正在自动换下一个来源…";
+    const v = room && room.video;
+    const count = v ? Number(v.line_count) || 0 : 0;
+    if (v && autoSwitch.episode === v.episode && count > 1 && autoSwitch.tried.length >= count) {
+      return "\n已自动试过全部来源，都放不出来";
+    }
+    return "\n房主可以在 🔑 面板里「换一个片源」";
+  }
+
+  function tryAutoSwitch(reason) {
+    const v = room && room.video;
+    if (!me.isHost || !v || v.source !== "vod" || preparing) return false;
+    const count = Number(v.line_count) || 0;
+    if (count <= 1) return false;
+    if (autoSwitch.episode !== v.episode) autoSwitch = { episode: v.episode, tried: [] };
+    const line = Number(v.line) || 0;
+    if (autoSwitch.tried.includes(line)) return false;    // the server came back around: give up
+    autoSwitch.tried.push(line);
+    if (autoSwitch.tried.length >= count) return false;
+    send({ type: "next_line" });
+    startPreparing();
+    toast(`来源${line + 1}在你这边放不出来（${reason}），自动换下一个（${autoSwitch.tried.length}/${count}）`);
+    return true;
   }
 
   function createYouTubePlayer(videoId, version, onReady) {
