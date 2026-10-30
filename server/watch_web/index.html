@@ -9,9 +9,12 @@
 <body>
   <main class="page">
     <header class="topbar">
-      <span id="title" class="title">一起看</span>
+      <span class="title-wrap">
+        <span id="title" class="title">一起看</span>
+        <span id="live-badge" class="live-badge" hidden>直播</span>
+      </span>
       <span id="conn" class="conn" hidden>连接中…</span>
-      <button id="tv-btn" class="perm-btn" type="button" hidden>📺 在电视上看</button>
+      <button id="bs-btn" class="perm-btn" type="button" hidden>📺 在电视上看</button>
       <button id="perm-btn" class="perm-btn" type="button" hidden aria-expanded="false" aria-controls="perm-panel">🔑 权限</button>
     </header>
     <div id="resume" class="resume" hidden></div>
@@ -48,6 +51,12 @@
             <button id="next-line" class="line-btn" type="button">换一个片源</button>
           </div>
         </div>
+        <div id="tv-panel" class="vod-panel" hidden>
+          <div class="line-row">
+            <span id="tv-line-label" class="line-label"></span>
+            <button id="tv-next" class="line-btn" type="button">换一个源</button>
+          </div>
+        </div>
         <div class="perm-title">谁能控制播放</div>
         <ul id="members" class="members"></ul>
         <form id="change-form" class="change-form">
@@ -60,16 +69,16 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-  <div id="tv-panel" class="tv-panel" role="dialog" aria-modal="true" aria-labelledby="tv-title" hidden>
-    <div class="tv-card">
-      <div class="tv-head">
-        <span id="tv-title" class="tv-title">在电视上看</span>
-        <button id="tv-close" class="ctl" type="button" aria-label="关闭">✕</button>
+  <div id="bs-panel" class="bs-panel" role="dialog" aria-modal="true" aria-labelledby="bs-title" hidden>
+    <div class="bs-card">
+      <div class="bs-head">
+        <span id="bs-title" class="bs-title">在电视上看</span>
+        <button id="bs-close" class="ctl" type="button" aria-label="关闭">✕</button>
       </div>
       <div id="qr" class="qr" aria-label="房间二维码"></div>
-      <p class="tv-hint">电视或盒子的浏览器打开 <b id="tv-host"></b>，输入房间号</p>
-      <div id="tv-code" class="tv-code"></div>
-      <p class="tv-hint small">手机扫码也能进。电视进来是普通观众，播放照样在这里控制。</p>
+      <p class="bs-hint">电视或盒子的浏览器打开 <b id="bs-host"></b>，输入房间号</p>
+      <div id="bs-code" class="bs-code"></div>
+      <p class="bs-hint small">手机扫码也能进。电视进来是普通观众，播放照样在这里控制。</p>
     </div>
   </div>
 

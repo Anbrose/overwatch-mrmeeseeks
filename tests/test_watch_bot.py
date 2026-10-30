@@ -1,4 +1,4 @@
-"""一起看的 Discord 接入：指令路由、房间卡片文字、「我是房主」按钮、卡片编辑节流、重启后的遗留卡片。
+"""一起看的 Discord 接入：指令路由、房间卡片文字、房主链接私下发给发起人、卡片编辑节流、重启后的遗留卡片。
 用假的 Discord 对象，不连 Discord、不联网。
 
 运行：python tests/test_watch_bot.py
@@ -22,7 +22,9 @@ import watch_ui as wui  # noqa: E402
 from vod_playlist import PlaylistError  # noqa: E402
 from vod_search import Episode, Line, SearchUnavailable, Show  # noqa: E402
 from watch_progress import Progress, ProgressStore  # noqa: E402
-from watch_rooms import RoomManager, Video, VodInfo, vod_video  # noqa: E402
+from tv_channels import Candidate, Channel, Match  # noqa: E402
+from watch_rooms import RoomManager, TvInfo, Video, VodInfo, tv_video, vod_video  # noqa: E402
+from watch_server import TvUnavailable  # noqa: E402
 from watch_sources import VideoUnavailable  # noqa: E402
 
 results = []
@@ -59,9 +61,9 @@ class Clock:
         return self.t
 
 
-def make_ui(clock=None, cards_path=None, max_bili=2):
+def make_ui(clock=None, cards_path=None, max_bili=2, max_tv=2):
     clock = clock or Clock()
-    rooms = RoomManager(clock=clock, max_bili_rooms=max_bili)
+    rooms = RoomManager(clock=clock, max_bili_rooms=max_bili, max_tv_rooms=max_tv)
 
     async def fake_sleep(s):
         fut = asyncio.get_running_loop().create_future()
@@ -99,19 +101,25 @@ class FakeSources:
 
 
 class FakeMessage:
-    def __init__(self, uid=1, name="小明", channel_id=555):
-        self.author = NS(id=uid, display_name=name, bot=False)
+    def __init__(self, uid=1, name="小明", channel_id=555, dm_error=None):
+        self.author = NS(id=uid, display_name=name, bot=False, send=self._dm)
         self.channel = NS(id=channel_id)
-        self.replies = []
+        self.replies, self.dms, self.dm_error = [], [], dm_error
+
+    async def _dm(self, content):
+        if self.dm_error:
+            raise self.dm_error
+        self.dms.append(content)
+        return NS(id=9000 + len(self.dms))
 
     async def reply(self, content, view=None, allowed_mentions=None):
         self.replies.append((content, view, allowed_mentions))
         return NS(id=7000 + len(self.replies))
 
 
-def make_bot(ui=None, sources=None, vod_search=None, watch_server=None, progress=None):
+def make_bot(ui=None, sources=None, vod_search=None, watch_server=None, progress=None, tv_table=None):
     b = bot.MeeseeksBot.__new__(bot.MeeseeksBot)
-    b.watch_ui, b.watch_sources = ui, sources
+    b.watch_ui, b.watch_sources, b.tv_table = ui, sources, tv_table
     b.vod_search, b.watch_server, b.progress = vod_search, watch_server, progress
     return b
 
@@ -137,7 +145,7 @@ def test_parse_and_route():
     check("watch 紧贴链接", bot.parse_command("watch" + url) == ("watch", url))
     check("watch 后全角空格 / 大小写", bot.parse_command("Watch\u3000" + url) == ("watch", url))
     check("watch 开头的普通问题不是指令", bot.parse_command("watchpoint genji?") == ("ask", "watchpoint genji?"))
-    check("帮助里有一起看", "`@mrmeeseeks 一起看 <Bilibili/YouTube link or show name>` (or `watch`)" in bot.HELP_TEXT)
+    check("帮助里有一起看", "`@mrmeeseeks 一起看 <Bilibili/YouTube link, show name or TV channel>` (or `watch`)" in bot.HELP_TEXT)
     check("按片名一起看", bot.parse_command("一起看 绝命毒师") == ("一起看", "绝命毒师")
           and bot.parse_command("watch Breaking Bad") == ("watch", "Breaking Bad"))
 
@@ -176,12 +184,11 @@ def test_build_view():
     r = rooms.create(555, 1, "小明", yt())
     view = wui.build_view(r, PUBLIC)
     items = view.children
-    check("两个按钮", len(items) == 2)
+    check("只有一个按钮：没有「我是房主」", len(items) == 1 and not hasattr(wui, "HostButton"))
     check("进入房间是链接按钮", items[0].style == discord.ButtonStyle.link and items[0].url == f"{PUBLIC}/r/{r.room_id}"
-          and items[0].label == "进入房间")
-    host = items[1]
-    check("我是房主是持久按钮", isinstance(host, wui.HostButton) and host.item.custom_id == f"watch:host:{r.room_id}"
-          and host.item.label == "我是房主" and view.timeout is None)
+          and items[0].label == "进入房间" and view.timeout is None)
+    text = wui.host_link_text(PUBLIC, r)
+    check("房主链接文案", text == f"房主链接：{PUBLIC}/r/{r.room_id}?k={r.owner_key}\n（请勿分享，单次有效）")
 
 
 def test_watch_command():
@@ -207,6 +214,20 @@ def test_watch_command():
               and room.message_id == 7001 and room.creator_id == 42 and room.creator_name == "小红"
               and room.channel_id == 555)
         check("卡片不 ping 人", mentions is not None and mentions.everyone is False and mentions.users is False)
+        check("房主链接私信给发起人，频道里只有公开链接", msg.dms == [wui.host_link_text(PUBLIC, room)]
+              and len(msg.replies) == 1 and len(view.children) == 1 and view.children[0].url == f"{PUBLIC}/r/{room.room_id}"
+              and room.owner_key not in text)
+
+        # 私信关了：卡片照发，再回一条说明；房间照常，最先进房的人是房主
+        msg = FakeMessage(uid=43, name="小绿", dm_error=discord.Forbidden(NS(status=403, reason="Forbidden"), "dm closed"))
+        asyncio.run(b._watch(msg, "https://youtu.be/dQw4w9WgXcQ"))
+        room2 = [r for r in rooms.active() if r.creator_id == 43][0]
+        check("私信失败 → 频道里说明、不泄露密钥", msg.dms == [] and len(msg.replies) == 2
+              and msg.replies[0][0].startswith("🎬 **一起看**") and msg.replies[1][0] == wui.HOST_LINK_FAILED
+              == "房主链接没法私信给你（可能关了私信），这次谁先进房间谁就是房主。"
+              and room2.owner_key not in msg.replies[1][0] and msg.replies[1][2] is not None)
+        m = rooms.connect(room2.room_id, None, None)
+        check("没用房主链接时最先进房的人是房主", room2.host_id == m.viewer_id)
         check("卡片记录写到文件", json.loads(Path(path).read_text(encoding="utf-8")) == {"cards": [[555, 7001]]})
         check("重新读取卡片记录", wui.CardStore(Path(path)).all() == [(555, 7001)])
 
@@ -254,38 +275,23 @@ def test_card_store_corrupt():
         check("增删、不重复", s.all() == [(3, 4)] and wui.CardStore(p).all() == [(3, 4)])
 
 
-def test_host_button():
+def test_send_host_link():
     ui, rooms, _, _ = make_ui()
+    b = make_bot(ui, FakeSources(yt()))
     r = rooms.create(555, 42, "小红", yt())
-    rid = r.room_id
-    it, sent = make_interaction(42)
-    asyncio.run(ui.on_host(it, rid))
-    check("发起人拿到 ephemeral 房主链接", sent.ephemeral and f"{PUBLIC}/r/{rid}?k={r.owner_key}" in sent.content)
-    it, sent = make_interaction(7)
-    asyncio.run(ui.on_host(it, rid))
-    check("别人点提示不是房主", sent.content == "你不是这个房间的房主。" and sent.ephemeral)
-    m = rooms.connect(rid, None, r.owner_key)
-    rooms.connect(rid, None, None)
-    rooms.disconnect(rid, m.viewer_id)
-    it, sent = make_interaction(42)
-    asyncio.run(ui.on_host(it, rid))
-    check("链接用过后提示", sent.content == f"房主链接已经用过了，房主身份现在在房间里的「{r.host_name()}」手上。"
-          and sent.ephemeral)
-    it, sent = make_interaction(42)
-    asyncio.run(ui.on_host(it, "zzzzzz"))
-    check("房间不存在", sent.content == "这个房间已经结束了。" and sent.ephemeral)
-
-    # 按钮回调走 handler；没有 handler 时提示没启用
-    btn = wui.HostButton(rid)
-    it, sent = make_interaction(42)
-    wui.HostButton.handler = None
-    asyncio.run(btn.callback(it))
-    check("没 handler 提示没启用", sent.content == "一起看功能没有启用。" and sent.ephemeral)
-    wui.HostButton.handler = ui
-    it, sent = make_interaction(42)
-    asyncio.run(btn.callback(it))
-    check("按钮回调交给 handler", "房主链接已经用过了" in sent.content)
-    wui.HostButton.handler = None
+    msg = FakeMessage(uid=42)
+    check("没有交互 → 私信", asyncio.run(b._send_host_link(r, msg.author)) is True
+          and msg.dms == [wui.host_link_text(PUBLIC, r)])
+    it, sent = make_pick_interaction(42)
+    msg = FakeMessage(uid=42)
+    check("有交互 → ephemeral 回复，不私信", asyncio.run(b._send_host_link(r, msg.author, it)) is True
+          and sent.followups == [(wui.host_link_text(PUBLIC, r), True)] and msg.dms == [])
+    it, sent = make_pick_interaction(42, followup_error=discord.HTTPException(NS(status=404, reason="x"), "gone"))
+    msg = FakeMessage(uid=42)
+    check("ephemeral 失败 → 退回私信", asyncio.run(b._send_host_link(r, msg.author, it)) is True
+          and sent.followups == [] and len(msg.dms) == 1)
+    msg = FakeMessage(uid=42, dm_error=discord.Forbidden(NS(status=403, reason="Forbidden"), "dm closed"))
+    check("都失败 → False", asyncio.run(b._send_host_link(r, msg.author, it)) is False and msg.dms == [])
 
 
 def test_throttle_and_close():
@@ -389,10 +395,10 @@ def test_bot_edit_and_setup_hook():
     b.watch_ui = ui
     b.vod_search = b.watch_server = b.progress = None
     asyncio.run(b.setup_hook())
-    check("启动时注册房主按钮、选单、请求按钮并设置 handler", added == [wui.HostButton, wui.PickSelect, wui.RequestButton]
-          and wui.HostButton.handler is ui and wui.PickSelect.handler is ui and wui.RequestButton.handler is ui
-          and ui.create_vod_room == b._create_vod_room)
-    wui.HostButton.handler = wui.PickSelect.handler = wui.RequestButton.handler = None
+    check("启动时注册选单、请求按钮并设置 handler", added == [wui.PickSelect, wui.RequestButton]
+          and wui.PickSelect.handler is ui and wui.RequestButton.handler is ui
+          and ui.create_vod_room == b._create_vod_room and ui.create_tv_room == b._create_tv_room)
+    wui.PickSelect.handler = wui.RequestButton.handler = None
 
 
 # ---------------------------------------------------------------- 按片名搜索
@@ -428,15 +434,21 @@ class FakeWatchServer:
         self.attached.append((room.room_id, playlist))
 
 
-def make_pick_interaction(uid, index=0):
+def make_pick_interaction(uid, index=0, followup_error=None):
     it, sent = make_interaction(uid)
-    deferred = []
+    deferred, followups = [], []
 
     async def defer():
         deferred.append(True)
+
+    async def followup_send(content, ephemeral=False):
+        if followup_error:
+            raise followup_error
+        followups.append((content, ephemeral))
     it.response.defer = defer
+    it.followup = NS(send=followup_send)
     it.data = {"values": [str(index)]}
-    sent.deferred = deferred
+    sent.deferred, sent.followups = deferred, followups
     return it, sent
 
 
@@ -465,7 +477,7 @@ def test_watch_search_errors():
     b = make_bot(ui, FakeSources(yt()), vs, FakeWatchServer())
     msg = FakeMessage()
     asyncio.run(b._watch(msg, "x" * 51))
-    check("51 个字给用法", msg.replies[0][0] == bot.WATCH_USAGE == "用法：@mrmeeseeks 一起看 <B站或YouTube链接 或 片名>"
+    check("51 个字给用法", msg.replies[0][0] == bot.WATCH_USAGE == "用法：@mrmeeseeks 一起看 <B站或YouTube链接、片名或台名>"
           and vs.calls == [])
     msg = FakeMessage()
     asyncio.run(b._watch(msg, ""))
@@ -529,10 +541,26 @@ def test_pick_flow():
     check("选中后先改成正在准备…并去掉选单", edits[0] == (555, 7001, "正在准备…", None) and wui.PICK_PREPARING == "正在准备…")
     check("搜索消息改成已选择且去掉选单", edits[1:] == [(555, 7001, "已选择：绝命毒师 第一季", None)])
     text, view, mentions = msg.replies[1]
-    check("卡片回复在原消息下并记录", text.startswith("🎬 **一起看**") and "片源：量子" in text and view is not None
+    check("卡片回复在原消息下并记录", text.startswith("🎬 **一起看**") and "（来源1）" in text and "量子" not in text
+          and view is not None
           and room.message_id == 7002 and ui.cards.all() == [(555, 7002)]
           and mentions is not None and mentions.users is False)
+    check("房主链接 ephemeral 回给选的人，卡片只有公开链接", sent.followups == [(wui.host_link_text(PUBLIC, room), True)]
+          and msg.dms == [] and len(view.children) == 1 and room.owner_key not in text)
     check("没有进度时 resume 为空", room.video.vod.resume is None)
+
+    # ephemeral 和私信都发不出去：搜索消息里说明
+    b, ui, rooms, clock, edits, ws, msg = setup_search(uid=44)
+    msg.dm_error = discord.Forbidden(NS(status=403, reason="Forbidden"), "dm closed")
+
+    async def go_fail():
+        it, sent = make_pick_interaction(44, followup_error=discord.HTTPException(NS(status=404, reason="x"), "gone"))
+        await ui.on_pick(it, token_of(msg))
+        return sent
+    sent = asyncio.run(go_fail())
+    room = rooms.active()[0]
+    check("房主链接发不出去 → 已选择后面附说明", edits[-1] == (555, 7001, f"已选择：绝命毒师 第一季\n{wui.HOST_LINK_FAILED}", None)
+          and room.owner_key not in edits[-1][2] and len(msg.replies) == 2)
 
 
 def tok_done(ui, tok):
@@ -767,6 +795,207 @@ def test_request_buttons():
     asyncio.run(want.callback(it))
     check("别人不受影响", sent.content.startswith("已记下「老友记」") and len(store.all()) == 3)
     wui.RequestButton.handler = None
+# ---------------------------------------------------------------- 电视直播
+def chan(name="湖南卫视", key=None):
+    return Channel(key or name, name, [Candidate("https://tv.example.com/a.m3u8", None, 0, False, True)])
+
+
+class FakeTable:
+    def __init__(self, exact=None, partial=None):
+        self.exact, self.partial, self.calls = exact, partial or [], []
+
+    def match(self, query):
+        self.calls.append(query)
+        return Match(self.exact, list(self.partial))
+
+
+class FakeTvServer(FakeWatchServer):
+    def __init__(self, error=None, tv_error=None):
+        super().__init__(error)
+        self.tv_error, self.tv_prepared = tv_error, []
+
+    async def prepare_tv(self, channel, order=None, start=0, bad=frozenset()):
+        self.tv_prepared.append(channel)
+        if self.tv_error:
+            raise self.tv_error
+        return tv_video(TvInfo(channel, channel.ordered(), 0))
+
+
+def setup_tv(table, shows=None, vs_error=None, ws=None, max_tv=2, vod=True, uid=42, query="湖南"):
+    ui, rooms, clock, edits = make_ui(max_tv=max_tv)
+    vs = FakeVodSearch([] if shows is None else shows, vs_error) if vod else None
+    ws = ws or FakeTvServer()
+    b = make_bot(ui, FakeSources(yt()), vs, ws, None, table)
+    ui.create_vod_room = b._create_vod_room
+    ui.create_tv_room = b._create_tv_room
+    msg = FakeMessage(uid=uid, name="小红")
+    msg.author.mention = f"<@{uid}>"
+    asyncio.run(b._watch(msg, query))
+    return b, ui, rooms, clock, edits, ws, msg, vs
+
+
+def test_tv_exact():
+    ch = chan()
+    table = FakeTable(exact=ch)
+    b, ui, rooms, clock, edits, ws, msg, vs = setup_tv(table, shows=[show()])
+    room = rooms.active()[0] if rooms.active() else None
+    check("精确匹配：先回正在准备…", msg.replies[0][0] == "正在准备…")
+    check("精确匹配：建 tv 房间", room is not None and room.video.source == "tv" and room.creator_id == 42
+          and room.creator_name == "小红" and ws.tv_prepared == [ch] and table.calls == ["湖南"])
+    text, view, mentions = msg.replies[1]
+    # 新房间总是暂停开始（RoomManager.create），房主点播放后卡片才会变成“直播中”
+    check("精确匹配：发卡片", "正在播放：**📺 湖南卫视**（直播）" in text and "⏸ 已暂停 · 👥 0 人在看" in text
+          and view is not None
+          and room.message_id == 7002 and ui.cards.all() == [(555, 7002)]
+          and mentions is not None and mentions.users is False)
+    check("精确匹配：准备消息改成已选择", edits == [(555, 7001, "已选择：📺 湖南卫视", None)])
+    check("精确匹配：房主链接私信给发起人，不进频道", msg.dms == [wui.host_link_text(PUBLIC, room)]
+          and not any(room.owner_key in r[0] for r in msg.replies))
+    check("精确匹配：没搜影视", vs.calls == [])
+
+    b, ui, rooms, clock, edits, ws, msg, vs = setup_tv(FakeTable(exact=ch), ws=FakeTvServer(tv_error=TvUnavailable()))
+    check("没有能播的源", rooms.rooms == {} and len(msg.replies) == 1
+          and edits == [(555, 7001, "这个台暂时没有能播的源", None)])
+
+    ui, rooms, clock, edits = make_ui(max_tv=2)
+    for _ in range(2):
+        rooms.create(1, 1, "a", tv_video(TvInfo(ch, ch.ordered(), 0)))
+    ws = FakeTvServer()
+    b = make_bot(ui, FakeSources(yt()), FakeVodSearch([]), ws, None, FakeTable(exact=ch))
+    msg = FakeMessage()
+    asyncio.run(b._watch(msg, "湖南"))
+    check("直播房间已满：直接回复、不探测", len(rooms.active()) == 2 and edits == [] and ws.tv_prepared == []
+          and [r[0] for r in msg.replies] == ["直播房间已满（最多 2 个），请稍后再试"]
+          and msg.replies[0][2] is not None and msg.replies[0][2].users is False)
+
+    # 选单里选台时已满：改搜索消息，不探测
+    b, ui, rooms, clock, edits, ws, msg, vs = setup_tv(FakeTable(partial=[ch]), shows=[show()], max_tv=1)
+    rooms.create(1, 1, "a", tv_video(TvInfo(ch, ch.ordered(), 0)))
+
+    async def pick_full():
+        it, _ = make_pick_interaction(42)
+        it.data = {"values": ["tv0"]}
+        await ui.on_pick(it, token_of(msg))
+    asyncio.run(pick_full())
+    check("选台时已满：改搜索消息、不探测", ws.tv_prepared == [] and len(rooms.active()) == 1
+          and edits == [(555, 7001, "正在准备…", None), (555, 7001, "直播房间已满（最多 1 个），请稍后再试", None)])
+
+    # create 仍然把关：探测期间名额被占满
+    ui, rooms, clock, edits = make_ui(max_tv=1)
+
+    class RacingServer(FakeTvServer):
+        async def prepare_tv(self, channel, order=None, start=0, bad=frozenset()):
+            rooms.create(1, 1, "a", tv_video(TvInfo(ch, ch.ordered(), 0)))
+            return await super().prepare_tv(channel, order, start, bad)
+    b = make_bot(ui, FakeSources(yt()), None, RacingServer(), None, FakeTable(exact=ch))
+    msg = FakeMessage()
+    asyncio.run(b._watch(msg, "湖南"))
+    check("探测期间满了仍由 create 拒绝", len(rooms.active()) == 1
+          and edits == [(555, 7001, "直播房间已满（最多 1 个），请稍后再试", None)])
+
+    # 卡片发不出去：关房
+    ui, rooms, clock, edits = make_ui()
+    b = make_bot(ui, FakeSources(yt()), None, FakeTvServer(), None, FakeTable(exact=ch))
+    msg = FakeMessage()
+    real = msg.reply
+
+    async def fail_card(content, view=None, allowed_mentions=None):
+        if view is not None:
+            raise discord.HTTPException(NS(status=403, reason="Forbidden"), "no perms")
+        return await real(content, view, allowed_mentions)
+    msg.reply = fail_card
+    asyncio.run(b._watch(msg, "湖南"))
+    check("卡片发送失败就关房", rooms.rooms == {} and ui.cards.all() == []
+          and edits == [(555, 7001, "出错了，请稍后再试", None)])
+
+    # 一个字的查询不查台
+    table = FakeTable(exact=ch)
+    b, ui, rooms, clock, edits, ws, msg, vs = setup_tv(table, shows=[show()], query="湖")
+    check("不足 2 个字不查台", table.calls == [] and rooms.active() == [] and vs.calls == ["湖"])
+
+
+def test_tv_partial_menu():
+    chs = [chan("湖南卫视"), chan("湖南经视")]
+    b, ui, rooms, clock, edits, ws, msg, vs = setup_tv(FakeTable(partial=chs), shows=[show(), show(key="k2")])
+    text, view, _ = msg.replies[0]
+    opts = view.children[0].item.options
+    check("一个选单（加「没有我想看的」按钮）：台在前", len(msg.replies) == 1 and len(view.children) == 2
+          and isinstance(view.children[1], wui.RequestButton) and len(opts) == 4
+          and opts[0].label == "📺 湖南卫视 · 直播" and opts[0].value == "tv0"
+          and opts[1].label.startswith("📺 ") and opts[1].label.endswith(" · 直播") and opts[1].value == "tv1")
+    check("影视选项值不变", [o.value for o in opts[2:]] == ["0", "1"] and vs.calls == ["湖南"])
+    p = ui.pending[token_of(msg)]
+    check("PendingSearch 带台", p.channels == chs and len(p.shows) == 2)
+
+    async def pick(value, uid=42, followup_error=None):
+        it, sent = make_pick_interaction(uid, followup_error=followup_error)
+        it.data = {"values": [value]}
+        await ui.on_pick(it, token_of(msg))
+        return sent
+    sent = asyncio.run(pick("tv0"))
+    room = rooms.active()[0] if rooms.active() else None
+    check("选 tv0 建 tv 房间", room is not None and room.video.source == "tv" and ws.tv_prepared == [chs[0]]
+          and sent.deferred == [True] and ws.prepared == [])
+    check("选台：正在准备… 再已选择", edits == [(555, 7001, "正在准备…", None), (555, 7001, "已选择：📺 湖南卫视", None)])
+    check("选台：卡片回复原消息", "📺 湖南卫视" in msg.replies[1][0] and room.message_id == 7002)
+    check("选台：房主链接 ephemeral 回给发起人", sent.followups == [(wui.host_link_text(PUBLIC, room), True)]
+          and msg.dms == [])
+
+    b, ui, rooms, clock, edits, ws, msg, vs = setup_tv(FakeTable(partial=chs), shows=[show()])
+    msg.dm_error = discord.Forbidden(NS(status=403, reason="Forbidden"), "dm closed")
+    sent = asyncio.run(pick("tv0", followup_error=discord.HTTPException(NS(status=404, reason="x"), "gone")))
+    check("选台：房主链接发不出去 → 已选择后面附说明",
+          edits[-1] == (555, 7001, f"已选择：📺 湖南卫视\n{wui.HOST_LINK_FAILED}", None))
+
+    b, ui, rooms, clock, edits, ws, msg, vs = setup_tv(FakeTable(partial=chs), shows=[show()])
+    called = []
+
+    async def fake_tv(p, ch):
+        called.append(ch)
+    ui.create_tv_room = fake_tv
+    asyncio.run(pick("tv1"))
+    check("tv1 交给 create_tv_room", called == [chs[1]])
+
+    b, ui, rooms, clock, edits, ws, msg, vs = setup_tv(FakeTable(partial=chs), shows=[show()])
+    asyncio.run(pick("0"))
+    check("选 0 仍走 vod", rooms.active()[0].video.source == "vod" and ws.tv_prepared == []
+          and len(ws.prepared) == 1)
+
+    b, ui, rooms, clock, edits, ws, msg, vs = setup_tv(FakeTable(partial=chs), shows=[show()])
+    sent = asyncio.run(pick("tv9"))
+    check("越界的 tv 值提示已过期", sent.content == "已过期，请重新搜索" and rooms.active() == [])
+    sent = asyncio.run(pick("tvx"))
+    check("坏的 tv 值提示已过期", sent.content == "已过期，请重新搜索")
+
+
+def test_tv_partial_fallbacks():
+    chs = [chan("湖南卫视")]
+    b, ui, rooms, clock, edits, ws, msg, vs = setup_tv(FakeTable(partial=chs), vs_error=SearchUnavailable())
+    opts = msg.replies[0][1].children[0].item.options
+    check("资源站不可用时只给台", [o.value for o in opts] == ["tv0"] and vs.calls == ["湖南"])
+    b, ui, rooms, clock, edits, ws, msg, vs = setup_tv(FakeTable(partial=chs), vod=False)
+    opts = msg.replies[0][1].children[0].item.options
+    check("没启用影视搜索也给台", [o.value for o in opts] == ["tv0"])
+    b, ui, rooms, clock, edits, ws, msg, vs = setup_tv(FakeTable(), query="不存在的台")
+    check("台和影视都没有 → 没找到", msg.replies[0][0] == "没找到「不存在的台」")
+    b, ui, rooms, clock, edits, ws, msg, vs = setup_tv(FakeTable(), vs_error=SearchUnavailable())
+    check("没台且资源站不可用 → 原提示", msg.replies[0][0] == "资源站暂时无法访问，请稍后再试")
+    b, ui, rooms, clock, edits, ws, msg, vs = setup_tv(FakeTable(), vod=False)
+    check("没台且没启用搜索 → 原提示", msg.replies[0][0] == "按片名搜索没有启用，请贴 B 站或 YouTube 链接")
+
+
+def test_tv_card_text():
+    ui, rooms, clock, _ = make_ui()
+    ch = chan()
+    r = rooms.create(555, 1, "小明", tv_video(TvInfo(ch, ch.ordered(), 0)))
+    r.playback.playing, r.playback.position, r.playback.at = True, 0.0, clock.t
+    rooms.connect(r.room_id, None, None)
+    lines = wui.card_text(r, clock.t + 100).split("\n")
+    check("tv 卡片标题行", lines[0] == "🎬 **一起看**" and lines[1] == "正在播放：**📺 湖南卫视**（直播）")
+    check("tv 卡片直播中、不显示时间", lines[2] == "▶ 直播中 · 👥 1 人在看" and lines[3] == f"房主：{r.host_name()}")
+    r.playback.playing = False
+    text = wui.card_text(r, clock.t + 100)
+    check("tv 卡片暂停", "⏸ 已暂停 · 👥 1 人在看" in text and "/" not in text and "0:" not in text)
 
 
 if __name__ == "__main__":
@@ -775,7 +1004,7 @@ if __name__ == "__main__":
     test_build_view()
     test_watch_command()
     test_card_store_corrupt()
-    test_host_button()
+    test_send_host_link()
     test_throttle_and_close()
     test_edit_failure_logged()
     test_stale_cards_on_ready()
@@ -791,6 +1020,10 @@ if __name__ == "__main__":
     test_pick_select_item()
     test_watch_link_unchanged()
     test_request_buttons()
+    test_tv_exact()
+    test_tv_partial_menu()
+    test_tv_partial_fallbacks()
+    test_tv_card_text()
     passed = sum(r for _, r in results)
     print(f"\n{passed}/{len(results)} passed")
     sys.exit(0 if passed == len(results) else 1)

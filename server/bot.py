@@ -14,7 +14,7 @@
   @mrmeeseeks esports here|off|status  赛事推送的默认频道，见 esports_feed.py
   @mrmeeseeks region <赛区> [off]       把当前频道绑定成某赛区的频道（赛事推送和开播通知共用），见 regions.py
   @mrmeeseeks live add|remove|list     按赛区登记 B 站直播间，开播时通知，见 live_watch.py
-  @mrmeeseeks 一起看 <链接或片名>      开一起看房间（B 站 / YouTube 链接，或按片名搜影视；也可写 watch），见 watch_ui.py
+  @mrmeeseeks 一起看 <链接、片名或台名>  开一起看房间（B 站 / YouTube 链接，按片名搜影视，或按台名看电视直播；也可写 watch），见 watch_ui.py
   @mrmeeseeks <问题>     英雄问答（数值、补丁、几枪击杀），见 hero_qa.py
 
 功能许愿频道（WISH_CHANNEL_ID）只接受表单提交，见 wishes.py；许愿子区里的 @ 用来改方案，见 wish_plan.py。
@@ -22,6 +22,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import io
 import json
 import logging
@@ -32,6 +33,7 @@ import time
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Awaitable, Callable, Sequence
 
 import discord
 import numpy as np
@@ -66,17 +68,23 @@ from vision.text import load_maps
 from wish_plan import WishPlanner, WishPlans
 from wishes import (WISH_DAILY_LIMIT, WishDesk, WishEntryView, WishLog, WishQuota, ensure_entry, export_csv, parse_export_args,
                     parse_games, select_wishes, vote_count)
+import tv_net
+import tv_stream
+from tv_channels import Channel, ChannelTable, parse_sources_env as parse_tv_lists
+import qa_log
+from qa_log import QaLog
 from vod_playlist import PlaylistError
 from vod_search import SearchUnavailable, VodSearch, parse_sources_env
 from geoip import BlockLog, GeoDB, parse_allowed
 from sysstats import SystemStats
 from watch_progress import ProgressRecorder, ProgressStore
 from watch_requests import DAILY_LIMIT as REQUEST_DAILY_LIMIT, RequestStore
-from watch_rooms import RoomManager, RoomsFull
-from watch_server import WatchServer, load_admin_key
+from watch_rooms import RoomManager, RoomsFull, TvRoomsFull
+from watch_server import TvUnavailable, WatchServer, load_admin_key
 from watch_sources import QUALITY_QN, Sources, VideoUnavailable, find_link
-from watch_ui import (CardStore, HostButton, PendingSearch, PickSelect, RequestButton, WatchUI, build_pick_view,
-                      build_want_view, search_header, card_text, build_view as build_watch_view)
+from watch_ui import (HOST_LINK_FAILED, PICK_PREPARING, CardStore, PendingSearch, PickSelect, RequestButton, WatchUI,
+                      build_pick_view, build_want_view, host_link_text, search_header,
+                      card_text, build_view as build_watch_view)
 from ws_server import WSServer
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
@@ -95,7 +103,7 @@ HELP_TEXT = (
     "`@mrmeeseeks disconnect` Unpair the client bound to this channel\n"
     "`@mrmeeseeks esports here` / `esports off` Post OWCS schedule, reminders, results and news in this channel "
     "(needs Manage Channels); `esports status` shows the current setup; "
-    "`esports preview` posts sample posts for this channel right now (for testing)\n"
+    "`esports preview` posts samples here (for testing)\n"
     "`@mrmeeseeks predictions` Prediction leaderboard (this week, season, your rank); "
     "`predictions reset` starts a new season (needs Manage Server)\n"
     "`@mrmeeseeks region cn` Make this channel the home of one region (cn, asia, korea, japan, pacific, emea, na, world): "
@@ -104,8 +112,9 @@ HELP_TEXT = (
     "`live remove <url>`, `live list`\n"
     "`@mrmeeseeks patches here` / `patches off` Post a summary of each new official Overwatch patch in this channel "
     "(needs Manage Channels); `patches status` shows the latest patch\n"
-    "`@mrmeeseeks 一起看 <Bilibili/YouTube link or show name>` (or `watch`) Open a watch-together room with synced playback\n"
+    "`@mrmeeseeks 一起看 <Bilibili/YouTube link, show name or TV channel>` (or `watch`) Open a watch-together room with synced playback\n"
     "`@mrmeeseeks help` Show this help\n"
+    "In DMs, no `@mrmeeseeks` needed (admins can read DMs)\n"
     "`@mrmeeseeks wishes [game] [7d]` (admins) Get feature wishes with their votes as a CSV by DM\n"
     "`@mrmeeseeks announce` (admins) Post an announcement with buttons to read it in "
     "简体中文 / 繁體中文 / English / 日本語 / 한국어\n"
@@ -117,7 +126,10 @@ ARG_COMMANDS = ("player", "esports", "patches", "wishes", "region", "live", "pre
 LIVE_USAGE = ("Usage: `@mrmeeseeks live add <region> <Bilibili room url or id> [label]`, "
               "`live remove <room url or id>` or `live list`. Bind the region's channel first with `@mrmeeseeks region <region>`.")
 ASK_COOLDOWN_SECONDS = 5
-WATCH_USAGE = "用法：@mrmeeseeks 一起看 <B站或YouTube链接 或 片名>"
+# 私信里不能用的指令：都是给服务器频道做设置的（predictions 只有 reset 不行，见 on_message）
+GUILD_ONLY = ("esports", "patches", "region", "live", "announce")
+DM_GUILD_ONLY = "This command only works in a server channel, not in DMs."
+WATCH_USAGE = "用法：@mrmeeseeks 一起看 <B站或YouTube链接、片名或台名>"
 _WATCH_PREFIX = re.compile(r"watch(?=\s|http)", re.IGNORECASE)     # \s 含全角空格
 
 
@@ -221,7 +233,10 @@ class MeeseeksBot(discord.Client):
     watch_sources: Sources | None = None
     vod_search: VodSearch | None = None
     watch_server: WatchServer | None = None
+    qa_log: QaLog | None = None              # 英雄问答记录（STATE_DIR/qa_log.jsonl）
+    report_channel_id: int | None = None     # 私信汇报频道（QA_REPORT_CHANNEL_ID）
     progress: ProgressStore | None = None
+    tv_table: ChannelTable | None = None     # 电视直播的频道表：WATCH_TV_LISTS 为空时为 None
     _watch_ready = False
 
     def __init__(self, registry: Registry, analyzer: Analyzer | None, recognizer: Recognizer,
@@ -235,7 +250,8 @@ class MeeseeksBot(discord.Client):
                  prediction_ui: PredictionUI | None = None, announce_desk: AnnounceDesk | None = None,
                  watch_ui: WatchUI | None = None, watch_sources: Sources | None = None,
                  vod_search: VodSearch | None = None, watch_server: WatchServer | None = None,
-                 progress: ProgressStore | None = None):
+                 progress: ProgressStore | None = None, tv_table: ChannelTable | None = None,
+                 qa_log: QaLog | None = None, report_channel_id: int | None = None):
         intents = discord.Intents.default()
         intents.message_content = True
         super().__init__(intents=intents, allowed_mentions=discord.AllowedMentions(everyone=False, roles=False))
@@ -268,9 +284,12 @@ class MeeseeksBot(discord.Client):
         self.watch_ui = watch_ui
         self.watch_sources = watch_sources
         self.vod_search, self.watch_server, self.progress = vod_search, watch_server, progress
+        self.tv_table = tv_table
+        self.qa_log, self.report_channel_id = qa_log, report_channel_id
         if watch_ui is not None:
             watch_ui.edit = self.edit_watch
             watch_ui.create_vod_room = self._create_vod_room
+            watch_ui.create_tv_room = self._create_tv_room
 
     def hero_name(self, key: str) -> str:
         return self.names.get(key) or overfast.hero_name(key)
@@ -288,12 +307,12 @@ class MeeseeksBot(discord.Client):
             LangButton.handler = self.announce_desk
             self.add_dynamic_items(LangButton)      # 公告的语言按钮：重启前发的公告照样能点
         if self.watch_ui:
-            HostButton.handler = self.watch_ui
             PickSelect.handler = self.watch_ui
             RequestButton.handler = self.watch_ui
             self.watch_ui.create_vod_room = self._create_vod_room
-            # 一起看的「我是房主」按钮、搜索选单、「没有我想看的」/「我正在寻找这一部影视资源」按钮
-            self.add_dynamic_items(HostButton, PickSelect, RequestButton)
+            self.watch_ui.create_tv_room = self._create_tv_room
+            # 一起看的搜索选单、「没有我想看的」/「我正在寻找这一部影视资源」按钮
+            self.add_dynamic_items(PickSelect, RequestButton)
 
     async def on_ready(self) -> None:
         log.info("Logged in to Discord as %s", self.user)
@@ -324,13 +343,14 @@ class MeeseeksBot(discord.Client):
                 and self.wish_plans.requests_review(message)):
             await self.wish_plans.review_requested(message)
             return
-        if self.user not in message.mentions:
+        dm = message.guild is None      # 私信：每条消息都是指令，不用 @
+        if self.user not in message.mentions and not dm:
             return
         if message.channel.id == self.wish_channel_id:
             return      # 许愿频道只走表单，不响应 @ 指令
         text = message.content
         tokens = (f"<@{self.user.id}>", f"<@!{self.user.id}>")
-        explicit = any(t in text for t in tokens)
+        explicit = dm or any(t in text for t in tokens)
         for token in tokens:
             text = text.replace(token, "")
         if self._in_wish_thread(message.channel):
@@ -338,6 +358,13 @@ class MeeseeksBot(discord.Client):
                 await self._wish_thread(message, text)
             return
         cmd, arg = parse_command(text, explicit)
+        if dm and not text.strip():
+            cmd = "help"        # 私信里只发了图片、贴纸等：显示帮助，不进入配对
+        if dm and cmd != "ask":
+            await self._report(qa_log.dm_report(message.author.id, message.author.display_name, text))
+        if dm and (cmd in GUILD_ONLY or (cmd == "predictions" and arg.strip().lower() == "reset")):
+            await message.reply(DM_GUILD_ONLY)
+            return
 
         if cmd == "connect":
             await self._connect_flow(message)
@@ -594,7 +621,14 @@ class MeeseeksBot(discord.Client):
             await message.reply("一起看功能没有启用。")
             return
         if find_link(arg) is None:
-            await self._watch_search(message, arg)
+            channels: list[Channel] = []
+            if self.tv_table is not None and self.watch_server is not None and len(arg.strip()) >= 2:
+                m = self.tv_table.match(arg)
+                if m.exact is not None:          # 台名精确匹配：直接开电视房间
+                    await self._open_tv(message, m.exact)
+                    return
+                channels = m.partial
+            await self._watch_search(message, arg, channels)
             return
         try:
             video = await sources.resolve(arg)
@@ -605,6 +639,7 @@ class MeeseeksBot(discord.Client):
         except RoomsFull as e:
             await message.reply(f"B 站房间已满（最多 {e.limit} 个），请稍后再试或换 YouTube 视频")
             return
+        delivered = await self._send_host_link(room, message.author)
         try:
             card = await message.reply(card_text(room, ui.rooms.clock()), view=build_watch_view(room, ui.public_url),
                                        allowed_mentions=discord.AllowedMentions.none())
@@ -614,26 +649,54 @@ class MeeseeksBot(discord.Client):
             return
         room.message_id = card.id
         ui.cards.add(message.channel.id, card.id)
+        if not delivered:
+            try:
+                await message.reply(HOST_LINK_FAILED, allowed_mentions=discord.AllowedMentions.none())
+            except discord.HTTPException:
+                log.exception("Could not post the host-link notice in channel %s", message.channel.id)
 
-    async def _watch_search(self, message: discord.Message, arg: str) -> None:
+    async def _send_host_link(self, room, user: discord.abc.User, interaction: discord.Interaction | None = None) -> bool:
+        """把房主链接单独发给发起人：有交互就 ephemeral 回复，否则（或失败时）私信。发不出去返回 False。"""
+        text = host_link_text(self.watch_ui.public_url, room)
+        if interaction is not None:
+            try:
+                await interaction.followup.send(text, ephemeral=True)
+                return True
+            except discord.HTTPException:
+                log.info("Ephemeral host link failed for room %s, trying a DM", room.room_id)
+        try:
+            await user.send(text)
+            return True
+        except discord.HTTPException:      # 私信关了（Forbidden）等
+            log.info("Could not DM the host link for room %s to user %s", room.room_id, user.id)
+            return False
+
+    async def _watch_search(self, message: discord.Message, arg: str, channels: Sequence[Channel] = ()) -> None:
+        """按片名搜影视；channels 是部分匹配的电视台，和影视结果放在同一个选单里（台在前）。"""
         ui, search = self.watch_ui, self.vod_search
+        channels = list(channels)
         if search is None or self.watch_server is None:
-            await message.reply("按片名搜索没有启用，请贴 B 站或 YouTube 链接")
-            return
+            search = None
+            if not channels:
+                await message.reply("按片名搜索没有启用，请贴 B 站或 YouTube 链接")
+                return
         if not 1 <= len(arg) <= 50:
             await message.reply(WATCH_USAGE)
             return
-        try:
-            shows = await search.search(arg)
-        except SearchUnavailable as e:
-            await message.reply(e.message)
-            return
-        if not shows:
+        shows = []
+        if search is not None:
+            try:
+                shows = await search.search(arg)
+            except SearchUnavailable as e:
+                if not channels:
+                    await message.reply(e.message)
+                    return
+        if not shows and not channels:
             await message.reply(f"没找到「{arg}」", view=build_want_view(arg),
                                 allowed_mentions=discord.AllowedMentions.none())
             return
         p = PendingSearch(secrets.token_urlsafe(12), message.author.id, arg, shows, message.channel.id, None,
-                          message, ui.clock())
+                          message, ui.clock(), channels=channels)
         try:
             sent = await message.reply(search_header(arg, message.author.mention),
                                        view=build_pick_view(p, self.progress),
@@ -652,13 +715,14 @@ class MeeseeksBot(discord.Client):
             video, playlist = await server.prepare_vod(show, 0, resume=resume)
             room = ui.rooms.create(p.channel_id, p.requester_id, p.origin_message.author.display_name, video)
         except PlaylistError as e:
-            await self._edit_search(p, e.message)
+            await self._edit_search(p, e.text)      # 带上每条线路不能播的原因
             return
         except Exception:
             log.exception("Could not prepare a vod room for %r", show.title)
             await self._edit_search(p, "出错了，请稍后再试")
             return
         server.attach_playlist(room, playlist)
+        delivered = await self._send_host_link(room, p.origin_message.author, p.interaction)
         try:
             card = await p.origin_message.reply(card_text(room, ui.rooms.clock()),
                                                 view=build_watch_view(room, ui.public_url),
@@ -670,7 +734,64 @@ class MeeseeksBot(discord.Client):
             return
         room.message_id = card.id
         ui.cards.add(p.channel_id, card.id)
-        await self._edit_search(p, f"已选择：{show.title}")
+        await self._edit_search(p, f"已选择：{show.title}" + ("" if delivered else f"\n{HOST_LINK_FAILED}"))
+
+    async def _open_tv(self, message: discord.Message, channel: Channel) -> None:
+        """台名精确匹配：先回一条「正在准备…」，探到能播的源再建房发卡片，最后把那条改成结果。"""
+        try:
+            self.watch_ui.rooms.check_tv()       # 名额已满就别让人等探测
+        except TvRoomsFull as e:
+            await message.reply(str(e), allowed_mentions=discord.AllowedMentions.none())
+            return
+        try:
+            status = await message.reply(PICK_PREPARING, allowed_mentions=discord.AllowedMentions.none())
+        except discord.HTTPException:
+            log.exception("Could not reply in channel %s", message.channel.id)
+            return
+
+        async def set_status(text: str) -> None:
+            try:
+                await self.watch_ui.edit(message.channel.id, status.id, text, None)
+            except Exception:
+                log.exception("Could not edit message %s", status.id)
+        await self._start_tv(message, channel, set_status)
+
+    async def _create_tv_room(self, p: PendingSearch, channel: Channel) -> None:
+        """搜索选单里选了台：和 _open_tv 一样，只是结果写回搜索消息。"""
+        async def set_status(text: str) -> None:
+            await self._edit_search(p, text)
+        await self._start_tv(p.origin_message, channel, set_status, p.interaction)
+
+    async def _start_tv(self, origin: discord.Message, channel: Channel,
+                        set_status: Callable[[str], Awaitable[None]],
+                        interaction: discord.Interaction | None = None) -> None:
+        ui, server = self.watch_ui, self.watch_server
+        try:
+            ui.rooms.check_tv()                  # 探测前先查名额；create 里还会再查一次（防并发）
+            video = await server.prepare_tv(channel)
+            room = ui.rooms.create(origin.channel.id, origin.author.id, origin.author.display_name, video)
+        except TvUnavailable as e:
+            await set_status(e.message)
+            return
+        except TvRoomsFull as e:
+            await set_status(str(e))
+            return
+        except Exception:
+            log.exception("Could not prepare a tv room for %r", channel.name)
+            await set_status("出错了，请稍后再试")
+            return
+        delivered = await self._send_host_link(room, origin.author, interaction)
+        try:
+            card = await origin.reply(card_text(room, ui.rooms.clock()), view=build_watch_view(room, ui.public_url),
+                                      allowed_mentions=discord.AllowedMentions.none())
+        except discord.HTTPException:
+            log.exception("Could not post the watch card in channel %s", origin.channel.id)
+            ui.rooms.close(room.room_id)   # 没有卡片就没人进得来，直接关掉，别占着直播名额
+            await set_status("出错了，请稍后再试")
+            return
+        room.message_id = card.id
+        ui.cards.add(origin.channel.id, card.id)
+        await set_status(f"已选择：📺 {channel.name}" + ("" if delivered else f"\n{HOST_LINK_FAILED}"))
 
     async def _edit_search(self, p: PendingSearch, text: str) -> None:
         """改搜索结果消息（去掉选单），尽力而为：失败只记日志。"""
@@ -806,23 +927,41 @@ class MeeseeksBot(discord.Client):
                             view=StartView(self.announce_desk, message.author.id))
 
     async def _ask(self, message: discord.Message, question: str) -> None:
+        outcome, reply = await self._answer(message, question)
+        await message.reply(reply)
+        if self.qa_log is not None:
+            self.qa_log.record(user_id=message.author.id, user_name=message.author.display_name,
+                               guild_id=message.guild.id if message.guild else None, channel_id=message.channel.id,
+                               message_id=message.id, question=question, outcome=outcome, answer=reply)
+        if message.guild is None:       # 频道里的问答只记录，不汇报
+            await self._report(qa_log.qa_report(message.author.id, message.author.display_name,
+                                                question, outcome, reply))
+
+    async def _answer(self, message: discord.Message, question: str) -> tuple[str, str]:
+        """(结果, 回复文本)；结果是 qa_log 里的 ANSWERED / COOLDOWN 等。"""
         if self.hero_qa is None:
-            await message.reply("Hero Q&A needs ANTHROPIC_API_KEY to be set.")
-            return
+            return qa_log.NO_API_KEY, "Hero Q&A needs ANTHROPIC_API_KEY to be set."
         if self.store is None or not self.store.ready:
-            await message.reply("Hero data is not ready yet, try again in a minute.")
-            return
+            return qa_log.NOT_READY, "Hero data is not ready yet, try again in a minute."
         if not self.ask_cooldown.allow(message.author.id):
-            await message.reply(f"Please wait {ASK_COOLDOWN_SECONDS} seconds between questions.")
-            return
+            return qa_log.COOLDOWN, f"Please wait {ASK_COOLDOWN_SECONDS} seconds between questions."
         try:
             async with message.channel.typing():
                 answer = await self.hero_qa.answer(question)
         except Exception:
             log.exception("Hero Q&A failed for %r", question)
-            await message.reply("Sorry, I couldn't answer that right now. Please try again later.")
+            return qa_log.ERROR, "Sorry, I couldn't answer that right now. Please try again later."
+        return qa_log.ANSWERED, answer[:1990] or "I couldn't come up with an answer."
+
+    async def _report(self, text: str) -> None:
+        """发到私信汇报频道，尽力而为：没设置或发不出去只记日志。"""
+        if self.report_channel_id is None:
             return
-        await message.reply(answer[:1990] or "I couldn't come up with an answer.")
+        try:
+            channel = await self._channel(self.report_channel_id)
+            await channel.send(text, allowed_mentions=discord.AllowedMentions.none())
+        except Exception:
+            log.exception("Could not post a DM report to channel %s", self.report_channel_id)
 
     async def _player(self, message: discord.Message, arg: str) -> None:
         tag = overfast.normalize_battletag(arg)
@@ -1059,7 +1198,7 @@ async def main() -> None:
 
     # 一起看：设置了 WATCH_PUBLIC_URL（网页的公网地址）才启用
     watch_url = os.environ.get("WATCH_PUBLIC_URL", "").strip().rstrip("/")
-    watch_ui = watch_sources = watch_server = vod_search = progress = None
+    watch_ui = watch_sources = watch_server = vod_search = progress = tv_table = tv_session = None
     if watch_url:
         sessdata = os.environ.get("BILIBILI_SESSDATA", "").strip()
         if not sessdata:
@@ -1068,7 +1207,8 @@ async def main() -> None:
         if quality not in QUALITY_QN:
             log.warning("Unknown WATCH_MAX_QUALITY %r (use 1080, 720 or 480); using 1080", quality)
             quality = "1080"
-        watch_rooms = RoomManager(max_bili_rooms=int(os.environ.get("WATCH_MAX_BILI_ROOMS", "").strip() or "2"))
+        watch_rooms = RoomManager(max_bili_rooms=int(os.environ.get("WATCH_MAX_BILI_ROOMS", "").strip() or "2"),
+                                  max_tv_rooms=int(os.environ.get("WATCH_MAX_TV_ROOMS", "").strip() or "2"))
         watch_sources = Sources(sessdata or None, QUALITY_QN[quality])
         vod_sources = parse_sources_env(os.environ.get("WATCH_VOD_SOURCES"))
         vod_search = VodSearch(vod_sources) if vod_sources else None
@@ -1098,18 +1238,28 @@ async def main() -> None:
                                    stats=SystemStats(disk_path=state_dir), geo=geo, blocks=blocks,
                                    admin_password=os.environ.get("WATCH_ADMIN_PASSWORD", "").strip() or None)
         watch_ui = WatchUI(watch_rooms, watch_url, CardStore(state_dir / "watch_cards.json"), requests=watch_requests)
+        # 电视直播：WATCH_TV_LISTS 不设用默认列表，设成空字符串关闭
+        tv_lists = parse_tv_lists(os.environ.get("WATCH_TV_LISTS"))
+        if tv_lists:
+            tv_session = tv_net.make_session()
+            tv_table = ChannelTable(state_dir / "tv_channels.json", tv_lists,
+                                    prober=functools.partial(tv_stream.probe, tv_session))
+            log.info("Live TV enabled with %d channel lists", len(tv_lists))
         log.info("Watch together enabled at %s (max quality %s); admin dashboard at %s/admin (WATCH_ADMIN_KEY %s, "
                  "WATCH_ADMIN_PASSWORD %s)", watch_url, quality, watch_url,
                  "set" if os.environ.get("WATCH_ADMIN_KEY", "").strip() else f"unset: generated key in {state_dir / 'watch_admin_key'}",
                  "set" if watch_server.admin_password else "unset: key alone logs in")
 
+    # 私信汇报频道：私信里的问答和指令发到这里；频道里的问答只记进 qa_log.jsonl
+    report = os.environ.get("QA_REPORT_CHANNEL_ID", "").strip()
     registry = Registry()
     bot = MeeseeksBot(registry, analyzer, recognizer, labels, roster, store, hero_qa, esports_feed,
                       int(wish_channel) if wish_channel else None, wish_desk, wish_plans, patch_feed,
                       regions=regions, live_watcher=live_watcher, live_notify_offline=live_notify_offline,
                       predictions=prediction_store, prediction_ui=PredictionUI(prediction_store),
                       announce_desk=announce_desk, watch_ui=watch_ui, watch_sources=watch_sources,
-                      vod_search=vod_search, watch_server=watch_server, progress=progress)
+                      vod_search=vod_search, watch_server=watch_server, progress=progress, tv_table=tv_table,
+                      qa_log=QaLog(state_dir / "qa_log.jsonl"), report_channel_id=int(report) if report else None)
     patch_feed.icons = HeroEmojis(bot).for_patch     # 补丁摘要里英雄名旁边的头像
     if watch_server is not None:
         watch_server.channel_name = lambda cid: getattr(bot.get_channel(cid), "name", None)   # 管理后台显示频道名
@@ -1132,6 +1282,8 @@ async def main() -> None:
             refreshers.append(asyncio.create_task(watch_server.run()))
             if watch_server.geo is not None:
                 refreshers.append(asyncio.create_task(watch_server.geo.run()))   # IP 分配表：没有就下载，每周刷新
+            if tv_table is not None:
+                refreshers.append(asyncio.create_task(tv_table.run()))
         try:
             await bot.start(token)
         except discord.LoginFailure:
@@ -1143,6 +1295,8 @@ async def main() -> None:
                 task.cancel()
             if watch_server is not None:
                 await watch_server.close()
+            if tv_session is not None:
+                await tv_session.close()
             await ws.close()
 
 
