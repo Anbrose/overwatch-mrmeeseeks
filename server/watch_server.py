@@ -1,6 +1,7 @@
 """一起看网页服务：房间页、WebSocket 同步协议、B 站 DASH 转流、资源站剧集的 m3u8。
 
 路由：
+- GET /                                        首页：输房间号进房（电视浏览器用）；GET /j?c=<房间号> 规范化后 303 到 /r/，没有就 404
 - GET /r/{room_id}                          房间页（index.html）；房间不存在 → 404 页面
 - GET /static/{name}                        watch_web 下白名单里的文件
 - GET /ws/{room_id}                         WebSocket（协议见 watch_web/player.js）
@@ -35,6 +36,7 @@ import logging
 import math
 import hashlib
 import os
+import re
 import secrets
 import time
 from dataclasses import dataclass, field
@@ -101,8 +103,15 @@ NOT_FOUND_HTML = """<!doctype html>
 background:#0f1115;color:#e6e6e6;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}</style>
 </head><body><p>房间不存在或已经结束</p></body></html>
 """
+JOIN_ERROR = '<p class="err">没有这个房间，看看房间号有没有输错</p>'
+_CODE_JUNK = re.compile(r"[^a-z0-9]")
 CHANGING_MSG = "正在换视频，请稍候"
 ROOMS_FULL_MSG = "B 站房间已满（最多 {limit} 个），请稍后再试或换 YouTube 视频"
+
+
+def normalize_code(raw: str) -> str:
+    """电视遥控器输的房间号：去空格和横线、不分大小写。"""
+    return _CODE_JUNK.sub("", (raw or "").strip().lower())[:12]
 
 
 def build_mpd(s: DashStreams, room_id: str, version: int) -> str:
@@ -235,6 +244,8 @@ class WatchServer:
         rooms.listeners.append(self._on_room_event)
 
         self.app = web.Application()
+        self.app.router.add_get("/", self._join_page)
+        self.app.router.add_get("/j", self._join)
         self.app.router.add_get("/r/{room_id}", self._page)
         self.app.router.add_get("/static/{name}", self._static)
         self.app.router.add_get("/ws/{room_id}", self._ws)
@@ -324,6 +335,23 @@ class WatchServer:
         return self._vod_session
 
     # ---------------- 页面 ----------------
+    # 首页就是「输房间号进房」：给电视、盒子的浏览器用，不用输长网址，也不需要 JS。
+    async def _join_page(self, request: web.Request) -> web.StreamResponse:
+        return self._join_html("")
+
+    async def _join(self, request: web.Request) -> web.StreamResponse:
+        code = normalize_code(request.query.get("c", ""))
+        if not code:
+            return self._join_html("")
+        if self.rooms.get(code) is None:
+            return self._join_html(JOIN_ERROR, status=404)
+        raise web.HTTPSeeOther(f"/r/{code}")
+
+    def _join_html(self, error: str, status: int = 200) -> web.Response:
+        html = (self.web_dir / "join.html").read_text(encoding="utf-8").replace("<!--ERROR-->", error)
+        return web.Response(status=status, text=html, content_type="text/html",
+                            headers={"Cache-Control": "no-store"})
+
     async def _page(self, request: web.Request) -> web.StreamResponse:
         if self.rooms.get(request.match_info["room_id"]) is None:
             return web.Response(status=404, text=NOT_FOUND_HTML, content_type="text/html")

@@ -37,7 +37,7 @@
 | `server/watch_requests.py` | 「想看但没有」的记录（`STATE_DIR/watch_requests.json`）：每人每天 `WATCH_REQUEST_DAILY_LIMIT` 次（悉尼 0 点重置）、同一天同一部去重、最多 2000 条、按规范化片名合并统计；不依赖 Discord |
 | `server/geoip.py` | 地区限制：下载五大 RIR 的 delegated-extended 分配表（每周刷新，缓存 `geoip.json`）、IP → 国家（v4 用 `array` 二分，v6 用 list）、放行判定（内网 LOCAL 放行，没加载时 `allowed=None` 即不拦）、`client_ip`（代理后取 `X-Forwarded-For` 最后一段）、`BlockLog`（被拦 IP 的编号、国家、房间、次数，`STATE_DIR/watch_blocked.json`） |
 | `server/sysstats.py` | 服务器资源采样：`/proc/stat`（整机 CPU）、`/proc/meminfo`、`/proc/loadavg`、`/proc/net/dev`（容器网卡上下行）、`/proc/self/stat|status`（bot 进程 CPU、RSS）、cgroup v2/v1 内存、磁盘；两次采样之差算百分比和速率，读不到就是 None |
-| `server/watch_web/` | 一起看网页：`index.html`、`player.js`（播放器、同步、权限面板、地区受限提示、投屏按钮和远端同步策略）、`cast.js`（Chromecast 发送端：懒加载 Google Cast SDK、会话、加载播放列表、远端播放状态）、`style.css`、`admin.html` + `admin.js`（管理后台，每 5 秒轮询 `/admin/api`） |
+| `server/watch_web/` | 一起看网页：`index.html`、`player.js`（播放器、同步、权限面板、地区受限提示、投屏按钮和远端同步策略）、`cast.js`（Chromecast 发送端：懒加载 Google Cast SDK、会话、加载播放列表、远端播放状态）、`join.html`（首页）、`style.css`、`admin.html` + `admin.js`（管理后台，每 5 秒轮询 `/admin/api`） |
 | `client/client.py` | 本地客户端：连接/重连、配对码输入、Tab 监听、两段截图、上传 |
 
 ## 客户端状态
@@ -85,6 +85,8 @@
 
 | 路由 | 说明 |
 |---|---|
+| `GET /` | 首页：输房间号进房的表单（`join.html`，电视浏览器用，不需要 JS） |
+| `GET /j?c=<房间号>` | 去空格横线、转小写后，房间存在就 303 到 `/r/<id>`，否则 404 回首页并提示 |
 | `GET /r/{room_id}` | 房间页（`index.html`）；房主链接带 `?k=<密钥>`，页面连上后会把它从地址栏去掉。房间不存在返回「房间不存在或已经结束」 |
 | `GET /static/{name}` | `player.js`、`cast.js`、`style.css` 等静态文件（白名单 `STATIC_FILES`） |
 | `GET /ws/{room_id}` | WebSocket，协议见下 |

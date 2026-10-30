@@ -11,6 +11,7 @@
   const DASH_SRC = "https://cdnjs.cloudflare.com/ajax/libs/dashjs/4.7.4/dash.all.min.js";
   const YT_SRC = "https://www.youtube.com/iframe_api";
   const HLS_SRC = "https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.20/hls.min.js";
+  const QR_SRC = "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js";
   const HLS_MIME = "application/vnd.apple.mpegurl";
   const PING_MS = 10000;
   const SYNC_MS = 1000;
@@ -46,6 +47,8 @@
     changeForm: $("change-form"), changeUrl: $("change-url"), toast: $("toast"),
     resume: $("resume"), vodPanel: $("vod-panel"), episodes: $("episodes"),
     lineLabel: $("line-label"), nextLine: $("next-line"),
+    tvBtn: $("tv-btn"), tvPanel: $("tv-panel"), tvClose: $("tv-close"),
+    qr: $("qr"), tvHost: $("tv-host"), tvCode: $("tv-code"),
   };
 
   // ---------------------------------------------------------------- storage
@@ -745,10 +748,36 @@
       ui.permBtn.setAttribute("aria-expanded", "false");
     }
     ui.conn.hidden = connected || ended;
+    ui.tvBtn.hidden = ended || !room;
+    if (ui.tvBtn.hidden) ui.tvPanel.hidden = true;
     renderResume();
     renderVodPanel();
     renderCastButton();
   }
+
+  // ---- 在电视上看: QR code + room code for a TV browser (joins as a viewer) ----
+  // The QR carries the plain viewer link, never the host key.
+  function openTvPanel() {
+    if (!/^[a-z0-9]{1,12}$/.test(roomId)) return;
+    const url = `${location.origin}/r/${roomId}`;
+    ui.tvHost.textContent = location.host;
+    ui.tvCode.textContent = roomId;
+    ui.qr.textContent = "";
+    ui.tvPanel.hidden = false;
+    ui.tvClose.focus();
+    loadScript(QR_SRC).then(() => {
+      if (ui.tvPanel.hidden) return;
+      const qr = window.qrcode(0, "M");
+      qr.addData(url);
+      qr.make();
+      ui.qr.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+    }).catch(() => { ui.qr.textContent = url; });
+  }
+
+  ui.tvBtn.addEventListener("click", openTvPanel);
+  ui.tvClose.addEventListener("click", () => { ui.tvPanel.hidden = true; });
+  ui.tvPanel.addEventListener("click", (e) => { if (e.target === ui.tvPanel) ui.tvPanel.hidden = true; });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") ui.tvPanel.hidden = true; });
 
   function isVod() {
     return !!(room && room.video && room.video.source === "vod");

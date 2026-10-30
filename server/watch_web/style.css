@@ -303,3 +303,24 @@ input[type="range"]:disabled::-moz-range-thumb { background: transparent; }
 
 /* 📺 投屏：投屏中点亮 */
 .ctl.on { color: var(--accent); }
+
+/* ---- 在电视上看 ---- */
+.tv-panel {
+  position: fixed; inset: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, .7); padding: 16px;
+}
+.tv-card {
+  width: 100%; max-width: 340px; background: var(--panel); border-radius: 10px;
+  padding: 14px 16px 16px; text-align: center;
+}
+.tv-head { display: flex; align-items: center; margin-bottom: 12px; }
+.tv-title { flex: 1; text-align: left; font-weight: 600; }
+.qr { display: flex; justify-content: center; min-height: 120px; }
+.qr svg { width: 200px; height: 200px; background: #fff; padding: 10px; border-radius: 8px; }
+.tv-hint { margin: 12px 0 6px; opacity: .8; }
+.tv-hint.small { font-size: 12px; opacity: .5; margin-top: 10px; }
+.tv-code {
+  font: 600 34px/1.2 ui-monospace, Menlo, Consolas, monospace; letter-spacing: .25em;
+  padding-left: .25em; user-select: all;
+}
