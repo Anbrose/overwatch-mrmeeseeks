@@ -33,8 +33,9 @@ def entry(name="片", year="2020", play_from="a", play_url="第1集$https://x/1.
 
 def test_parse_sources_env():
     d = vs.parse_sources_env(None)
-    check("默认 3 个", len(d) == 3 and d[0] == ("创享影视", "https://ys.cxkjg.cn/api/provide/vod")
-          and [n for n, _ in d] == ["创享影视", "1080资源", "量子"])
+    check("默认 7 个，两边都通的在前、只在国内通的在后", len(d) == 7
+          and d[0] == ("创享影视", "https://ys.cxkjg.cn/api/provide/vod")
+          and [n for n, _ in d] == ["创享影视", "极速", "魔都", "百度", "iKun", "1080资源", "量子"])
     check("空串禁用", vs.parse_sources_env("") == [])
     check("trim", vs.parse_sources_env("甲=https://a/x, 乙=https://b/y") == [("甲", "https://a/x"), ("乙", "https://b/y")])
     check("跳过坏项", vs.parse_sources_env("无等号,丙=ftp://c/z,丁=javascript:alert(1),=https://e/f,戊=http://g/h")
