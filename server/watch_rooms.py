@@ -133,6 +133,7 @@ class Room:
     version: int = 0                      # 每次换视频 +1
     finished_version: int | None = None   # 已经通知过 finished 的 version
     owner_viewer_id: str | None = None    # 用房主链接拿回房主身份的人
+    created_at: float = 0.0               # 建房时间（clock），管理后台显示「开了多久」
     now: Callable[[], float] = field(default=time.time, repr=False)
 
     def present(self) -> list[Member]:
@@ -228,7 +229,7 @@ class RoomManager:
                 break
         room = Room(room_id=room_id, channel_id=channel_id, creator_id=creator_id, creator_name=creator_name,
                     owner_key=secrets.token_urlsafe(16), video=video,
-                    playback=Playback(False, 0.0, now), empty_since=now, now=self.clock)
+                    playback=Playback(False, 0.0, now), empty_since=now, created_at=now, now=self.clock)
         self.rooms[room_id] = room
         return room
 

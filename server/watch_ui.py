@@ -9,6 +9,9 @@
 - 按片名搜索：bot 发出带 PickSelect（DynamicItem，custom_id `watch:pick:<token>`）的结果消息，WatchUI.pending 记着待选项；
   部分匹配的电视台排在影视前面（选项值 `tv<i>`，影视仍是 `<i>`），选台交给 create_tv_room，选影视交给 create_vod_room；
   只有发起人能选，选一次就作废（on_pick 在第一个 await 之前就标记 done），2 分钟没选消息改成"选择已过期"。
+- 「没有我想看的」（搜索结果下面）和「我正在寻找这一部影视资源」（没找到时）是 RequestButton（DynamicItem，
+  custom_id `watch:req:<miss|want>:<片名>`，片名就在 custom_id 里，所以选单过期、bot 重启后都还能点）。谁都能点，
+  记到 RequestStore（每人每天 WATCH_REQUEST_DAILY_LIMIT 次），管理后台里能看到。选单过期后这个按钮保留。
 - CardStore（STATE_DIR/watch_cards.json）记下还开着的房间卡片；房间都在内存里，重启后 bot 把这些卡片编辑成
   "已结束（服务器重启）"。
 """
@@ -29,6 +32,8 @@ import discord
 from tv_channels import Channel
 from vod_search import Show
 from watch_progress import ProgressStore
+from watch_requests import (KIND_NO_RESULTS, KIND_NOT_LISTED, RequestStore, clean_query, duplicate_text, limit_text,
+                            recorded_text)
 from watch_rooms import Room, RoomManager
 
 log = logging.getLogger("mrmeeseeks.watch_ui")
@@ -45,6 +50,10 @@ PICK_GONE = "已过期，请重新搜索"
 PICK_NOT_REQUESTER = "只有发起人能选"
 PICK_PREPARING = "正在准备…"
 OPTION_MAX = 100
+REQUEST_TEMPLATE = r"watch:req:(?P<kind>miss|want):(?P<query>.{1,50})"
+REQUEST_KIND = {"miss": KIND_NOT_LISTED, "want": KIND_NO_RESULTS}
+REQUEST_LABEL = {"miss": "没有我想看的", "want": "我正在寻找这一部影视资源"}
+REQUESTS_OFF = "这个功能没有启用。"
 
 
 def fmt_time(seconds: float) -> str:
@@ -169,6 +178,40 @@ class PickSelect(discord.ui.DynamicItem[discord.ui.Select], template=PICK_TEMPLA
         await PickSelect.handler.on_pick(interaction, self.token)
 
 
+class RequestButton(discord.ui.DynamicItem[discord.ui.Button], template=REQUEST_TEMPLATE):
+    """「没有我想看的」(miss) / 「我正在寻找这一部影视资源」(want)。片名放在 custom_id 里，按钮不依赖内存状态。"""
+    handler: "WatchUI | None" = None     # bot 启动时设置
+
+    def __init__(self, kind: str, query: str):
+        query = clean_query(query)
+        super().__init__(discord.ui.Button(label=REQUEST_LABEL[kind], custom_id=f"watch:req:{kind}:{query}",
+                                           style=discord.ButtonStyle.secondary, emoji="🙋"))
+        self.kind, self.query = kind, query
+
+    @classmethod
+    async def from_custom_id(cls, interaction: discord.Interaction, item: discord.ui.Button,
+                             match: re.Match[str]) -> "RequestButton":
+        return cls(match["kind"], match["query"])
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        if RequestButton.handler is None:
+            await interaction.response.send_message(NOT_ENABLED, ephemeral=True)
+            return
+        await RequestButton.handler.on_request(interaction, REQUEST_KIND[self.kind], self.query)
+
+
+def build_miss_view(query: str) -> discord.ui.View:
+    view = discord.ui.View(timeout=None)
+    view.add_item(RequestButton("miss", query))
+    return view
+
+
+def build_want_view(query: str) -> discord.ui.View:
+    view = discord.ui.View(timeout=None)
+    view.add_item(RequestButton("want", query))
+    return view
+
+
 def build_pick_view(p: PendingSearch, progress: ProgressStore | None) -> discord.ui.View:
     options = [discord.SelectOption(label=channel_label(ch), value=f"tv{i}") for i, ch in enumerate(p.channels)]
     for i, show in enumerate(p.shows):
@@ -177,6 +220,7 @@ def build_pick_view(p: PendingSearch, progress: ProgressStore | None) -> discord
                                             description=f"上次看到第 {seen.episode + 1} 集" if seen else None))
     view = discord.ui.View(timeout=None)
     view.add_item(PickSelect(p.token, options))
+    view.add_item(RequestButton("miss", p.query))
     return view
 
 
@@ -234,8 +278,10 @@ EditFn = Callable[[int, int, str, "discord.ui.View | None"], Awaitable[None]]
 class WatchUI:
     def __init__(self, rooms: RoomManager, public_url: str, cards: CardStore,
                  min_edit_interval: float = MIN_EDIT_INTERVAL,
-                 sleep: Callable[[float], Awaitable[None]] = asyncio.sleep):
+                 sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+                 requests: RequestStore | None = None):
         self.rooms, self.public_url, self.cards = rooms, public_url.rstrip("/"), cards
+        self.requests = requests
         self.clock = rooms.clock
         self.min_edit_interval, self.sleep = min_edit_interval, sleep
         self.edit: EditFn | None = None          # bot 注入 (channel_id, message_id, text, view)
@@ -246,6 +292,27 @@ class WatchUI:
         self._pending: dict[str, asyncio.Task] = {}
         self._tasks: set[asyncio.Task] = set()   # 保留引用，避免任务被回收
         rooms.listeners.append(self.on_change)
+
+    # ---------------- 按钮 ----------------
+    async def on_request(self, interaction: discord.Interaction, kind: str, query: str) -> None:
+        """「没有我想看的」/「我正在寻找这一部影视资源」：记一条，只回复本人。"""
+        if self.requests is None:
+            await interaction.response.send_message(REQUESTS_OFF, ephemeral=True)
+            return
+        user = interaction.user
+        channel_id = getattr(interaction, "channel_id", None) or 0
+        try:
+            res = self.requests.add(query, kind, user.id, user.display_name, channel_id)
+        except ValueError:
+            await interaction.response.send_message(REQUESTS_OFF, ephemeral=True)
+            return
+        if res.status == "ok":
+            text = recorded_text(clean_query(query), res.remaining, self.requests.limit)
+        elif res.status == "duplicate":
+            text = duplicate_text(clean_query(query))
+        else:
+            text = limit_text(self.requests.limit)
+        await interaction.response.send_message(text, ephemeral=True)
 
     # ---------------- 搜索选单 ----------------
     def add_search(self, p: PendingSearch) -> None:
@@ -258,8 +325,8 @@ class WatchUI:
         if p.done or self.edit is None or p.message_id is None:
             return
         p.done = True
-        try:
-            await self.edit(p.channel_id, p.message_id, PICK_EXPIRED, None)
+        try:     # 选单去掉，「没有我想看的」留着
+            await self.edit(p.channel_id, p.message_id, PICK_EXPIRED, build_miss_view(p.query))
         except Exception:
             log.exception("Could not expire search message %s", p.message_id)
 

@@ -395,10 +395,10 @@ def test_bot_edit_and_setup_hook():
     b.watch_ui = ui
     b.vod_search = b.watch_server = b.progress = None
     asyncio.run(b.setup_hook())
-    check("启动时只注册搜索选单并设置 handler", added == [wui.PickSelect]
-          and wui.PickSelect.handler is ui and ui.create_vod_room == b._create_vod_room
-          and ui.create_tv_room == b._create_tv_room)
-    wui.PickSelect.handler = None
+    check("启动时注册选单、请求按钮并设置 handler", added == [wui.PickSelect, wui.RequestButton]
+          and wui.PickSelect.handler is ui and wui.RequestButton.handler is ui
+          and ui.create_vod_room == b._create_vod_room and ui.create_tv_room == b._create_tv_room)
+    wui.PickSelect.handler = wui.RequestButton.handler = None
 
 
 # ---------------------------------------------------------------- 按片名搜索
@@ -493,6 +493,10 @@ def test_watch_search_errors():
     msg = FakeMessage()
     asyncio.run(b._watch(msg, "不存在的剧"))
     check("没找到", msg.replies[0][0] == "没找到「不存在的剧」")
+    want = msg.replies[0][1]
+    check("没找到时带「我正在寻找这一部影视资源」", want is not None and len(want.children) == 1
+          and isinstance(want.children[0], wui.RequestButton) and want.children[0].item.label == "我正在寻找这一部影视资源"
+          and want.children[0].item.custom_id == "watch:req:want:不存在的剧")
 
 
 def test_watch_search_posts_menu():
@@ -501,7 +505,10 @@ def test_watch_search_posts_menu():
     sel = view.children[0].item
     check("搜索结果文字", text == wui.search_header("绝命毒师", "<@42>")
           and text == "🔎 「绝命毒师」的搜索结果（只有 <@42> 能选，2 分钟内有效）")
-    check("选单 custom_id 匹配模板", len(view.children) == 1 and re.fullmatch(wui.PICK_TEMPLATE, sel.custom_id))
+    check("选单 custom_id 匹配模板", len(view.children) == 2 and re.fullmatch(wui.PICK_TEMPLATE, sel.custom_id))
+    miss = view.children[1]
+    check("选单下面有「没有我想看的」", isinstance(miss, wui.RequestButton) and miss.item.label == "没有我想看的"
+          and miss.item.custom_id == "watch:req:miss:绝命毒师" and re.fullmatch(wui.REQUEST_TEMPLATE, miss.item.custom_id))
     check("选项标签", len(sel.options) <= 10 and sel.options[0].label == "绝命毒师 第一季 · 2008 · 欧美剧 · 7 集"
           and sel.options[0].value == "0" and not sel.options[0].description)
     check("结果消息不 ping", mentions is not None and mentions.users is False)
@@ -697,7 +704,10 @@ def test_pick_timeout():
         await drain(ui)
         return tok, before
     tok, before = asyncio.run(go())
-    check("2 分钟后选单过期", before and edits == [(555, 7001, "选择已过期", None)] and tok not in ui.pending)
+    check("2 分钟后选单过期", before and len(edits) == 1 and edits[0][:3] == (555, 7001, "选择已过期") and tok not in ui.pending)
+    kept = edits[0][3]
+    check("过期后留着「没有我想看的」", kept is not None and len(kept.children) == 1
+          and isinstance(kept.children[0], wui.RequestButton) and kept.children[0].query == "绝命毒师")
     check("过期 120 秒", wui.PICK_TIMEOUT == 120.0 and clock.t == 1000.0 + 120.0)
 
 
@@ -734,6 +744,57 @@ def test_watch_link_unchanged():
           and b.vod_search.calls == [])
 
 
+# ---------------------------------------------------------------- 「没有我想看的」/「我正在寻找这一部影视资源」
+def test_request_buttons():
+    btn = wui.RequestButton("miss", "绝命  毒师")
+    check("custom_id 里是压过空白的片名", btn.item.custom_id == "watch:req:miss:绝命 毒师" and btn.query == "绝命 毒师"
+          and btn.item.emoji is not None)
+    m = re.fullmatch(wui.REQUEST_TEMPLATE, "watch:req:want:" + "x" * 50)
+    check("模板最多 50 字、区分 miss/want", m and m["kind"] == "want"
+          and re.fullmatch(wui.REQUEST_TEMPLATE, "watch:req:want:" + "x" * 51) is None
+          and re.fullmatch(wui.REQUEST_TEMPLATE, "watch:req:other:x") is None)
+
+    async def go():
+        item = await wui.RequestButton.from_custom_id(None, btn.item, re.fullmatch(wui.REQUEST_TEMPLATE, btn.item.custom_id))
+        return item
+    item = asyncio.run(go())
+    check("from_custom_id 还原 kind 和片名", item.kind == "miss" and item.query == "绝命 毒师")
+
+    it, sent = make_interaction(1)
+    wui.RequestButton.handler = None
+    asyncio.run(item.callback(it))
+    check("没 handler 提示没启用", sent.content == "一起看功能没有启用。" and sent.ephemeral)
+
+    ui, *_ = make_ui()
+    wui.RequestButton.handler = ui
+    it, sent = make_interaction(1)
+    asyncio.run(item.callback(it))
+    check("没有 RequestStore 提示没启用", sent.content == wui.REQUESTS_OFF)
+
+    from watch_requests import KIND_NO_RESULTS, KIND_NOT_LISTED, RequestStore
+    store = RequestStore(None, limit=2)
+    ui.requests = store
+    it, sent = make_interaction(7)
+    it.channel_id = 555
+    asyncio.run(item.callback(it))
+    check("点一下记一条、只回复本人", sent.ephemeral and sent.content == "已记下「绝命 毒师」，管理员会看到。你今天还能提 1 次（每天最多 2 次）。"
+          and len(store.all()) == 1 and store.all()[0].kind == KIND_NOT_LISTED and store.all()[0].user_id == 7
+          and store.all()[0].channel_id == 555 and store.all()[0].user_name == "x")
+    it, sent = make_interaction(7)
+    asyncio.run(item.callback(it))
+    check("再点同一部提示已提过", sent.content == "你今天已经提过「绝命 毒师」了。" and len(store.all()) == 1)
+    want = wui.build_want_view("老友记").children[0]
+    it, sent = make_interaction(7)
+    asyncio.run(want.callback(it))
+    check("没找到的按钮记成 no_results", store.all()[1].kind == KIND_NO_RESULTS and store.all()[1].query == "老友记"
+          and sent.content.startswith("已记下「老友记」"))
+    it, sent = make_interaction(7)
+    asyncio.run(wui.build_want_view("生活大爆炸").children[0].callback(it))
+    check("超过每日次数", sent.content == "你今天已经提了 2 次，明天再来吧。" and len(store.all()) == 2)
+    it, sent = make_interaction(8)
+    asyncio.run(want.callback(it))
+    check("别人不受影响", sent.content.startswith("已记下「老友记」") and len(store.all()) == 3)
+    wui.RequestButton.handler = None
 # ---------------------------------------------------------------- 电视直播
 def chan(name="湖南卫视", key=None):
     return Channel(key or name, name, [Candidate("https://tv.example.com/a.m3u8", None, 0, False, True)])
@@ -858,7 +919,8 @@ def test_tv_partial_menu():
     b, ui, rooms, clock, edits, ws, msg, vs = setup_tv(FakeTable(partial=chs), shows=[show(), show(key="k2")])
     text, view, _ = msg.replies[0]
     opts = view.children[0].item.options
-    check("一个选单：台在前", len(msg.replies) == 1 and len(view.children) == 1 and len(opts) == 4
+    check("一个选单（加「没有我想看的」按钮）：台在前", len(msg.replies) == 1 and len(view.children) == 2
+          and isinstance(view.children[1], wui.RequestButton) and len(opts) == 4
           and opts[0].label == "📺 湖南卫视 · 直播" and opts[0].value == "tv0"
           and opts[1].label.startswith("📺 ") and opts[1].label.endswith(" · 直播") and opts[1].value == "tv1")
     check("影视选项值不变", [o.value for o in opts[2:]] == ["0", "1"] and vs.calls == ["湖南"])
@@ -957,6 +1019,7 @@ if __name__ == "__main__":
     test_pick_timeout()
     test_pick_select_item()
     test_watch_link_unchanged()
+    test_request_buttons()
     test_tv_exact()
     test_tv_partial_menu()
     test_tv_partial_fallbacks()

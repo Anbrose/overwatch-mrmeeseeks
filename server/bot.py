@@ -75,12 +75,15 @@ import qa_log
 from qa_log import QaLog
 from vod_playlist import PlaylistError
 from vod_search import SearchUnavailable, VodSearch, parse_sources_env
+from geoip import BlockLog, GeoDB, parse_allowed
+from sysstats import SystemStats
 from watch_progress import ProgressRecorder, ProgressStore
+from watch_requests import DAILY_LIMIT as REQUEST_DAILY_LIMIT, RequestStore
 from watch_rooms import RoomManager, RoomsFull, TvRoomsFull
-from watch_server import TvUnavailable, WatchServer
+from watch_server import TvUnavailable, WatchServer, load_admin_key
 from watch_sources import QUALITY_QN, Sources, VideoUnavailable, find_link
-from watch_ui import (HOST_LINK_FAILED, PICK_PREPARING, CardStore, PendingSearch, PickSelect, WatchUI, build_pick_view,
-                      host_link_text, search_header,
+from watch_ui import (HOST_LINK_FAILED, PICK_PREPARING, CardStore, PendingSearch, PickSelect, RequestButton, WatchUI,
+                      build_pick_view, build_want_view, host_link_text, search_header,
                       card_text, build_view as build_watch_view)
 from ws_server import WSServer
 
@@ -305,9 +308,11 @@ class MeeseeksBot(discord.Client):
             self.add_dynamic_items(LangButton)      # 公告的语言按钮：重启前发的公告照样能点
         if self.watch_ui:
             PickSelect.handler = self.watch_ui
+            RequestButton.handler = self.watch_ui
             self.watch_ui.create_vod_room = self._create_vod_room
             self.watch_ui.create_tv_room = self._create_tv_room
-            self.add_dynamic_items(PickSelect)      # 一起看的搜索选单
+            # 一起看的搜索选单、「没有我想看的」/「我正在寻找这一部影视资源」按钮
+            self.add_dynamic_items(PickSelect, RequestButton)
 
     async def on_ready(self) -> None:
         log.info("Logged in to Discord as %s", self.user)
@@ -687,7 +692,8 @@ class MeeseeksBot(discord.Client):
                     await message.reply(e.message)
                     return
         if not shows and not channels:
-            await message.reply(f"没找到「{arg}」", allowed_mentions=discord.AllowedMentions.none())
+            await message.reply(f"没找到「{arg}」", view=build_want_view(arg),
+                                allowed_mentions=discord.AllowedMentions.none())
             return
         p = PendingSearch(secrets.token_urlsafe(12), message.author.id, arg, shows, message.channel.id, None,
                           message, ui.clock(), channels=channels)
@@ -1208,10 +1214,30 @@ async def main() -> None:
         vod_search = VodSearch(vod_sources) if vod_sources else None
         progress = ProgressStore(state_dir / "watch_progress.json")
         recorder = ProgressRecorder(watch_rooms, progress)
+        # 「没有我想看的」记录 + 管理后台（/admin 输入密钥进入；密钥没配就生成一个存在 STATE_DIR/watch_admin_key）
+        watch_requests = RequestStore(state_dir / "watch_requests.json",
+                                      int(os.environ.get("WATCH_REQUEST_DAILY_LIMIT", "").strip() or REQUEST_DAILY_LIMIT))
+        admin_key = load_admin_key(state_dir / "watch_admin_key", os.environ.get("WATCH_ADMIN_KEY"))
+        # 地区限制：默认只放行 AU、NZ；WATCH_ALLOWED_COUNTRIES 设成空字符串就不限制。IP 分配表缓存在 herodata 卷
+        allowed = parse_allowed(os.environ.get("WATCH_ALLOWED_COUNTRIES"))
+        geo = blocks = None
+        if allowed:
+            geo = GeoDB(Path(herodata_dir) / "geoip.json", allowed)
+            if geo.load():
+                log.info("Watch geo restriction: allow %s (%d ranges loaded)", ", ".join(allowed),
+                         geo.status()["ranges"])
+            else:
+                log.info("Watch geo restriction: allow %s; IP data will be downloaded first "
+                         "(nobody is blocked until then)", ", ".join(allowed))
+            blocks = BlockLog(state_dir / "watch_blocked.json")
+        else:
+            log.info("Watch geo restriction disabled (WATCH_ALLOWED_COUNTRIES is empty)")
         watch_server = WatchServer(watch_rooms, watch_sources, host=os.environ.get("WATCH_HOST", "").strip() or "0.0.0.0",
                                    port=int(os.environ.get("WATCH_PORT", "").strip() or "8080"),
-                                   origin=watch_url, recorder=recorder)
-        watch_ui = WatchUI(watch_rooms, watch_url, CardStore(state_dir / "watch_cards.json"))
+                                   origin=watch_url, recorder=recorder, admin_key=admin_key, requests=watch_requests,
+                                   stats=SystemStats(disk_path=state_dir), geo=geo, blocks=blocks,
+                                   admin_password=os.environ.get("WATCH_ADMIN_PASSWORD", "").strip() or None)
+        watch_ui = WatchUI(watch_rooms, watch_url, CardStore(state_dir / "watch_cards.json"), requests=watch_requests)
         # 电视直播：WATCH_TV_LISTS 不设用默认列表，设成空字符串关闭
         tv_lists = parse_tv_lists(os.environ.get("WATCH_TV_LISTS"))
         if tv_lists:
@@ -1219,7 +1245,10 @@ async def main() -> None:
             tv_table = ChannelTable(state_dir / "tv_channels.json", tv_lists,
                                     prober=functools.partial(tv_stream.probe, tv_session))
             log.info("Live TV enabled with %d channel lists", len(tv_lists))
-        log.info("Watch together enabled at %s (max quality %s)", watch_url, quality)
+        log.info("Watch together enabled at %s (max quality %s); admin dashboard at %s/admin (WATCH_ADMIN_KEY %s, "
+                 "WATCH_ADMIN_PASSWORD %s)", watch_url, quality, watch_url,
+                 "set" if os.environ.get("WATCH_ADMIN_KEY", "").strip() else f"unset: generated key in {state_dir / 'watch_admin_key'}",
+                 "set" if watch_server.admin_password else "unset: key alone logs in")
 
     # 私信汇报频道：私信里的问答和指令发到这里；频道里的问答只记进 qa_log.jsonl
     report = os.environ.get("QA_REPORT_CHANNEL_ID", "").strip()
@@ -1232,6 +1261,8 @@ async def main() -> None:
                       vod_search=vod_search, watch_server=watch_server, progress=progress, tv_table=tv_table,
                       qa_log=QaLog(state_dir / "qa_log.jsonl"), report_channel_id=int(report) if report else None)
     patch_feed.icons = HeroEmojis(bot).for_patch     # 补丁摘要里英雄名旁边的头像
+    if watch_server is not None:
+        watch_server.channel_name = lambda cid: getattr(bot.get_channel(cid), "name", None)   # 管理后台显示频道名
     ws = WSServer(
         registry, bot,
         host=os.environ.get("WS_HOST", "0.0.0.0"),
@@ -1249,6 +1280,8 @@ async def main() -> None:
         if watch_server is not None:
             await watch_server.start()
             refreshers.append(asyncio.create_task(watch_server.run()))
+            if watch_server.geo is not None:
+                refreshers.append(asyncio.create_task(watch_server.geo.run()))   # IP 分配表：没有就下载，每周刷新
             if tv_table is not None:
                 refreshers.append(asyncio.create_task(tv_table.run()))
         try:

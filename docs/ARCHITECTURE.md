@@ -37,9 +37,12 @@
 | `server/tv_channels.py` | 一起看电视直播的频道表：解析 `WATCH_TV_LISTS` 里的 m3u 列表（BOM、CRLF、`#EXTVLCOPT` 都能处理）、名称归一化和别名、把查询匹配到频道（完全匹配 / 最多 5 个包含匹配）、启动时和每 6 小时重新下载并探测（并发 16、单次 8 秒）、落盘到 `STATE_DIR/tv_channels.json`（坏文件按空表处理） |
 | `server/tv_stream.py` | 一起看电视直播的流处理：跟进主列表、只选 H.264 且不超过 8 Mbps 的最高清晰度、从 TS 的 PMT 识别 H.265、探测一条地址能不能播（最新分片至少 1 KB） |
 | `server/tv_relay.py` | 一起看电视直播的中继：每个 (房间, 版本) 一个 `LiveStream`，把上游媒体列表改写成只含本站 `/tv/...` 路径的列表（1 秒内的请求合并），按编号转发分片（缓存 12 个、单个上限 20 MB），判定断流（10 秒没有列表、序号 10 秒不动或连续 3 个分片失败） |
-| `server/watch_server.py` | 一起看 HTTP / WebSocket 服务（aiohttp）：房间页、静态文件、同步协议、B 站转流和 MPD、vod 播放列表、电视直播中继和自动换源（`prepare_tv`） |
-| `server/watch_ui.py` | 一起看的 Discord 部分：房间卡片（只有公开链接）、房主链接文案（bot 私信或 ephemeral 发给发起人）、搜索选单（`DynamicItem`，含部分匹配的电视台）、人数更新 |
-| `server/watch_web/` | 一起看网页：`index.html`、`player.js`（播放器、同步、权限面板、直播模式）、`style.css`。vod 和直播房间只要浏览器有 MSE 就用 hls.js，不信 `canPlayType` 的原生 HLS（Android Chrome 等常以「格式不支持」失败）；原生只给没有 MSE 的 iPhone Safari 或 hls.js 脚本加载不了时用 |
+| `server/watch_server.py` | 一起看 HTTP / WebSocket 服务（aiohttp）：首页（输房间号进房）、房间页、静态文件、同步协议、B 站转流和 MPD、vod 播放列表（带 CORS，给 Chromecast 接收端）、电视直播中继和自动换源（`prepare_tv`）、管理后台（`/admin`，密钥 + 密码登录、房间快照、资源用量）、地区限制的拦截点 |
+| `server/watch_ui.py` | 一起看的 Discord 部分：房间卡片（只有公开链接）、房主链接文案（bot 私信或 ephemeral 发给发起人）、搜索选单（`DynamicItem`，含部分匹配的电视台）、人数更新、「没有我想看的」/「我正在寻找这一部影视资源」按钮（`RequestButton`，片名在 custom_id 里） |
+| `server/watch_requests.py` | 「想看但没有」的记录（`STATE_DIR/watch_requests.json`）：每人每天 `WATCH_REQUEST_DAILY_LIMIT` 次（悉尼 0 点重置）、同一天同一部去重、最多 2000 条、按规范化片名合并统计；不依赖 Discord |
+| `server/geoip.py` | 地区限制：下载五大 RIR 的 delegated-extended 分配表（每周刷新，缓存 `geoip.json`）、IP → 国家（v4 用 `array` 二分，v6 用 list）、放行判定（内网 LOCAL 放行，没加载时 `allowed=None` 即不拦）、`client_ip`（代理后取 `X-Forwarded-For` 最后一段）、`BlockLog`（被拦 IP 的编号、国家、房间、次数，`STATE_DIR/watch_blocked.json`） |
+| `server/sysstats.py` | 服务器资源采样：`/proc/stat`（整机 CPU）、`/proc/meminfo`、`/proc/loadavg`、`/proc/net/dev`（容器网卡上下行）、`/proc/self/stat|status`（bot 进程 CPU、RSS）、cgroup v2/v1 内存、磁盘；两次采样之差算百分比和速率，读不到就是 None |
+| `server/watch_web/` | 一起看网页：`index.html`、`player.js`（播放器、同步、权限面板、直播模式、地区受限提示、投屏按钮和远端同步策略、「在电视上看」二维码）、`cast.js`（Chromecast 发送端：懒加载 Google Cast SDK、会话、加载播放列表、远端播放状态）、`join.html`（首页）、`style.css`、`admin.html` + `admin.js`（管理后台，每 5 秒轮询 `/admin/api`）。vod 和直播房间只要浏览器有 MSE 就用 hls.js，不信 `canPlayType` 的原生 HLS（Android Chrome 等常以「格式不支持」失败）；原生只给没有 MSE 的 iPhone Safari、hls.js 脚本加载不了时，以及 Safari 播 vod 时（保留 AirPlay，MediaSource 投不出去） |
 | `client/client.py` | 本地客户端：连接/重连、配对码输入、Tab 监听、两段截图、上传 |
 
 ## 客户端状态
@@ -87,18 +90,26 @@
 
 | 路由 | 说明 |
 |---|---|
+| `GET /` | 首页：输房间号进房的表单（`join.html`，电视浏览器用，不需要 JS） |
+| `GET /j?c=<房间号>` | 去空格横线、转小写后，房间存在就 303 到 `/r/<id>`，否则 404 回首页并提示 |
 | `GET /r/{room_id}` | 房间页（`index.html`）；房主链接带 `?k=<密钥>`，页面连上后会把它从地址栏去掉。房间不存在返回「房间不存在或已经结束」 |
-| `GET /static/{name}` | `player.js`、`style.css` 等静态文件 |
+| `GET /static/{name}` | `player.js`、`cast.js`、`style.css` 等静态文件（白名单 `STATIC_FILES`） |
 | `GET /ws/{room_id}` | WebSocket，协议见下 |
 | `GET /bili/{room_id}/{version}/manifest.mpd` | B 站视频的 DASH 清单，`BaseURL` 指向下面的转流地址 |
 | `GET /bili/{room_id}/{version}/{video\|audio}` | B 站视频流、音频流转发（支持 Range）。`version` 随换视频递增，旧地址失效 |
-| `GET /vod/{room_id}/{version}/index.m3u8` | 按片名搜索的剧集播放列表：本服务器只取当前集、当前片源线路的 m3u8，改写后返回（去广告，所有 URI 变成绝对 https）。片段由浏览器直接从资源站 CDN 取。`version` 随换视频递增，旧地址失效 |
 | `GET /tv/{room_id}/{version}/index.m3u8` | 电视直播的媒体列表：服务器取上游列表，把分片、`EXT-X-KEY` 等的地址全部改写成下面的按编号路径，不含任何上游主机。房间不存在、不是直播或 `version` 不是当前的返回 404，上游失败返回 502 |
 | `GET /tv/{room_id}/{version}/s/{n}` | 电视直播分片转发：只认这个版本的列表里发出过的编号，其它编号直接 404，不请求上游。所有 `/tv` 响应都带 `X-Content-Type-Options: nosniff` 和 `Cache-Control: no-store` |
 
 **电视直播全部经本服务器转发**（和 vod 不同：vod 的片段由浏览器直连资源站 CDN）。直播地址大多是 http，而且常常跳转到只认请求方 IP 的地址，所以浏览器只连我们，服务器替它拉列表和分片。服务器只请求 `WATCH_TV_LISTS` 里的列表、频道表里的候选地址，以及这些地址的播放列表里出现的地址，从不请求客户端给的地址；每一跳都过 `tv_net` 的公网地址检查。`WATCH_TV_LISTS` 设成空字符串关闭直播；同时存在的直播房间不超过 `WATCH_MAX_TV_ROOMS`（默认 2）。
-| `GET /vod/{room_id}/{version}/index.m3u8` | 按片名搜索的剧集播放列表：本服务器只取当前集、当前片源线路的 m3u8，改写后返回（去广告，所有 URI 变成绝对 https；`#EXT-X-KEY` 的 URI 改成下面的 `key{n}`）。片段由浏览器直接从资源站 CDN 取。`version` 随换视频递增，旧地址失效 |
+| `GET /vod/{room_id}/{version}/index.m3u8` | 按片名搜索的剧集播放列表：本服务器只取当前集、当前片源线路的 m3u8，改写后返回（去广告，所有 URI 变成绝对 https；`#EXT-X-KEY` 的 URI 改成下面的 `key{n}`）。片段由浏览器直接从资源站 CDN 取。`version` 随换视频递增，旧地址失效。响应带 `Access-Control-Allow-Origin: *`：投屏时 Chromecast 的接收端（Google 的页面）跨域来取这份列表 |
 | `GET /vod/{room_id}/{version}/key{n}` | 播放列表里第 n 把 AES 密钥（16 字节）：本服务器向播放列表里记下的原地址取一次后缓存，`application/octet-stream`。中转的原因是有些资源站的密钥域名在部分地区的 CDN 边缘节点直接拒绝连接（实测上海电信/联通），浏览器拿不到密钥整集就播不了；片段域名通常不受影响。取不到 → 502，正文是原因 |
+| `GET /admin` | 管理后台。没登录返回输入密钥 + 密码的登录页；登录了返回 `admin.html`。没配 `WATCH_ADMIN_KEY` 时整个 `/admin` 都是 404 |
+| `POST /admin/login` | 表单字段 `key`、`password`。都对 → 写 `watch_admin` cookie（值是 sha256(密钥
+密码) 的令牌，`HttpOnly`、`Path=/admin`、https 下 `Secure`、30 天）并 303 回 `/admin`；错 → 401 登录页带提示；同一 IP（`client_ip`）15 分钟内错 10 次 → 429 |
+| `GET /admin/logout` | 清 cookie，303 回 `/admin` |
+| `GET /admin/api` | 后台轮询的 JSON：`summary`（房间数、人数、B 站房间数、今日转流字节）、`rooms`（每个房间的频道、片名、片源、播放状态、进度、观众名单带房主/控制权/在线标记、房主、建房时间）、`requests`（「想看但没有」原始记录，带规范化 `key`，页面按它合并）、`stats`（`sysstats.sample()`，最多每 2 秒采一次）、`geo`（地区限制状态）、`blocked`（被拦 IP）。令牌放 cookie 或 `X-Admin-Token` 头；没登录 401。里面没有房主密钥、`viewer_id`、后台密钥 |
+
+地区限制（`WATCH_ALLOWED_COUNTRIES` 非空时）：`/r/` 照常打开；`/ws/` 连上后先按 `client_ip` 查国家，不放行就只发 `blocked` 然后关闭，不进房；`/bili/`、`/vod/`、`/tv/` 对不放行的 IP 返回 403。每次拦截都记进 `BlockLog`。
 
 页面用 `localStorage["watch_viewer_id:<room_id>"]`（每个房间一个）保存 `viewer_id`，断线 2 秒后自动重连并带上同一个 `viewer_id`。`viewer_id` 是重连凭据，服务器只在 `welcome` 里发给本人；别人看到的是每个成员的公开 `id`（`members` 列表、`grant.target` 用它）。
 
@@ -131,9 +142,11 @@
 | `error` | `message` | 提示信息，如 `正在换视频，请稍候`（上一次 `change_video` 还没处理完时） |
 | `notice` | `message` | 非错误的提示，如直播换源成功后发给房间里所有人的 `已切换片源`（网页显示约 3 秒） |
 | `ended` | 无 | 房间已结束 |
+| `blocked` | `id`（6 位访客编号）, `country`（两位国家码或 null）, `message` | 地区不在放行名单：这是该连接收到的唯一一条消息，随后服务器关闭连接；页面显示原因和编号，不重连 |
 
 同步：客户端取最近 5 次 ping 里往返最小的一次，`offset = server_time + rtt/2 − 本地时间`；期望位置 = `position + (playing ? 现在的服务器时间 − server_time : 0)`。每秒比较一次，差距超过 2 秒直接跳转，0.3–2 秒微调播放速度。只有用户亲手操作才发 `control`，服务器下发状态引起的播放器事件不回传。
 
+投屏（只有 vod 片源）：Chromecast 走 `cast.js`，电视端用 Google 默认媒体接收端直接播 `/vod/…/index.m3u8`，页面只发 load / play / pause / seek、读回位置（SDK 的估计值，约半秒延迟）；AirPlay 走 `<video>` 自带的 Remote Playback API（Safari）或 webkit 前缀接口，元素继续当播放器，换集时只换 `src` 不重建元素，否则 AirPlay 会断。远端播放时不调倍速：播放中差距超过 1.5 秒就跳到目标再加 0.5 秒（补 seek 的往返），暂停时超过 1 秒重定位，两次跳转至少隔 3 秒，电视在 seeking / buffering 时不比较。Cast 会话连上时把页面当成已点过「开始观看」；房间换成 B 站或 YouTube 时结束会话；会话结束（电视停了、投屏失败）就重建本地播放器。
 直播房间不对位置：网页只跟随播放/暂停，每次从暂停变成播放（包括刚打开）都跳到最新画面（hls.js 的 `liveSyncPosition`，原生 HLS 用 `seekable` 的末尾），`control` 的 `position` 固定发 0，从不发 `seek`。播放器出致命错误后网页发一次 `tv_stall`，5 秒后用同一个版本重建播放器再试。
 
 ## 截图限流
