@@ -32,9 +32,12 @@
 | `server/vod_search.py` | 一起看按片名搜索：解析 `WATCH_VOD_SOURCES`，并发查询采集接口（`?ac=detail&wd=`），只留 https 的 `.m3u8` 片源，多个接口按「片名+年份」合并、按贴近程度排序，最多 10 条 |
 | `server/vod_playlist.py` | 一起看 vod 播放列表：取 m3u8（master 跟进一层最高码率）、改写成全绝对 https 地址、去掉片中插入的广告、试播探测（带 Origin 的 Range 请求，m3u8 和片段的跳转链也只认 https）、按线路找第一条能播的；`WatchServer.prepare_vod` 给整个过程加 45 秒总时限（`VOD_PREPARE_TIMEOUT`），超时按「这一集暂时没有能播的片源」处理 |
 | `server/watch_progress.py` | 一起看按频道的观看进度（`STATE_DIR/watch_progress.json`）：只记 vod 房间，少于 30 秒不记，房间里没人时不记（最后一个人宽限期结束时记最后一次），坏文件按空处理；生成「上次一起看到…」文案 |
-| `server/watch_server.py` | 一起看 HTTP / WebSocket 服务（aiohttp）：房间页、静态文件、同步协议、B 站转流和 MPD |
-| `server/watch_ui.py` | 一起看的 Discord 部分：房间卡片、房主链接按钮（`DynamicItem`）、人数更新 |
-| `server/watch_web/` | 一起看网页：`index.html`、`player.js`（播放器、同步、权限面板）、`style.css` |
+| `server/watch_server.py` | 一起看 HTTP / WebSocket 服务（aiohttp）：房间页、静态文件、同步协议、B 站转流和 MPD、管理后台（`/admin`，密钥 + 密码登录、房间快照、资源用量）、地区限制的拦截点 |
+| `server/watch_ui.py` | 一起看的 Discord 部分：房间卡片、房主链接按钮（`DynamicItem`）、人数更新、搜索选单、「没有我想看的」/「我正在寻找这一部影视资源」按钮（`RequestButton`，片名在 custom_id 里） |
+| `server/watch_requests.py` | 「想看但没有」的记录（`STATE_DIR/watch_requests.json`）：每人每天 `WATCH_REQUEST_DAILY_LIMIT` 次（悉尼 0 点重置）、同一天同一部去重、最多 2000 条、按规范化片名合并统计；不依赖 Discord |
+| `server/geoip.py` | 地区限制：下载五大 RIR 的 delegated-extended 分配表（每周刷新，缓存 `geoip.json`）、IP → 国家（v4 用 `array` 二分，v6 用 list）、放行判定（内网 LOCAL 放行，没加载时 `allowed=None` 即不拦）、`client_ip`（代理后取 `X-Forwarded-For` 最后一段）、`BlockLog`（被拦 IP 的编号、国家、房间、次数，`STATE_DIR/watch_blocked.json`） |
+| `server/sysstats.py` | 服务器资源采样：`/proc/stat`（整机 CPU）、`/proc/meminfo`、`/proc/loadavg`、`/proc/net/dev`（容器网卡上下行）、`/proc/self/stat|status`（bot 进程 CPU、RSS）、cgroup v2/v1 内存、磁盘；两次采样之差算百分比和速率，读不到就是 None |
+| `server/watch_web/` | 一起看网页：`index.html`、`player.js`（播放器、同步、权限面板、地区受限提示、投屏按钮和远端同步策略）、`cast.js`（Chromecast 发送端：懒加载 Google Cast SDK、会话、加载播放列表、远端播放状态）、`style.css`、`admin.html` + `admin.js`（管理后台，每 5 秒轮询 `/admin/api`） |
 | `client/client.py` | 本地客户端：连接/重连、配对码输入、Tab 监听、两段截图、上传 |
 
 ## 客户端状态
@@ -83,11 +86,18 @@
 | 路由 | 说明 |
 |---|---|
 | `GET /r/{room_id}` | 房间页（`index.html`）；房主链接带 `?k=<密钥>`，页面连上后会把它从地址栏去掉。房间不存在返回「房间不存在或已经结束」 |
-| `GET /static/{name}` | `player.js`、`style.css` 等静态文件 |
+| `GET /static/{name}` | `player.js`、`cast.js`、`style.css` 等静态文件（白名单 `STATIC_FILES`） |
 | `GET /ws/{room_id}` | WebSocket，协议见下 |
 | `GET /bili/{room_id}/{version}/manifest.mpd` | B 站视频的 DASH 清单，`BaseURL` 指向下面的转流地址 |
 | `GET /bili/{room_id}/{version}/{video\|audio}` | B 站视频流、音频流转发（支持 Range）。`version` 随换视频递增，旧地址失效 |
-| `GET /vod/{room_id}/{version}/index.m3u8` | 按片名搜索的剧集播放列表：本服务器只取当前集、当前片源线路的 m3u8，改写后返回（去广告，所有 URI 变成绝对 https）。片段由浏览器直接从资源站 CDN 取。`version` 随换视频递增，旧地址失效 |
+| `GET /vod/{room_id}/{version}/index.m3u8` | 按片名搜索的剧集播放列表：本服务器只取当前集、当前片源线路的 m3u8，改写后返回（去广告，所有 URI 变成绝对 https）。片段由浏览器直接从资源站 CDN 取。`version` 随换视频递增，旧地址失效。响应带 `Access-Control-Allow-Origin: *`：投屏时 Chromecast 的接收端（Google 的页面）跨域来取这份列表 |
+| `GET /admin` | 管理后台。没登录返回输入密钥 + 密码的登录页；登录了返回 `admin.html`。没配 `WATCH_ADMIN_KEY` 时整个 `/admin` 都是 404 |
+| `POST /admin/login` | 表单字段 `key`、`password`。都对 → 写 `watch_admin` cookie（值是 sha256(密钥
+密码) 的令牌，`HttpOnly`、`Path=/admin`、https 下 `Secure`、30 天）并 303 回 `/admin`；错 → 401 登录页带提示；同一 IP（`client_ip`）15 分钟内错 10 次 → 429 |
+| `GET /admin/logout` | 清 cookie，303 回 `/admin` |
+| `GET /admin/api` | 后台轮询的 JSON：`summary`（房间数、人数、B 站房间数、今日转流字节）、`rooms`（每个房间的频道、片名、片源、播放状态、进度、观众名单带房主/控制权/在线标记、房主、建房时间）、`requests`（「想看但没有」原始记录，带规范化 `key`，页面按它合并）、`stats`（`sysstats.sample()`，最多每 2 秒采一次）、`geo`（地区限制状态）、`blocked`（被拦 IP）。令牌放 cookie 或 `X-Admin-Token` 头；没登录 401。里面没有房主密钥、`viewer_id`、后台密钥 |
+
+地区限制（`WATCH_ALLOWED_COUNTRIES` 非空时）：`/r/` 照常打开；`/ws/` 连上后先按 `client_ip` 查国家，不放行就只发 `blocked` 然后关闭，不进房；`/bili/`、`/vod/` 对不放行的 IP 返回 403。每次拦截都记进 `BlockLog`。
 
 页面用 `localStorage["watch_viewer_id:<room_id>"]`（每个房间一个）保存 `viewer_id`，断线 2 秒后自动重连并带上同一个 `viewer_id`。`viewer_id` 是重连凭据，服务器只在 `welcome` 里发给本人；别人看到的是每个成员的公开 `id`（`members` 列表、`grant.target` 用它）。
 
@@ -116,8 +126,11 @@
 | `members` | `members`（`id`（公开 id，不是 `viewer_id`）, `name`, `can_control`） | 只发给房主，不含房主自己 |
 | `error` | `message` | 提示信息，如 `正在换视频，请稍候`（上一次 `change_video` 还没处理完时） |
 | `ended` | 无 | 房间已结束 |
+| `blocked` | `id`（6 位访客编号）, `country`（两位国家码或 null）, `message` | 地区不在放行名单：这是该连接收到的唯一一条消息，随后服务器关闭连接；页面显示原因和编号，不重连 |
 
 同步：客户端取最近 5 次 ping 里往返最小的一次，`offset = server_time + rtt/2 − 本地时间`；期望位置 = `position + (playing ? 现在的服务器时间 − server_time : 0)`。每秒比较一次，差距超过 2 秒直接跳转，0.3–2 秒微调播放速度。只有用户亲手操作才发 `control`，服务器下发状态引起的播放器事件不回传。
+
+投屏（只有 vod 片源）：Chromecast 走 `cast.js`，电视端用 Google 默认媒体接收端直接播 `/vod/…/index.m3u8`，页面只发 load / play / pause / seek、读回位置（SDK 的估计值，约半秒延迟）；AirPlay 走 `<video>` 自带的 Remote Playback API（Safari）或 webkit 前缀接口，元素继续当播放器，换集时只换 `src` 不重建元素，否则 AirPlay 会断。远端播放时不调倍速：播放中差距超过 1.5 秒就跳到目标再加 0.5 秒（补 seek 的往返），暂停时超过 1 秒重定位，两次跳转至少隔 3 秒，电视在 seeking / buffering 时不比较。Cast 会话连上时把页面当成已点过「开始观看」；房间换成 B 站或 YouTube 时结束会话；会话结束（电视停了、投屏失败）就重建本地播放器。
 
 ## 截图限流
 

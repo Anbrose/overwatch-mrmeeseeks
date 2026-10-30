@@ -32,6 +32,7 @@
             <button id="mute" class="ctl" type="button" aria-label="静音">🔊</button>
             <input id="volume" class="volume" type="range" min="0" max="100" step="1" value="100" aria-label="音量">
           </span>
+          <button id="cast" class="ctl" type="button" hidden aria-label="投屏" title="投屏">📺</button>
           <button id="fs" class="ctl" type="button" aria-label="全屏">⛶</button>
         </div>
         <div id="me" class="me"></div>
@@ -58,6 +59,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
+  <script src="/static/cast.js"></script>
   <script src="/static/player.js"></script>
 </body>
 </html>

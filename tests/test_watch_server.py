@@ -16,6 +16,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "server"))
 
 import watch_server as ws_mod  # noqa: E402
+from geoip import BlockLog, GeoDB  # noqa: E402
+from watch_requests import KIND_NO_RESULTS, KIND_NOT_LISTED, RequestStore  # noqa: E402
 from watch_rooms import RoomManager, Video  # noqa: E402
 from watch_sources import DashStreams, VideoUnavailable  # noqa: E402
 
@@ -509,6 +511,7 @@ async def test_pages():
         r = await client.get(f"/r/{room.room_id}")
         text = await r.text()
         check("房间页 200", r.status == 200 and "/static/player.js" in text and r.content_type == "text/html")
+        check("房间页带投屏脚本和按钮", "/static/cast.js" in text and 'id="cast"' in text)
         r = await client.get("/r/zzzzzz")
         text = await r.text()
         check("不存在的房间 404 文案", r.status == 404 and "房间不存在或已经结束" in text)
@@ -516,6 +519,9 @@ async def test_pages():
         check("static 白名单内 200", r.status == 200 and "javascript" in r.content_type)
         r = await client.get("/static/style.css")
         check("static css 类型", r.status == 200 and r.content_type == "text/css")
+        r = await client.get("/static/cast.js")
+        check("cast.js 在 static 白名单", r.status == 200 and "javascript" in r.content_type
+              and "WatchCast" in await r.text())
         check("static 白名单外 404", (await client.get("/static/../watch_server.py")).status == 404)
         check("static 编码穿越 404", (await client.get("/static/..%2Fwatch_server.py")).status == 404)
         check("static 未列名文件 404", (await client.get("/static/player-v2.html")).status == 404)
@@ -687,6 +693,7 @@ async def test_vod_playlist_route():
         body = await r.text()
         check("vod 播放列表 200 且类型对", r.status == 200 and r.content_type == "application/vnd.apple.mpegurl"
               and r.headers.get("Cache-Control") == "no-store" and body.startswith("#EXTM3U"))
+        check("vod 播放列表放开 CORS（Chromecast 接收端跨域取）", r.headers.get("Access-Control-Allow-Origin") == "*")
         check("播放列表去掉了广告、地址绝对", AD_SEGMENT not in body and f"{base}/l0/0/1000k/hls/" in body)
         check("命中缓存不再取上游", len(up.m3u8_requests) == n_req)
         check("vod 旧版本号 404", (await client.get(f"/vod/{rid}/1/index.m3u8")).status == 404)
@@ -1016,6 +1023,226 @@ async def test_vod_auto_next():
         await up_client.close()
 
 
+# ---------------- 管理后台 ----------------
+class FakeStats:
+    def __init__(self):
+        self.calls = 0
+
+    def sample(self):
+        self.calls += 1
+        return {"cpu_percent": 12.5, "mem": {"total": 100, "available": 60, "used": 40}}
+
+
+async def test_admin():
+    rooms = RoomManager()
+    reqs = RequestStore(None)
+    reqs.add("绝命毒师", KIND_NOT_LISTED, 1, "小明", 555)
+    reqs.add("老友记", KIND_NO_RESULTS, 2, "小红", 556)
+    stats = FakeStats()
+    server = ws_mod.WatchServer(rooms, FakeSources(), "127.0.0.1", 0, admin_key="JihyosDog", admin_password="Nwcambrosia4",
+                                requests=reqs, stats=stats, channel_name=lambda cid: "general" if cid == 1 else None)
+    client = TestClient(TestServer(server.app))
+    await client.start_server()
+    token = server.admin_token
+    auth = {"Cookie": f"watch_admin={token}"}
+    try:
+        room = rooms.create(1, 2, "发起人", yt(duration=300.0))
+        rooms.create(2, 3, "另一个", bili())
+        a, wa = await hello(client, room.room_id, key=room.owner_key)
+        b, wb = await hello(client, room.room_id)
+        rooms.control(room.room_id, wa["viewer_id"], "play", 10.0)
+
+        r = await client.get("/admin")
+        text = await r.text()
+        check("没登录：登录页（密钥 + 密码两个框）", r.status == 200 and 'name="key"' in text and 'name="password"' in text
+              and "/static/admin.js" not in text and r.headers.get("Cache-Control") == "no-store")
+        check("没登录 api 401", (await client.get("/admin/api")).status == 401)
+        check("令牌不是密钥本身，?k= 不再生效", token != "JihyosDog" and len(token) == 64
+              and "/static/admin.js" not in await (await client.get("/admin?k=JihyosDog")).text()
+              and (await client.get("/admin", headers={"Cookie": "watch_admin=JihyosDog"})).status == 200
+              and "/static/admin.js" not in await (await client.get("/admin", headers={"Cookie": "watch_admin=JihyosDog"})).text())
+        r = await client.post("/admin/login", data={"key": "JihyosDog", "password": "wrong"})
+        check("密码错：401 + 提示", r.status == 401 and "密钥或密码不对" in await r.text() and "Set-Cookie" not in r.headers)
+        r = await client.post("/admin/login", data={"key": "wrong", "password": "Nwcambrosia4"})
+        check("密钥错：401", r.status == 401)
+        r = await client.post("/admin/login", data={"key": "JihyosDog"})
+        check("缺密码：401", r.status == 401)
+        r = await client.post("/admin/login", data={"key": "JihyosDog", "password": "Nwcambrosia4"}, allow_redirects=False)
+        cookie = r.headers.get("Set-Cookie", "")
+        check("都对：303 回 /admin、写 cookie", r.status == 303 and r.headers.get("Location") == "/admin"
+              and f"watch_admin={token}" in cookie and "HttpOnly" in cookie and "Path=/admin" in cookie)
+        r = await client.get("/admin", headers=auth)
+        check("带 cookie 开后台页", r.status == 200 and "/static/admin.js" in await r.text())
+        check("admin.js 在 static 白名单", (await client.get("/static/admin.js")).status == 200)
+        r = await client.get("/admin/api", headers=auth)
+        body = await r.text()
+        d = json.loads(body)
+        check("api 200 JSON 不缓存", r.status == 200 and r.content_type == "application/json"
+              and r.headers.get("Cache-Control") == "no-store")
+        client.session.cookie_jar.clear()     # TestClient 的 jar 会记下登录 cookie，先清掉再测头
+        check("api 也认 X-Admin-Token 头", (await client.get("/admin/api", headers={"X-Admin-Token": token})).status == 200
+              and (await client.get("/admin/api", headers={"X-Admin-Token": "JihyosDog"})).status == 401)
+        r = await client.get("/admin/logout", allow_redirects=False)
+        check("退出：清 cookie 回登录页", r.status == 303 and "watch_admin=" in r.headers.get("Set-Cookie", "")
+              and ("Max-Age=0" in r.headers.get("Set-Cookie", "") or "expires" in r.headers.get("Set-Cookie", "").lower()))
+        check("概览", d["summary"] == {"rooms": 2, "viewers": 2, "bili_rooms": 1, "bili_bytes_today": 0}
+              and isinstance(d["server_time"], float) and d["started_at"] <= d["server_time"])
+        r0 = d["rooms"][0]
+        check("房间信息", r0["room_id"] == room.room_id and r0["url"] == f"/r/{room.room_id}"
+              and r0["channel"] == {"id": "1", "name": "general"} and r0["title"] == "YT" and r0["source"] == "youtube"
+              and r0["source_label"] == "YouTube" and r0["playing"] is True and r0["finished"] is False
+              and 10.0 <= r0["position"] < 12.0 and r0["duration"] == 300.0 and r0["host"] == "发起人"
+              and r0["creator"] == "发起人" and r0["age"] >= 0 and r0["episode"] is None)
+        names = {m["name"]: m for m in r0["viewers"]}
+        check("观众名单含房主标记", len(r0["viewers"]) == 2 and names[wa["name"]]["is_host"] and not names[wb["name"]]["is_host"]
+              and names[wb["name"]]["online"] and names[wb["name"]]["can_control"] is False)
+        check("没名字的频道只给 id", d["rooms"][1]["channel"] == {"id": "2", "name": None} and d["rooms"][1]["host"] is None
+              and d["rooms"][1]["viewers"] == [] and d["rooms"][1]["source_label"] == "B 站")
+        check("不泄露房主密钥、viewer_id、后台密钥", room.owner_key not in body and wa["viewer_id"] not in body
+              and wb["viewer_id"] not in body and "JihyosDog" not in body and "Nwcambrosia4" not in body)
+        check("请求记录", [q["query"] for q in d["requests"]] == ["绝命毒师", "老友记"]
+              and d["requests"][0]["kind_label"] == "搜到了但没有想看的" and d["requests"][1]["kind"] == "no_results"
+              and d["requests"][0]["channel"] == {"id": "555", "name": None} and d["requests"][0]["key"] == "绝命毒师"
+              and d["request_limit"] == 5)
+        check("资源用量来自 stats、短时间内不重采", d["stats"]["cpu_percent"] == 12.5 and stats.calls == 1)
+        await client.get("/admin/api", headers=auth)
+        check("2 秒内复用采样", stats.calls == 1)
+        check("没开地区限制", d["geo"] == {"enabled": False} and d["blocked"] == [])
+
+        # 连续输错锁 IP
+        old = ws_mod.ADMIN_LOGIN_MAX_FAILURES
+        ws_mod.ADMIN_LOGIN_MAX_FAILURES = 3
+        try:
+            hdr = {"X-Forwarded-For": "8.8.8.8"}
+            for _ in range(3):
+                await client.post("/admin/login", data={"key": "x", "password": "y"}, headers=hdr)
+            r = await client.post("/admin/login", data={"key": "JihyosDog", "password": "Nwcambrosia4"}, headers=hdr,
+                                  allow_redirects=False)
+            check("输错 3 次后即使对了也是 429", r.status == 429 and "输错太多次" in await r.text())
+            r = await client.post("/admin/login", data={"key": "JihyosDog", "password": "Nwcambrosia4"},
+                                  headers={"X-Forwarded-For": "8.8.4.4"}, allow_redirects=False)
+            check("别的 IP 不受影响", r.status == 303)
+        finally:
+            ws_mod.ADMIN_LOGIN_MAX_FAILURES = old
+        await a.close()
+        await b.close()
+    finally:
+        await client.close()
+
+    # 只配密钥没配密码：登录页只有密钥框，密钥对就进
+    server = ws_mod.WatchServer(rooms, FakeSources(), "127.0.0.1", 0, admin_key="onlykey")
+    client = TestClient(TestServer(server.app))
+    await client.start_server()
+    try:
+        text = await (await client.get("/admin")).text()
+        r = await client.post("/admin/login", data={"key": "onlykey"}, allow_redirects=False)
+        check("没配密码：只要密钥", 'name="password"' not in text and r.status == 303 and server.admin_password is None)
+    finally:
+        await client.close()
+
+    # 没有 admin_key：一律 404；没有 requests / stats 也能出快照
+    server = ws_mod.WatchServer(rooms, FakeSources(), "127.0.0.1", 0, admin_password="pw")
+    client = TestClient(TestServer(server.app))
+    await client.start_server()
+    try:
+        check("没配密钥：/admin 全 404", (await client.get("/admin")).status == 404
+              and (await client.get("/admin/api")).status == 404
+              and (await client.post("/admin/login", data={"key": "", "password": "pw"})).status == 404
+              and server.admin_key is None and server.admin_token is None)
+        snap = server.admin_snapshot()
+        check("无 requests / stats 的快照", snap["requests"] == [] and snap["stats"] is None and snap["request_limit"] is None)
+    finally:
+        await client.close()
+
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "watch_admin_key")
+        k1 = ws_mod.load_admin_key(p)
+        k2 = ws_mod.load_admin_key(p)
+        with open(p, encoding="utf-8") as f:
+            saved = f.read().strip()
+        check("自动生成的密钥存文件、重启不变", len(k1) >= 24 and k1 == k2 and saved == k1)
+        check("配置了就用配置的", ws_mod.load_admin_key(p, " mykey ") == "mykey" and ws_mod.load_admin_key(None, "") != "")
+
+
+async def test_geo_block():
+    import ipaddress
+
+    def ip4(s):
+        return int(ipaddress.IPv4Address(s))
+    geo = GeoDB(None, allowed=("AU", "NZ"))
+    geo.set_ranges([(ip4("1.0.0.0"), ip4("1.0.0.255"), "AU"), (ip4("8.8.8.0"), ip4("8.8.8.255"), "US")], [], fetched_at=1.0)
+    blocks = BlockLog(None)
+    rooms = RoomManager()
+    sources = FakeSources()
+    server = ws_mod.WatchServer(rooms, sources, "127.0.0.1", 0, admin_key="k", geo=geo, blocks=blocks)
+    client = TestClient(TestServer(server.app))
+    await client.start_server()
+    try:
+        room = rooms.create(1, 2, "发起人", yt(duration=300.0))
+        rid = room.room_id
+        check("房间页不拦", (await client.get(f"/r/{rid}", headers={"X-Forwarded-For": "8.8.8.8"})).status == 200)
+
+        ws = await client.ws_connect(f"/ws/{rid}", headers={"X-Forwarded-For": "8.8.8.8"})
+        await ws.send_json({"type": "hello", "viewer_id": None, "key": room.owner_key})
+        got = await drain(ws, timeout=1.0)
+        blocked = got[0] if got else {}
+        check("美国 IP：只收到 blocked 然后断开", blocked.get("type") == "blocked" and blocked.get("country") == "US"
+              and len(blocked.get("id", "")) == 6 and blocked.get("message") == ws_mod.BLOCKED_MSG
+              and got[-1]["type"].startswith("__"))
+        check("被拦的人不进房、房主密钥没被消耗", rooms.get(rid).members == {} and not room.key_used)
+        entry = blocks.all()[0]
+        check("记录 IP、编号、国家、房间", entry.ip == "8.8.8.8" and entry.id == blocked["id"] and entry.country == "US"
+              and entry.rooms == [rid] and entry.hits == 1)
+
+        ws2, w2 = await hello(client, rid)
+        check("没有 XFF（本机）放行", w2 is not None and w2["name"])
+        ws3 = await client.ws_connect(f"/ws/{rid}", headers={"X-Forwarded-For": "8.8.8.8, 1.0.0.9"})
+        await ws3.send_json({"type": "hello", "viewer_id": None, "key": None})
+        w3 = await recv_type(ws3, "welcome")
+        check("XFF 以最后一段为准（伪造的前段无效）：澳洲放行", w3 is not None)
+        ws4 = await client.ws_connect(f"/ws/{rid}", headers={"X-Forwarded-For": "1.0.0.9, 8.8.8.8"})
+        await ws4.send_json({"type": "hello", "viewer_id": None, "key": None})
+        got4 = await drain(ws4, timeout=1.0)
+        check("最后一段是美国 → 拦", got4 and got4[0].get("type") == "blocked" and blocks.entries["8.8.8.8"].hits == 2)
+        ws5 = await client.ws_connect(f"/ws/{rid}", headers={"X-Forwarded-For": "9.9.9.9"})
+        await ws5.send_json({"type": "hello", "viewer_id": None, "key": None})
+        got5 = await drain(ws5, timeout=1.0)
+        check("不在分配表里的 IP 也拦、国家为 None", got5 and got5[0].get("type") == "blocked" and got5[0]["country"] is None
+              and blocks.entries["9.9.9.9"].country is None)
+        ws6 = await client.ws_connect("/ws/zzzzzz", headers={"X-Forwarded-For": "8.8.8.8"})
+        got6 = await drain(ws6, timeout=1.0)
+        check("不存在的房间不记", got6 and got6[0]["type"] == "ended" and blocks.entries["8.8.8.8"].hits == 2)
+
+        broom = rooms.create(1, 2, "发起人", bili())
+        r = await client.get(f"/bili/{broom.room_id}/0/manifest.mpd", headers={"X-Forwarded-For": "8.8.8.8"})
+        check("B 站媒体路由 403", r.status == 403 and sources.calls == 0 and blocks.entries["8.8.8.8"].hits == 3
+              and broom.room_id in blocks.entries["8.8.8.8"].rooms)
+
+        snap = server.admin_snapshot()
+        check("后台快照里有地区状态和拦截记录", snap["geo"]["enabled"] and snap["geo"]["loaded"] and snap["geo"]["allowed"] == ["AU", "NZ"]
+              and snap["geo"]["ranges"] == 2 and {b["ip"] for b in snap["blocked"]} == {"8.8.8.8", "9.9.9.9"}
+              and snap["blocked"][0]["hits"] >= 1 and "id" in snap["blocked"][0])
+        await ws2.close()
+        await ws3.close()
+    finally:
+        await client.close()
+
+    # 数据还没加载：不拦
+    server = ws_mod.WatchServer(rooms, sources, "127.0.0.1", 0, geo=GeoDB(None), blocks=BlockLog(None))
+    client = TestClient(TestServer(server.app))
+    await client.start_server()
+    try:
+        room = rooms.create(1, 2, "发起人", yt(duration=300.0))
+        ws = await client.ws_connect(f"/ws/{room.room_id}", headers={"X-Forwarded-For": "8.8.8.8"})
+        await ws.send_json({"type": "hello", "viewer_id": None, "key": None})
+        check("地区数据没加载时放行", (await recv_type(ws, "welcome")) is not None and server.blocks.all() == []
+              and server.admin_snapshot()["geo"]["loaded"] is False)
+        await ws.close()
+    finally:
+        await client.close()
+
+
 async def main():
     await test_ws_flow()
     await test_duration_and_change_video()
@@ -1033,6 +1260,8 @@ async def main():
     await test_vod_switch_race()
     await test_vod_prepare_timeout()
     await test_vod_auto_next()
+    await test_admin()
+    await test_geo_block()
 
 
 if __name__ == "__main__":

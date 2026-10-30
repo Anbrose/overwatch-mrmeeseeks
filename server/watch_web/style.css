@@ -98,6 +98,7 @@ button, input { font: inherit; color: inherit; }
   justify-content: center;
   color: var(--muted);
   text-align: center;
+  white-space: pre-line;
   padding: 0 16px;
   pointer-events: none;
 }
@@ -299,3 +300,6 @@ input[type="range"]:disabled::-moz-range-thumb { background: transparent; }
   cursor: pointer;
 }
 .line-btn:hover:not(:disabled) { color: var(--accent); }
+
+/* 📺 投屏：投屏中点亮 */
+.ctl.on { color: var(--accent); }

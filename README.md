@@ -323,7 +323,7 @@ journalctl -u mrmeeseeks -f      # 查看日志
 | `ANTHROPIC_API_KEY` | 否 | 空 | 留空则只识别截图，不给建议 |
 | `CLAUDE_MODEL` | 否 | `claude-sonnet-5` | 给建议用的模型；想更快可换成 `claude-haiku-4-5-20251001`。可用模型见[模型列表](https://platform.claude.com/docs/en/models/overview) |
 | `ADVISE_EFFORT` | 否 | `low` | 给建议时的思考强度（`low`/`medium`/`high`），越高越慢 |
-| `STATE_DIR` | 否 | `state/` | 标注的模板、待标注队列、许愿次数（`wishes.json`）、赛区频道绑定（`regions.json`）、直播源（`live_sources.json`）、赛事竞猜（`predictions.db`）和公告的各语言版本（`announcements/`）存放位置；Docker 部署时是挂载的 `/state` |
+| `STATE_DIR` | 否 | `state/` | 标注的模板、待标注队列、许愿次数（`wishes.json`）、赛区频道绑定（`regions.json`）、直播源（`live_sources.json`）、赛事竞猜（`predictions.db`）、公告的各语言版本（`announcements/`）、一起看的进度（`watch_progress.json`）、「没有我想看的」记录（`watch_requests.json`）、被拦 IP（`watch_blocked.json`）和后台密钥（`watch_admin_key`）存放位置；Docker 部署时是挂载的 `/state` |
 | `WS_HOST` | 否 | `0.0.0.0` | WebSocket 监听地址；用反向代理时改为 `127.0.0.1` |
 | `WS_PORT` | 否 | `8765` | WebSocket 端口 |
 | `MIN_SNAPSHOT_INTERVAL` | 否 | `5` | 同一客户端两次分析的最短间隔（秒） |
@@ -336,6 +336,10 @@ journalctl -u mrmeeseeks -f      # 查看日志
 | `WATCH_MAX_QUALITY` | 否 | `1080` | B 站视频的画质上限，可选 `1080`、`720`、`480` |
 | `WATCH_MAX_BILI_ROOMS` | 否 | `2` | 同时存在的 B 站房间上限（服务器转流，占出口带宽）；YouTube 房间不限 |
 | `WATCH_VOD_SOURCES` | 否 | 见说明 | 按片名搜索用的资源站（采集接口），格式 `名字=接口地址`，逗号分隔，靠前的优先。不设置时用默认的 `创享影视`、`1080资源`、`量子` 三个；设成空字符串则关闭按片名搜索（仍可贴 B 站 / YouTube 链接）。见下方「按片名搜索」 |
+| `WATCH_ADMIN_KEY` | 否 | 自动生成 | 一起看管理后台（`/admin`）登录用的密钥。留空则第一次启动时生成并存到 `STATE_DIR/watch_admin_key`，之后不变。见下方「管理后台」 |
+| `WATCH_ADMIN_PASSWORD` | 否 | 空 | 管理后台登录的第二项：密码。配了就要密钥 + 密码一起输；留空只要密钥 |
+| `WATCH_REQUEST_DAILY_LIMIT` | 否 | `5` | 每人每天最多点几次「没有我想看的」/「我正在寻找这一部影视资源」，悉尼时间 0 点重置 |
+| `WATCH_ALLOWED_COUNTRIES` | 否 | `AU,NZ` | 一起看只对这些国家/地区的 IP 开放（两位国家码，逗号分隔）。不写这一行就是澳大利亚、新西兰；写成空字符串（`WATCH_ALLOWED_COUNTRIES=`）则不限制。见下方「地区限制」 |
 | `HERO_DATA_PATH` | 否 | `server/herodata/heroes.json` | 英雄数据缓存文件。Docker 部署时位于 `herodata` 卷 |
 | `HERO_REFRESH_HOURS` | 否 | `24` | 每隔多少小时刷新英雄数据（Overwatch Wiki）和对位数据（counterwatch.gg）；对位数据缓存在同一目录的 `matchups.json` |
 | `WISH_CHANNEL_ID` | 否 | 空 | 功能许愿频道的 ID，留空不启用。见下方「功能许愿频道」 |
@@ -402,6 +406,36 @@ python client\client.py --help
 - 一集播完会自动接下一集并开始播放；期间如果有人手动换过集，自动下一集作废。
 - 同一个频道看过的剧会记下进度（存在 `STATE_DIR/watch_progress.json`，不到 30 秒的不记；房间里没人以后不再往前记）。下次在这个频道搜到同一部剧，网页上会显示「上次一起看到 第 n 集 m:ss（M月D日）」，有控制权的人点它就能跳回上次的位置。
 - 资源站由第三方提供，内容和可用性都不由 bot 控制；接口出错或返回的不是有效数据时，bot 只提示「资源站暂时无法访问，请稍后再试」。
+- **没有我想看的**：搜索结果的下拉菜单下面有一个「没有我想看的」按钮，没找到时的回复里有「我正在寻找这一部影视资源」按钮。谁都能点，点一下就把这个片名记下来（只回复点的人），管理员在后台能看到谁想看什么。每人每天最多 `WATCH_REQUEST_DAILY_LIMIT`（默认 5）次，悉尼时间 0 点重置；同一个人同一天重复提同一部不算、也不扣次数。选单过期后按钮仍然留着，bot 重启后也能点（片名就在按钮里）。记录存在 `STATE_DIR/watch_requests.json`，最多保留 2000 条。
+
+#### 投屏
+
+按片名搜到的剧集可以投到电视上看，手机或电脑只当遥控器，同步照常。播放器控制栏里有 📺 按钮，网络里有能投的设备时才出现：
+
+- **Chromecast / Google TV / 带 Chromecast 的电视**：用电脑 Chrome 或安卓 Chrome 打开房间，点 📺 选设备。电视自己从资源站 CDN 拉视频，不经过手机。
+- **AirPlay（Apple TV、支持 AirPlay 的电视）**：用 iPhone、iPad 或 Mac 的 Safari 打开房间，点 📺 弹出系统的 AirPlay 选择器；想停就再点一次，选回自己的设备。
+- 投屏时房间换集、换片源都会跟着切；房主换成 B 站或 YouTube 视频时自动停止投屏（这两种不能投：YouTube 不给出流地址，B 站走服务器 DASH 转流，电视端不支持）。
+- 电视报位置有半秒左右的延迟、也不认倍速，所以投屏时的同步改成「差 1.5 秒以上就跳一下」，不像本地那样靠微调倍速，误差会比本地大一点。
+- 电视直接向服务器要播放列表，所以它要能访问 `WATCH_PUBLIC_URL` 且和手机在同一地区（地区限制按电视的 IP 判断，家里同一个网络没问题）。个别资源站的 CDN 只给浏览器放行跨域，电视会播不了，提示「投屏失败」后自动换回手机播放，换一个片源再试。
+
+#### 地区限制
+
+默认只有澳大利亚、新西兰的 IP 能看（`WATCH_ALLOWED_COUNTRIES`，写成空字符串就不限制）。其他地区的人能打开房间页，页面上显示「你所在的地区暂时不能观看」和一个 6 位**访客编号**，但收不到房间状态、看不到视频，B 站转流和剧集播放列表的地址也会返回 403；他们不算进房间人数。被拦的 IP、访客编号、推测的国家、去过的房间和次数记在 `STATE_DIR/watch_blocked.json`（每个 IP 一条，最多 500 条），后台「被拦截的访问」一栏能看，用户报编号就能对上。
+
+- IP 归属用 APNIC / ARIN / RIPE / LACNIC / AFRINIC 五家公开的 IP 分配表判断（免费、不用账号、合计约 46 MB），解析后缓存在 herodata 卷的 `geoip.json`，每 7 天刷新一次。**第一次启动要先下载完才开始拦截**（一般一两分钟内），下载好之前所有人都放行，后台会提示「地区数据还没加载」。
+- 分配表只到国家级别，判断的是「这个 IP 段分给了哪个国家的机构」，VPN、跨国运营商会判错；不在任何分配表里的 IP 也不放行。
+- 内网 / 本机地址（`127.0.0.1`、`172.18.x.x` 等）视为 `LOCAL`，一律放行。bot 从反向代理收到的连接都来自本机，所以**Caddy 必须把真实 IP 放在 `X-Forwarded-For` 里**（Caddy 的 `reverse_proxy` 默认就会）；如果后台里被拦记录和房间观众的 IP 全是 LOCAL，说明代理没传。bot 只认 `X-Forwarded-For` 的最后一段（代理追加的那一段），客户端自己伪造的前面几段无效。
+
+#### 管理后台
+
+打开 `https://watch.example.com/admin`（就是 `WATCH_PUBLIC_URL` 加 `/admin`），输入密钥（`WATCH_ADMIN_KEY`）和密码（`WATCH_ADMIN_PASSWORD`）登录。登录后浏览器里存一个 30 天的 cookie（值是由密钥和密码派生的令牌，不是密钥本身），右上角「退出」可以清掉。同一个 IP 连续输错 10 次锁 15 分钟。没配 `WATCH_ADMIN_KEY` 时密钥是自动生成的，在服务器上 `cat state/watch_admin_key` 能看到。页面每 5 秒刷新，有四块：
+
+- **概览 / 房间**：房间数、在看人数、今日 B 站转流量、bot 运行时长；每个房间的频道、正在播放的片名和片源、播放 / 暂停和进度、观众名单（房主、有控制权、断线中都有标记）、房主、开了多久，点房间号可以进去看。
+- **服务器资源**：整机 CPU 占用和负载、整机内存、容器内存（对照 `compose.yml` 的 `mem_limit`）、bot 进程的内存和 CPU、磁盘用量、容器网卡的上下行速率和累计流量（B 站转流都算在里面）、服务器开机时长。都从 `/proc` 和 cgroup 读，不需要额外权限；读不到的项显示「—」。
+- **被拦截的访问**：见上方「地区限制」。
+- **想看但没有的片**：按片名合并，显示次数、是「搜到了但没有想看的」还是「没搜到」、谁提的、在哪个频道、最近一次；可以切换今天 / 7 天 / 30 天 / 全部。
+
+要换密钥或密码就改 `.env` 里的 `WATCH_ADMIN_KEY` / `WATCH_ADMIN_PASSWORD` 后重启，所有已登录的浏览器都会被登出。
 
 **部署步骤**（先把 `compose.yml` 里的端口和下面的 Caddy 配置备好）：
 
@@ -514,8 +548,11 @@ python tests/test_wishes.py     # 功能许愿：每日限额、存档导出、�
 python tests/test_announce.py   # 多语言公告：分段、翻译、预览、发布、语言按钮
 python tests/test_watch_rooms.py   # 一起看：房间状态、权限、房主交接、过期
 python tests/test_watch_sources.py # 一起看：链接解析、B 站取流、YouTube 信息
-python tests/test_watch_server.py  # 一起看：HTTP 路由、WebSocket 协议、B 站转流
-python tests/test_watch_bot.py     # 一起看：指令、房间卡片、房主按钮
+python tests/test_watch_server.py  # 一起看：HTTP 路由、WebSocket 协议、B 站转流、管理后台登录与快照、地区拦截、投屏用的静态文件和 CORS
+python tests/test_watch_bot.py     # 一起看：指令、房间卡片、房主按钮、「没有我想看的」按钮
+python tests/test_watch_requests.py # 一起看：「没有我想看的」记录、每日限额、合并统计
+python tests/test_geoip.py         # 一起看：地区限制（RIR 分配表解析、IP 查国家、X-Forwarded-For、被拦记录）
+python tests/test_sysstats.py      # 管理后台：服务器资源采样（/proc、cgroup）
 ```
 
 每个脚本最后一行显示 `N/N passed`，全部通过时退出码为 0。

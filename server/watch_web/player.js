@@ -20,8 +20,18 @@
   const CAUGHT_UP = 0.1;     // seconds: nudging done, back to 1x
   const PAUSED_DRIFT = 0.25; // seconds: while paused, re-seek beyond this
   const RATE_STEPS = { bilibili: [0.95, 1.05], youtube: [0.75, 1.25], vod: [0.95, 1.05] };
+  // Casting (AirPlay / Chromecast): the TV reports its position with ~0.5 s of
+  // slack and ignores playbackRate, so sync by seeking, less often and with a
+  // wider band. REMOTE_SEEK_LEAD covers the seek round trip.
+  const REMOTE_DRIFT = 1.5;        // seconds while playing: re-seek beyond this
+  const REMOTE_PAUSED_DRIFT = 1.0; // seconds while paused
+  const REMOTE_SEEK_LEAD = 0.5;    // seconds added to a playing seek target
+  const REMOTE_SEEK_GAP_MS = 3000; // never seek a remote more often than this
   const UNPLAYABLE_MSG = "这个视频暂时无法播放";
   const VOD_FAILED_MSG = "视频加载失败";
+  const CAST_FAILED_MSG = "投屏失败，电视播不了这个片源";
+  const CAST_ONLY_VOD_MSG = "投屏只支持按片名搜到的剧集，已停止投屏";
+  const CAST_STOPPED_MSG = "已停止投屏";
   const PREPARING_MSG = "正在准备…";
   const PREPARING_TIMEOUT_MS = 50000;   // outlasts the server's 45 s VOD_PREPARE_TIMEOUT
   const RESUME_NEAR = 30;    // seconds: resume line hidden this close to the snapshot
@@ -31,6 +41,7 @@
     title: $("title"), conn: $("conn"), permBtn: $("perm-btn"),
     stageWrap: $("stage-wrap"), host: $("player-host"), stageMsg: $("stage-msg"), start: $("start"),
     play: $("play"), seek: $("seek"), time: $("time"), mute: $("mute"), volume: $("volume"), fs: $("fs"),
+    cast: $("cast"),
     me: $("me"), panel: $("perm-panel"), members: $("members"),
     changeForm: $("change-form"), changeUrl: $("change-url"), toast: $("toast"),
     resume: $("resume"), vodPanel: $("vod-panel"), episodes: $("episodes"),
@@ -122,6 +133,9 @@
 
   function syncTick() {
     if (!started || !room || !player || !player.ready || ended) return;
+    const remote = isRemote();
+    // A TV that is still seeking/buffering reports a stale position: wait.
+    if (remote && player.busy && player.busy()) return;
     const target = expectedPosition(room);
     const dur = currentDuration();
     // Calling play() on an ended video restarts it from 0; don't.
@@ -133,18 +147,38 @@
     const drift = target - player.getTime();
     if (!room.playing) {
       // A paused target doesn't depend on the clock, so no pong is needed.
-      if (Math.abs(drift) > PAUSED_DRIFT) player.seek(target, { keepPaused: true });
+      if (Math.abs(drift) > (remote ? REMOTE_PAUSED_DRIFT : PAUSED_DRIFT)) {
+        if (remote) remoteSeek(target, true); else player.seek(target, { keepPaused: true });
+      }
       player.setRate(1);
       return;
     }
     // While playing, the target depends on clock offset: wait for a real sample.
     if (atEnd || !clockReady()) { player.setRate(1); return; }
+    if (remote) {
+      // No rate nudging on a TV: jump (slightly ahead, the seek takes a moment).
+      if (Math.abs(drift) > REMOTE_DRIFT) remoteSeek(target + REMOTE_SEEK_LEAD, false);
+      return;
+    }
     if (Math.abs(drift) > HARD_DRIFT) {
       player.seek(target);
       player.setRate(1);
       return;
     }
     player.setRate(chooseRate(drift, player.getRate(), RATE_STEPS[player.source]));
+  }
+
+  // Playback is happening on a TV (AirPlay target or a Cast session).
+  function isRemote() {
+    return !!(player && player.remote && player.remote());
+  }
+
+  let lastRemoteSeek = -Infinity;
+  function remoteSeek(target, keepPaused) {
+    const now = performance.now();
+    if (now - lastRemoteSeek < REMOTE_SEEK_GAP_MS) return;
+    lastRemoteSeek = now;
+    player.seek(Math.max(0, target), { keepPaused });
   }
 
   // ---------------------------------------------------------------- script loading
@@ -238,6 +272,7 @@
     const video = document.createElement("video");
     video.playsInline = true;
     video.setAttribute("playsinline", "");
+    video.setAttribute("x-webkit-airplay", "allow");
     video.preload = "auto";
     ui.host.appendChild(video);
     const native = !!video.canPlayType(HLS_MIME);
@@ -249,6 +284,13 @@
       failed: false,
       failMsg: VOD_FAILED_MSG,
       video,
+      native,
+      remoteAvailable: false,              // an AirPlay / Remote Playback target exists
+      remote: () => remotePlaying(video),  // playing on that target right now
+      busy: () => video.seeking,
+      promptRemote: () => promptRemote(video),
+      // Same element, new playlist: keeps an AirPlay session alive across episodes.
+      load: (url) => { if (native) video.src = url; else if (hls) hls.loadSource(url); },
       getTime: () => video.currentTime || 0,
       getDuration: () => (Number.isFinite(video.duration) ? video.duration : 0),
       isPaused: () => video.paused,
@@ -281,6 +323,9 @@
     video.addEventListener("error", onError);
     if (native) {
       video.src = hlsUrl;
+      // Only a playlist the browser plays itself can be handed to a TV; hls.js
+      // feeds the element a MediaSource, which AirPlay cannot forward.
+      watchRemote(video, adapter);
     } else if (window.Hls && window.Hls.isSupported()) {
       hls = new window.Hls();
       hls.on(window.Hls.Events.ERROR, (_event, data) => { if (data && data.fatal) onError(); });
@@ -291,6 +336,147 @@
       Promise.resolve().then(onError);
     }
     return adapter;
+  }
+
+  // ---- AirPlay / Remote Playback API (Safari, iOS; Chrome on Android) ----
+  // The <video> keeps playing "through" the TV: currentTime, play() and pause()
+  // still work, so the vod adapter stays in charge; only the sync policy changes.
+
+  function remotePlaying(video) {
+    if (video.remote && video.remote.state === "connected") return true;
+    return !!video.webkitCurrentPlaybackTargetIsWireless;
+  }
+
+  // Opens the system picker; it is also the only way to stop (pick "iPhone" again).
+  function promptRemote(video) {
+    if (video.remote && typeof video.remote.prompt === "function") {
+      return video.remote.prompt().catch(() => {});
+    }
+    if (typeof video.webkitShowPlaybackTargetPicker === "function") video.webkitShowPlaybackTargetPicker();
+    return Promise.resolve();
+  }
+
+  function watchRemote(video, adapter) {
+    const onChange = () => { if (player === adapter) onRemoteChange(adapter); };
+    const setAvailable = (v) => {
+      if (adapter.remoteAvailable === v) return;
+      adapter.remoteAvailable = v;
+      if (player === adapter) renderCastButton();
+    };
+    if (video.remote && typeof video.remote.watchAvailability === "function") {
+      video.remote.watchAvailability((v) => setAvailable(!!v))
+        // NotSupportedError: this browser can't tell in advance; show the button anyway.
+        .catch(() => setAvailable(true));
+      for (const ev of ["connecting", "connect", "disconnect"]) video.remote.addEventListener(ev, onChange);
+    } else if (typeof video.webkitShowPlaybackTargetPicker === "function") {
+      video.addEventListener("webkitplaybacktargetavailabilitychanged", (e) => {
+        setAvailable(e.availability === "available");
+      });
+    }
+    video.addEventListener("webkitcurrentplaybacktargetiswirelesschanged", onChange);
+  }
+
+  let wasRemote = false;
+  function onRemoteChange(adapter) {
+    const now = adapter.remote();
+    if (now !== wasRemote) {
+      wasRemote = now;
+      lastRemoteSeek = -Infinity;
+      if (now) toast("正在投屏到电视");
+    }
+    renderCastButton();
+    syncTick();
+  }
+
+  // ---- Chromecast: the receiver plays the playlist, we only steer it ----
+  // Volume is the TV's own: on connect we take its level instead of pushing
+  // ours, so a page at 100% never blasts the living room.
+  function createCastPlayer(video) {
+    const C = window.WatchCast;
+    const url = new URL(video.hls, location.href).href;
+    let loading = true;
+    let cancelled = false;
+    const adapter = {
+      source: "vod",
+      ready: false,
+      failed: false,
+      failMsg: CAST_FAILED_MSG,
+      cast: true,
+      remote: () => true,
+      busy: () => loading || C.player.isBuffering(),
+      getTime: () => C.player.getTime(),
+      getDuration: () => C.player.getDuration(),
+      isPaused: () => C.player.isPaused(),
+      play: () => C.player.play(),
+      pause: () => C.player.pause(),
+      seek: (t) => C.player.seek(t),
+      getRate: () => 1,
+      setRate: () => {},
+      setVolume: (v, m) => C.player.setVolume(v, m),
+      destroy: () => { cancelled = true; },
+    };
+    (async () => {
+      let fmp4 = false;
+      try {
+        // The receiver wants to know the segment container; our playlist says.
+        const text = await (await fetch(video.hls, { cache: "no-store" })).text();
+        fmp4 = text.includes("#EXT-X-MAP");
+      } catch { /* let the receiver guess */ }
+      if (cancelled) return;
+      try {
+        await C.load({
+          url, title: video.title, fmp4,
+          startTime: room ? expectedPosition(room) : 0,
+          autoplay: !!(room && room.playing),
+        });
+      } catch {
+        if (cancelled) return;
+        // The receiver refused the playlist (codec, CORS on the CDN…): drop the
+        // session; its end event brings the local player back.
+        adapter.failed = true;
+        setStageMessage(CAST_FAILED_MSG);
+        toast(CAST_FAILED_MSG);
+        C.stop();
+        return;
+      }
+      if (cancelled) return;
+      loading = false;
+      adapter.ready = true;
+      const v = C.player.getVolume();
+      volume = v.level;
+      muted = v.muted;
+      applyVolume();
+      wasRemote = true;
+      lastRemoteSeek = -Infinity;
+      onPlayerReady(adapter);
+    })();
+    return adapter;
+  }
+
+  function castConnected() {
+    return !!(window.WatchCast && window.WatchCast.connected());
+  }
+
+  // A Cast session came or went (user picked a TV, TV stopped, auto-rejoin on reload).
+  function onCastSession(connected) {
+    if (connected) {
+      if (ended || !room) return;  // onState builds the cast player once a state arrives
+      if (!isVod()) {
+        window.WatchCast.stop();
+        toast(CAST_ONLY_VOD_MSG);
+        return;
+      }
+      started = true;              // the TV needs no tap to start
+      ui.start.hidden = true;
+      buildPlayer(room.video);
+    } else {
+      if (player && player.cast) {
+        toast(CAST_STOPPED_MSG);
+        if (room && !ended) buildPlayer(room.video);
+      }
+      wasRemote = false;
+      renderCastButton();
+    }
   }
 
   function createYouTubePlayer(videoId, version, onReady) {
@@ -379,17 +565,35 @@
   }
 
   async function buildPlayer(video) {
+    // AirPlay is bound to the <video> element: for the next episode swap the
+    // playlist instead of the element, or the TV would drop the session.
+    if (video.source === "vod" && player && player.source === "vod" && player.native
+        && !player.failed && player.remote() && !castConnected()) {
+      buildToken++;
+      playerVersion = video.version;
+      player.load(video.hls);
+      lastRemoteSeek = -Infinity;
+      syncTick();
+      return;
+    }
     destroyPlayer();
     const token = buildToken;
     playerVersion = video.version;
     setStageMessage("加载中…");
     renderStartButton();
+    if (castConnected() && video.source !== "vod") {
+      window.WatchCast.stop();
+      toast(CAST_ONLY_VOD_MSG);
+    }
     try {
       if (video.source === "bilibili") {
         await loadScript(DASH_SRC);
         if (token !== buildToken) return;
         player = createBiliPlayer(video.mpd);
         onPlayerReady(player);
+      } else if (video.source === "vod" && castConnected()) {
+        player = createCastPlayer(video);   // reports ready itself once the TV accepted
+        renderCastButton();
       } else if (video.source === "vod") {
         if (!document.createElement("video").canPlayType(HLS_MIME)) {
           await loadScript(HLS_SRC);
@@ -418,6 +622,7 @@
     p.setVolume(volume, muted);
     setStageMessage("");
     renderStartButton();
+    renderCastButton();
     syncTick();
   }
 
@@ -429,9 +634,26 @@
   }
 
   function renderStageMessage() {
-    const text = preparing ? PREPARING_MSG : stageText;
+    // While a Cast session plays, the stage is empty: say where the picture went.
+    const casting = player && player.cast && !player.failed
+      ? `正在投屏到 ${window.WatchCast.deviceName() || "电视"}` : "";
+    const text = preparing ? PREPARING_MSG : stageText || casting;
     ui.stageMsg.textContent = text;
     ui.stageMsg.hidden = !text;
+  }
+
+  // 📺 button: shown when a TV can be reached (Cast device on the network, or
+  // an AirPlay target); lit while casting.
+  function renderCastButton() {
+    const casting = isRemote();
+    const C = window.WatchCast;
+    const reachable = isVod() && !ended && ((C && C.available) || !!(player && player.remoteAvailable));
+    ui.cast.hidden = !(reachable || casting);
+    ui.cast.classList.toggle("on", casting);
+    const label = casting ? "停止投屏" : "投屏";
+    ui.cast.setAttribute("aria-label", label);
+    ui.cast.title = label;
+    renderStageMessage();
   }
 
   // Shown on the stage from a vod switch request until ANY state or error
@@ -525,6 +747,7 @@
     ui.conn.hidden = connected || ended;
     renderResume();
     renderVodPanel();
+    renderCastButton();
   }
 
   function isVod() {
@@ -629,6 +852,7 @@
   function showEnded() {
     ended = true;
     stopPreparing();
+    if (castConnected()) window.WatchCast.stop();
     destroyPlayer();
     ui.start.hidden = true;
     setStageMessage("房间已结束");
@@ -692,6 +916,18 @@
     } else if (player && player.video && player.video.webkitEnterFullscreen) {
       player.video.webkitEnterFullscreen(); // iOS Safari
     }
+  });
+
+  // Chromecast first (its picker also lists AirPlay-less TVs); otherwise the
+  // system AirPlay picker, which is where an AirPlay session is ended too.
+  ui.cast.addEventListener("click", () => {
+    const C = window.WatchCast;
+    if (player && player.cast) { C.stop(); return; }
+    if (C && C.available && !isRemote()) {
+      C.request().catch(() => {});  // cancelled picker: nothing to do
+      return;
+    }
+    if (player && player.promptRemote) player.promptRemote();
   });
 
   ui.start.addEventListener("click", () => {
@@ -809,7 +1045,24 @@
       case "ended":
         showEnded();
         break;
+      case "blocked":
+        showBlocked(msg);
+        break;
     }
+  }
+
+  // 地区不在放行名单：服务器只发这一条就断开。不重连，不建播放器；把编号给用户看，方便找管理员对照。
+  function showBlocked(msg) {
+    ended = true;
+    stopPreparing();
+    destroyPlayer();
+    ui.start.hidden = true;
+    const id = msg.id ? String(msg.id) : "";
+    setStageMessage(String(msg.message || "你所在的地区暂时不能观看") + (id ? `\n访客编号：${id}` : ""));
+    renderControls();
+    ui.me.textContent = id ? `房间 ${roomId} · 访客编号 ${id}` : `房间 ${roomId}`;
+    ui.title.textContent = "一起看 · 地区受限";
+    document.title = "一起看 · 地区受限";
   }
 
   function revertOptimistic() {
@@ -828,6 +1081,8 @@
     const title = msg.video.title || "";
     ui.title.textContent = title;
     document.title = title ? `${title} · 一起看` : "一起看";
+    // The Cast SDK is only worth loading once there is something castable.
+    if (msg.video.source === "vod" && window.WatchCast) window.WatchCast.init();
     if (msg.video.version !== playerVersion) buildPlayer(msg.video);
     if (firstState && !started) ui.start.hidden = false;
     renderControls();
@@ -836,6 +1091,10 @@
 
   // ---------------------------------------------------------------- boot
 
+  if (window.WatchCast) {
+    window.WatchCast.on("available", renderCastButton);
+    window.WatchCast.on("session", onCastSession);
+  }
   applyVolume();
   renderControls();
   renderStartButton();
