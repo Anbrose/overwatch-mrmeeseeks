@@ -34,7 +34,7 @@ def message(content, dm=True, mention=False):
     async def reply(content=None, **kw):
         replies.append(content)
 
-    return NS(author=NS(id=7, bot=False), mentions=[NS(id=1)] if mention else [], content=content,
+    return NS(author=NS(id=7, bot=False, display_name="小红"), mentions=[NS(id=1)] if mention else [], content=content,
               channel=NS(id=99), guild=None if dm else NS(), reply=reply), replies
 
 

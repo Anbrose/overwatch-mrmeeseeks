@@ -263,6 +263,7 @@ class FakeChannel:
 class FakeMessage:
     def __init__(self, user_id=1):
         self.author = NS(id=user_id)
+        self.guild = NS(id=10)
         self.channel = FakeChannel()
         self.replies = []
 
