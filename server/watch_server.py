@@ -125,6 +125,7 @@ background:#0f1115;color:#e6e6e6;font-family:system-ui,-apple-system,"PingFang S
 JOIN_ERROR = '<p class="err">没有这个房间，看看房间号有没有输错</p>'
 _CODE_JUNK = re.compile(r"[^a-z0-9]")
 CHANGING_MSG = "正在换视频，请稍候"
+HOST_CHANGED = "房主现在是「{name}」"
 ROOMS_FULL_MSG = "B 站房间已满（最多 {limit} 个），请稍后再试或换 YouTube 视频"
 NO_TV_SOURCE = "这个台暂时没有能播的源"
 TV_SWITCHED = "已切换片源"
@@ -805,6 +806,14 @@ class WatchServer:
             target, allowed = data.get("target"), data.get("allowed")
             if isinstance(target, str) and isinstance(allowed, bool):
                 self.rooms.set_permission(rid, vid, target, allowed)
+        elif kind == "transfer":
+            target = data.get("target")
+            if isinstance(target, str):
+                new_host = self.rooms.transfer_host(rid, vid, target)
+                if new_host is not None:
+                    msg = {"type": "notice", "message": HOST_CHANGED.format(name=new_host.name)}
+                    for c in self.conns.get(rid, ()):
+                        c.push(msg)
         elif kind == "change_video":
             url = data.get("url")
             room = self.rooms.get(rid)

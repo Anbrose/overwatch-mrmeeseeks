@@ -122,6 +122,7 @@
 | `control` | `action`（`play` / `pause` / `seek`）, `position` | 播放控制，只有房主和被授权的人有效；被拒绝时服务器只给发送者回一条 `state`，让它撤回乐观更新 |
 | `duration` | `value` | YouTube 播放器加载后上报一次视频时长；只接受房主和有控制权的人，且只在时长未知时 |
 | `grant` | `target`（成员的公开 `id`）, `allowed` | 房主开关某人的控制权限 |
+| `transfer` | `target`（成员的公开 `id`，必须在场） | 房主把房主身份交给这个人；原房主保留控制权。成功后所有人收到 `you`、新房主收到 `members`，并广播 `notice`「房主现在是「名字」」 |
 | `change_video` | `url` | 房主换视频 |
 | `episode` | `index`（从 0 开始） | 房主选集（vod 房间）：停在开头、暂停，优先用当前片源线路。当前视频不是 vod 时忽略 |
 | `next_line` | 无 | 房主换一个片源（vod 房间）：同一集、下一条线路（绕圈），保持当前位置和播放/暂停状态 |

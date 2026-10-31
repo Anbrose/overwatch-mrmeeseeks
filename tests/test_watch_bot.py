@@ -112,8 +112,9 @@ class FakeMessage:
         self.dms.append(content)
         return NS(id=9000 + len(self.dms))
 
-    async def reply(self, content, view=None, allowed_mentions=None):
+    async def reply(self, content, view=None, allowed_mentions=None, embeds=None):
         self.replies.append((content, view, allowed_mentions))
+        self.embeds = embeds
         return NS(id=7000 + len(self.replies))
 
 
@@ -246,7 +247,7 @@ def test_watch_command():
         ui3, rooms3, _, edits3 = make_ui(max_bili=1)
         msg = FakeMessage()
 
-        async def fail_reply(content, view=None, allowed_mentions=None):
+        async def fail_reply(content, view=None, allowed_mentions=None, embeds=None):
             raise discord.HTTPException(NS(status=403, reason="Forbidden"), "no perms")
         msg.reply = fail_reply
         closed = []
@@ -512,6 +513,14 @@ def test_watch_search_posts_menu():
     check("选项标签", len(sel.options) <= 10 and sel.options[0].label == "绝命毒师 第一季 · 2008 · 欧美剧 · 7 集"
           and sel.options[0].value == "0" and not sel.options[0].description)
     check("结果消息不 ping", mentions is not None and mentions.users is False)
+    check("搜索结果没海报就没有 embed", msg.embeds == [])
+    pics = [show(key=f"p{i}", title=f"剧{i}") for i in range(7)]
+    for i, s in enumerate(pics):
+        s.pic = f"https://img.example.com/{i}.jpg" if i != 2 else None
+    embeds = wui.build_pick_embeds(pics)
+    check("有海报的前 5 条各一个 embed（跳过没海报的）", len(embeds) == 5
+          and [e.title for e in embeds] == [wui.option_label(pics[i]) for i in (0, 1, 3, 4, 5)]
+          and embeds[0].thumbnail.url == "https://img.example.com/0.jpg")
     check("登记了待选", token_of(msg) in ui.pending and ui.pending[token_of(msg)].message_id == 7001)
     check("缺 year / type_name 就省掉",
           wui.option_label(show(year=None, type_name="")) == "绝命毒师 第一季 · 7 集"
@@ -651,7 +660,7 @@ def test_pick_failures():
     # 卡片发不出去：关房
     b, ui, rooms, clock, edits, ws, msg = setup_search()
 
-    async def fail_reply(content, view=None, allowed_mentions=None):
+    async def fail_reply(content, view=None, allowed_mentions=None, embeds=None):
         raise discord.HTTPException(NS(status=403, reason="Forbidden"), "no perms")
     msg.reply = fail_reply
 
@@ -683,7 +692,7 @@ def test_pick_failures():
     msg = FakeMessage()
     msg.author.mention = "<@1>"
 
-    async def fail_menu(content, view=None, allowed_mentions=None):
+    async def fail_menu(content, view=None, allowed_mentions=None, embeds=None):
         raise discord.HTTPException(NS(status=403, reason="Forbidden"), "no perms")
     msg.reply = fail_menu
     asyncio.run(b._watch(msg, "绝命毒师"))
@@ -899,7 +908,7 @@ def test_tv_exact():
     msg = FakeMessage()
     real = msg.reply
 
-    async def fail_card(content, view=None, allowed_mentions=None):
+    async def fail_card(content, view=None, allowed_mentions=None, embeds=None):
         if view is not None:
             raise discord.HTTPException(NS(status=403, reason="Forbidden"), "no perms")
         return await real(content, view, allowed_mentions)

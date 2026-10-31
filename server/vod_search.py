@@ -55,6 +55,7 @@ class Show:
     year: int | None
     type_name: str
     lines: list[Line] = field(default_factory=list)
+    pic: str | None = None        # 海报（资源站的 vod_pic，只认 https；Discord 消息里当缩略图）
 
     @property
     def episode_count(self) -> int:
@@ -130,11 +131,14 @@ def parse_detail(resp: dict, api_name: str) -> list[Show]:
         year = int(m.group()) if m else None
         title = re.sub(r"\s+", " ", name).strip()
         type_name = it.get("type_name")
+        pic = it.get("vod_pic")
+        pic = pic.strip() if isinstance(pic, str) else ""
         shows.append(Show(
             key=normalize_title(name) + "|" + str(year or ""),
             title=title, year=year,
             type_name=type_name.strip() if isinstance(type_name, str) else "",
-            lines=lines))
+            lines=lines,
+            pic=pic if pic.startswith("https://") and len(pic) <= 500 else None))
     return shows
 
 
@@ -144,8 +148,10 @@ def merge_shows(groups: list[list[Show]]) -> list[Show]:
         for s in group:
             if s.key in merged:
                 merged[s.key].lines.extend(s.lines)
+                if merged[s.key].pic is None:
+                    merged[s.key].pic = s.pic
             else:
-                merged[s.key] = Show(s.key, s.title, s.year, s.type_name, list(s.lines))
+                merged[s.key] = Show(s.key, s.title, s.year, s.type_name, list(s.lines), s.pic)
     return list(merged.values())
 
 

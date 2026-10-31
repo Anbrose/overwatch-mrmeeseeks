@@ -212,6 +212,23 @@ def build_want_view(query: str) -> discord.ui.View:
     return view
 
 
+PICK_EMBEDS_MAX = 5       # 搜索结果消息里最多放几张海报（Discord 一条消息最多 10 个 embed，太多会很长）
+
+
+def build_pick_embeds(shows: list[Show], limit: int = PICK_EMBEDS_MAX) -> list[discord.Embed]:
+    """有海报的前几条结果各一个 embed：标题和选单里的选项一样，缩略图是海报。没海报的跳过。"""
+    out = []
+    for show in shows:
+        if len(out) >= limit:
+            break
+        if not show.pic:
+            continue
+        e = discord.Embed(title=option_label(show))
+        e.set_thumbnail(url=show.pic)
+        out.append(e)
+    return out
+
+
 def build_pick_view(p: PendingSearch, progress: ProgressStore | None) -> discord.ui.View:
     options = [discord.SelectOption(label=channel_label(ch), value=f"tv{i}") for i, ch in enumerate(p.channels)]
     for i, show in enumerate(p.shows):

@@ -83,7 +83,7 @@ from watch_rooms import RoomManager, RoomsFull, TvRoomsFull
 from watch_server import TvUnavailable, WatchServer, load_admin_key
 from watch_sources import QUALITY_QN, Sources, VideoUnavailable, find_link
 from watch_ui import (HOST_LINK_FAILED, PICK_PREPARING, CardStore, PendingSearch, PickSelect, RequestButton, WatchUI,
-                      build_pick_view, build_want_view, host_link_text, search_header,
+                      build_pick_embeds, build_pick_view, build_want_view, host_link_text, search_header,
                       card_text, build_view as build_watch_view)
 from ws_server import WSServer
 
@@ -700,6 +700,7 @@ class MeeseeksBot(discord.Client):
         try:
             sent = await message.reply(search_header(arg, message.author.mention),
                                        view=build_pick_view(p, self.progress),
+                                       embeds=build_pick_embeds(shows),
                                        allowed_mentions=discord.AllowedMentions.none())
         except discord.HTTPException:
             log.exception("Could not post the search results in channel %s", message.channel.id)

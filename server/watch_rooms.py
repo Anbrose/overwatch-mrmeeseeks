@@ -319,6 +319,22 @@ class RoomManager:
         self._notify(room, "permissions")
         return True
 
+    def transfer_host(self, room_id, actor_id, target_public_id) -> Member | None:
+        """房主把房主身份交给房间里的另一个人（公开 id 指定，必须在场）。原房主保留控制权。
+        成功返回新房主，否则 None。"""
+        room = self.get(room_id)
+        if room is None or not self._is_host(room, actor_id):
+            return None
+        target = next((m for m in room.present() if m.public_id == target_public_id), None)
+        if target is None or target.viewer_id == actor_id:
+            return None
+        old = room.members.get(actor_id)
+        if old is not None:
+            old.can_control = True
+        room.host_id = target.viewer_id
+        self._notify(room, "host")
+        return target
+
     def _set_video(self, room: Room, video: Video, position: float, playing: bool) -> None:
         room.video = video
         room.version += 1

@@ -1077,7 +1077,20 @@
       sw.addEventListener("click", () => {
         send({ type: "grant", target: m.id, allowed: !m.can_control });
       });
-      li.append(name, sw);
+      // Hand the host role over. The server keeps the old host's control
+      // permission, so this is not a way to lose the room.
+      const crown = document.createElement("button");
+      crown.type = "button";
+      crown.className = "make-host";
+      crown.title = "设为房主";
+      crown.setAttribute("aria-label", `把房主交给 ${m.name}`);
+      crown.textContent = "👑";
+      crown.addEventListener("click", () => {
+        if (window.confirm(`把房主交给「${m.name}」？你会保留控制播放的权限。`)) {
+          send({ type: "transfer", target: m.id });
+        }
+      });
+      li.append(name, crown, sw);
       ui.members.appendChild(li);
     }
   }
