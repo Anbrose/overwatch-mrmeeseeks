@@ -20,6 +20,9 @@
   const CAUGHT_UP = 0.1;     // seconds: nudging done, back to 1x
   const PAUSED_DRIFT = 0.25; // seconds: while paused, re-seek beyond this
   const RATE_STEPS = { bilibili: [0.95, 1.05], youtube: [0.75, 1.25], vod: [0.95, 1.05] };
+  const HEALTH_WINDOW_MS = 60000;    // stalls within this window count towards the health level
+  const HEALTH_MIN_MS = 3000;        // don't report a level change more often than this
+  const HEALTH_HEARTBEAT_MS = 30000; // ...but do repeat the current level this often
   const UNPLAYABLE_MSG = "这个视频暂时无法播放";
   const VOD_FAILED_MSG = "视频加载失败";
   const PREPARING_MSG = "正在准备…";
@@ -31,7 +34,7 @@
     title: $("title"), conn: $("conn"), permBtn: $("perm-btn"),
     stageWrap: $("stage-wrap"), host: $("player-host"), stageMsg: $("stage-msg"), start: $("start"),
     play: $("play"), seek: $("seek"), time: $("time"), mute: $("mute"), volume: $("volume"), fs: $("fs"),
-    me: $("me"), panel: $("perm-panel"), members: $("members"),
+    me: $("me"), panel: $("perm-panel"), members: $("members"), people: $("people"), stallBtn: $("stall-btn"),
     changeForm: $("change-form"), changeUrl: $("change-url"), toast: $("toast"),
     resume: $("resume"), vodPanel: $("vod-panel"), episodes: $("episodes"),
     lineLabel: $("line-label"), nextLine: $("next-line"),
@@ -81,6 +84,15 @@
   // once per line per episode; when every line has been tried, or the server
   // has no other line, the failure is shown as usual.
   let autoSwitch = { episode: null, tried: [] };
+  // Buffering ("stall") bookkeeping for sync and for the health dots: while the
+  // player is buffering we never chase the room position (another seek would
+  // only restart the buffering), and after a seek we remember how long the
+  // buffering took (seekCost) so the next jump is only made when the drift is
+  // worth it; smaller drifts are caught up by playing slightly faster.
+  const stall = { active: false, since: 0, log: [], seekCost: 0, pendingSeek: false, seekAt: 0 };
+  let lastDrift = 0;
+  let health = { level: "", note: "", sentAt: 0 };
+  let stallBtnMuteUntil = 0;
   let episodesKey = null;     // which show/episode count the episode grid was built for
 
   // ---------------------------------------------------------------- clock sync
@@ -138,6 +150,9 @@
     if (!room.playing && !player.isPaused()) player.pause();
 
     const drift = target - player.getTime();
+    lastDrift = drift;
+    const buffering = room.playing && !atEnd && player.isBuffering();
+    noteStall(buffering, drift);
     if (!room.playing) {
       // A paused target doesn't depend on the clock, so no pong is needed.
       if (Math.abs(drift) > PAUSED_DRIFT) player.seek(target, { keepPaused: true });
@@ -146,12 +161,87 @@
     }
     // While playing, the target depends on clock offset: wait for a real sample.
     if (atEnd || !clockReady()) { player.setRate(1); return; }
-    if (Math.abs(drift) > HARD_DRIFT) {
+    // Buffering: leave it alone. Seeking again would restart the download.
+    if (buffering) { player.setRate(1); return; }
+    // Jump only when the drift exceeds what the last seek cost us in buffering
+    // (twice, to be safe); otherwise catch up by playing a little faster.
+    if (Math.abs(drift) > Math.max(HARD_DRIFT, 2 * stall.seekCost)) {
       player.seek(target);
       player.setRate(1);
+      stall.pendingSeek = true;
+      stall.seekAt = performance.now();
       return;
     }
     player.setRate(chooseRate(drift, player.getRate(), RATE_STEPS[player.source]));
+  }
+
+  function noteStall(buffering, drift) {
+    const now = performance.now();
+    if (buffering && !stall.active) {
+      stall.active = true;
+      stall.since = now;
+    } else if (!buffering && stall.active) {
+      stall.active = false;
+      const dur = (now - stall.since) / 1000;
+      stall.log.push({ end: now, dur });
+      if (stall.pendingSeek) { stall.seekCost = dur; stall.pendingSeek = false; }
+    }
+    // A seek that did not stall within 2 s was free: forget the old cost.
+    if (stall.pendingSeek && !buffering && now - stall.seekAt > 2000) {
+      stall.seekCost = 0;
+      stall.pendingSeek = false;
+    }
+    stall.log = stall.log.filter((s) => now - s.end < HEALTH_WINDOW_MS);
+    updateHealth(drift, now);
+  }
+
+  function stallSummary(now) {
+    const current = stall.active ? (now - stall.since) / 1000 : 0;
+    return {
+      count: stall.log.length + (stall.active ? 1 : 0),
+      total: stall.log.reduce((a, s) => a + s.dur, 0) + current,
+      current,
+    };
+  }
+
+  // green: smooth; yellow: stalled recently or a bit behind; red: stalling now
+  // for a while, stalling a lot, or far behind.
+  function healthLevel(drift, now) {
+    const s = stallSummary(now);
+    const behind = Math.max(0, drift);
+    if (s.current >= 3 || s.total >= 10 || behind >= 8) return "red";
+    if (s.count > 0 || behind >= 2) return "yellow";
+    return "green";
+  }
+
+  function healthNote(drift, now) {
+    const s = stallSummary(now);
+    const parts = [];
+    if (s.count) parts.push(`最近 1 分钟卡顿 ${s.count} 次共 ${Math.round(s.total)} 秒`);
+    if (drift >= 1) parts.push(`落后 ${Math.round(drift)} 秒`);
+    return parts.join("，") || "流畅";
+  }
+
+  function updateHealth(drift, now) {
+    const level = healthLevel(drift, now);
+    const changed = level !== health.level;
+    if ((changed && now - health.sentAt > HEALTH_MIN_MS) || now - health.sentAt > HEALTH_HEARTBEAT_MS) {
+      health = { level, note: healthNote(drift, now), sentAt: now };
+      send({ type: "health", level: health.level, note: health.note });
+    }
+    renderStallButton(level, now);
+  }
+
+  // Offered when this viewer is stalling: viewers report it to the host (who
+  // can switch the source); the host of a vod room gets the switch directly.
+  function renderStallButton(level, now) {
+    const v = room && room.video;
+    const hostSwitch = me.isHost && v && v.source === "vod" && (Number(v.line_count) || 0) > 1;
+    const recentLong = (stall.active && now - stall.since >= 3000)
+      || stall.log.some((s) => s.dur >= 3 && now - s.end < 30000);
+    const show = now >= stallBtnMuteUntil && (level === "red" || recentLong) && (!me.isHost || hostSwitch);
+    if (show) ui.stallBtn.textContent = hostSwitch ? "网络卡顿？换一个片源" : "网络卡顿？报告给房主";
+    ui.stallBtn.hidden = !show;
   }
 
   // ---------------------------------------------------------------- script loading
@@ -204,6 +294,7 @@
       getTime: () => video.currentTime || 0,
       getDuration: () => (Number.isFinite(video.duration) ? video.duration : 0),
       isPaused: () => video.paused,
+      isBuffering: () => video.readyState < 3,   // < HAVE_FUTURE_DATA: waiting for data
       play: () => {
         const p = video.play();
         if (p && p.catch) {
@@ -262,6 +353,7 @@
       getTime: () => video.currentTime || 0,
       getDuration: () => (Number.isFinite(video.duration) ? video.duration : 0),
       isPaused: () => video.paused,
+      isBuffering: () => video.readyState < 3,   // < HAVE_FUTURE_DATA: waiting for data
       play: () => {
         const p = video.play();
         if (p && p.catch) {
@@ -446,6 +538,7 @@
       },
       getDuration: () => (adapter.ready ? adapter.yt.getDuration() || 0 : 0),
       isPaused: () => { const s = adapter.yt.getPlayerState(); return s !== 1 && s !== 3; },
+      isBuffering: () => adapter.ready && adapter.yt.getPlayerState() === 3,
       play: () => {
         adapter.yt.playVideo();
         // Outside a user gesture (e.g. iOS) playVideo() can be refused silently,
@@ -517,6 +610,9 @@
     destroyPlayer();
     const token = buildToken;
     playerVersion = video.version;
+    stall.active = false;
+    stall.seekCost = 0;
+    stall.pendingSeek = false;
     setStageMessage("加载中…");
     renderStartButton();
     try {
@@ -731,8 +827,28 @@
     ui.nextLine.disabled = preparing || (Number(v.line_count) || 0) <= 1;
   }
 
+  function healthDot(m) {
+    const dot = document.createElement("span");
+    dot.className = "dot" + (m.health ? ` ${m.health}` : "");
+    dot.title = m.health ? m.health_note || "" : "还不知道";
+    return dot;
+  }
+
+  // Everyone in the room, with a health dot each (host marked with 🔑).
+  function renderPeople(members) {
+    ui.people.textContent = "";
+    for (const m of members) {
+      const chip = document.createElement("span");
+      chip.className = "person";
+      chip.append(healthDot(m), m.name + (m.is_host ? " 🔑" : ""));
+      chip.title = m.health ? m.health_note || "" : "还不知道";
+      ui.people.appendChild(chip);
+    }
+  }
+
   function renderMembers(members) {
     ui.members.textContent = "";
+    members = members.filter((m) => !m.is_host);
     if (!members.length) {
       const li = document.createElement("li");
       li.className = "empty";
@@ -744,7 +860,7 @@
       const li = document.createElement("li");
       const name = document.createElement("span");
       name.className = "name";
-      name.textContent = m.name;
+      name.append(healthDot(m), m.name);
       const sw = document.createElement("button");
       sw.type = "button";
       sw.className = "switch";
@@ -862,6 +978,22 @@
     startPreparing();
   });
 
+  ui.stallBtn.addEventListener("click", () => {
+    const now = performance.now();
+    const v = room && room.video;
+    stallBtnMuteUntil = now + 60000;
+    ui.stallBtn.hidden = true;
+    if (me.isHost) {
+      if (preparing) return;
+      send({ type: "next_line" });
+      startPreparing();
+      return;
+    }
+    const line = v && v.source === "vod" ? `来源${(Number(v.line) || 0) + 1}` : "";
+    send({ type: "stall", detail: [healthNote(lastDrift, now), line].filter(Boolean).join("，") });
+    toast("已报告给房主");
+  });
+
   ui.changeForm.addEventListener("submit", (e) => {
     e.preventDefault();
     const url = ui.changeUrl.value.trim();
@@ -940,8 +1072,14 @@
         me = { ...me, isHost: !!msg.is_host, canControl: !!msg.can_control };
         renderControls();
         break;
-      case "members":
-        renderMembers(Array.isArray(msg.members) ? msg.members : []);
+      case "members": {
+        const list = Array.isArray(msg.members) ? msg.members : [];
+        renderMembers(list);
+        renderPeople(list);
+        break;
+      }
+      case "notice":
+        toast(String(msg.message || ""));
         break;
       case "error":
         stopPreparing();

@@ -164,10 +164,15 @@ async def test_ws_flow():
         check("观众进房也收到 state", (await recv_type(b, "state")) is not None)
         ma0 = await recv_type(a, "members")
         ma = await recv_type(a, "members")
-        check("房主进房先收到空 members", ma0 and ma0["members"] == [])
+        apub = rooms.get(rid).members[wa["viewer_id"]].public_id
+        check("房主进房先收到只有自己的 members", ma0 and [(m["id"], m["is_host"]) for m in ma0["members"]] == [(apub, True)])
         bpub = rooms.get(rid).members[bid].public_id
-        check("members 发给房主且不含房主", ma and [m["id"] for m in ma["members"]] == [bpub]
-              and ma["members"][0]["can_control"] is False and ma["members"][0]["name"] == wb["name"])
+        mb = await recv_type(b, "members")
+        entry = {m["id"]: m for m in ma["members"]} if ma else {}
+        check("members 发给所有人，含房主标记", ma and mb and set(entry) == {apub, bpub} and entry[apub]["is_host"] is True
+              and entry[bpub]["is_host"] is False and entry[bpub]["can_control"] is False
+              and entry[bpub]["name"] == wb["name"] and {m["id"] for m in mb["members"]} == {apub, bpub})
+        check("还没自报时 health 为空", entry and all(m["health"] == "" and m["health_note"] == "" for m in entry.values()))
         check("members 不泄露 viewer_id", bid not in json.dumps(ma) and wa["viewer_id"] not in json.dumps(ma)
               and "viewer_id" not in ma["members"][0])
 
@@ -199,7 +204,7 @@ async def test_ws_flow():
         yb = await recv_type(b, "you")
         check("被授权者收到 you", yb and yb["can_control"] is True and yb["is_host"] is False)
         ma = await recv_type(a, "members")
-        check("授权后房主收到 members", ma and ma["members"][0]["can_control"] is True)
+        check("授权后房主收到 members", ma and next(m for m in ma["members"] if m["id"] == bpub)["can_control"] is True)
 
         await b.send_json({"type": "control", "action": "play", "position": 10})
         s1, s2 = await recv_type(a, "state"), await recv_type(b, "state")
@@ -230,7 +235,7 @@ async def test_ws_flow():
         got = await drain(c)
         check("普通观众发 grant 无效", not rooms.get(rid).members[cid].can_control
               and not any(m["type"] == "you" for m in got))
-        check("members 只发给房主", not any(m["type"] == "members" for m in got + await drain(b)))
+        check("有人进房时观众也收到 members", any(m["type"] == "members" for m in await drain(b)))
 
         # 已有时长时 duration 不接受
         await a.send_json({"type": "duration", "value": 12.0})
@@ -1016,6 +1021,62 @@ async def test_vod_prepare_timeout():
         await up_client.close()
 
 
+async def test_health_and_stall():
+    """网页自报网络状况随 members 发给所有人（level 变了才广播）；卡顿报告记日志并提示房主。"""
+    rooms, sources, server, client = await make()
+    records = []
+
+    class Grab(logging.Handler):
+        def emit(self, record):
+            records.append(record)
+    logging.getLogger("watch_server").addHandler(Grab())
+    try:
+        room = rooms.create(1, 2, "发起人", yt(duration=300.0))
+        rid = room.room_id
+        a, wa = await hello(client, rid, key=room.owner_key)
+        b, wb = await hello(client, rid)
+        await drain(a)
+        await drain(b)
+        bpub = rooms.get(rid).members[wb["viewer_id"]].public_id
+        await b.send_json({"type": "health", "level": "yellow", "note": "最近 1 分钟卡顿 2 次共 5 秒"})
+        ma, mb = await recv_type(a, "members"), await recv_type(b, "members")
+        entry = next((m for m in ma["members"] if m["id"] == bpub), None) if ma else None
+        check("health 变了 → 所有人收到带 health 的 members", entry and mb and entry["health"] == "yellow"
+              and entry["health_note"] == "最近 1 分钟卡顿 2 次共 5 秒")
+        await b.send_json({"type": "health", "level": "yellow", "note": "最近 1 分钟卡顿 3 次共 7 秒"})
+        check("同样的 level 不再广播", not any(m["type"] == "members" for m in await drain(a)))
+        await b.send_json({"type": "health", "level": "purple", "note": "x"})
+        await b.send_json({"type": "health", "level": 3})
+        check("非法 level 忽略", not any(m["type"] == "members" for m in await drain(a)))
+        await b.send_json({"type": "health", "level": "red", "note": "n" * 500})
+        ma = await recv_type(a, "members")
+        entry = next((m for m in ma["members"] if m["id"] == bpub), None) if ma else None
+        check("note 截到 80 字", entry and entry["health"] == "red" and len(entry["health_note"]) == 80)
+
+        n0 = len(records)
+        await b.send_json({"type": "stall", "detail": "最近 1 分钟卡顿 3 次共 12 秒，落后 4 秒，来源2"})
+        notice = await recv_type(a, "notice")
+        check("卡顿报告 → 房主收到 notice", notice and notice["message"] == f"「{wb['name']}」报告卡顿：最近 1 分钟卡顿 3 次共 12 秒，落后 4 秒，来源2")
+        check("观众自己不收 notice", not any(m["type"] == "notice" for m in await drain(b)))
+        msgs = [r.getMessage() for r in records[n0:] if "watch client stall" in r.getMessage()]
+        check("卡顿报告记 WARNING 日志，带成员公开 id、不带 viewer_id", len(msgs) == 1 and f"member={bpub}" in msgs[0]
+              and f"room={rid}" in msgs[0] and "来源2" in msgs[0] and wb["viewer_id"] not in msgs[0]
+              and records[n0:][0].levelno == logging.WARNING)
+        for _ in range(ws_server_max_reports()):
+            await b.send_json({"type": "stall", "detail": "x"})
+        got = await drain(a, timeout=0.5)
+        check(f"每个连接最多 {ws_server_max_reports()} 条卡顿报告", sum(1 for m in got if m["type"] == "notice") == ws_server_max_reports() - 1)
+        await b.send_json({"type": "stall", "detail": 5})
+        check("detail 不是字符串忽略", not any(m["type"] == "notice" for m in await drain(a)))
+    finally:
+        await client.close()
+
+
+def ws_server_max_reports():
+    import watch_server
+    return watch_server.MAX_REPORTS
+
+
 async def test_client_report():
     """网页端播放失败的回报只进日志：带房间、成员公开 id、视频地址；每个连接最多 MAX_REPORTS 条。"""
     rooms, sources, server, client = await make()
@@ -1111,6 +1172,8 @@ async def main():
     await test_vod_switch_race()
     await test_vod_prepare_timeout()
     await test_vod_auto_next()
+    await test_client_report()
+    await test_health_and_stall()
 
 
 if __name__ == "__main__":

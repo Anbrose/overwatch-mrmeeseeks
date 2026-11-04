@@ -17,6 +17,11 @@ vod 房间额外的客户端消息（当前视频不是 vod 时一律忽略）�
 - {"type": "resume"}                  房主或有控制权的人：跳到建房时的进度快照（需要时先换集），暂停
 任何房间都接受 {"type": "report", "detail": str, "url": str, "env": str}：网页端播放失败的回报，只记 WARNING 日志
 （带房间号、成员公开 id、当前视频地址、播放器模式和浏览器 UA），不改房间状态；每个连接最多 MAX_REPORTS 条。
+{"type": "health", "level": "green"|"yellow"|"red", "note": str}：网页自报的网络状况（卡顿次数、落后秒数），
+存在连接上、随 members 发给房间里所有人；level 变了才重新广播。
+{"type": "stall", "detail": str}：观众报告卡顿：记 WARNING 日志，并给房主推 {"type": "notice", "message": str}
+（房主可据此换片源）；每个连接最多 MAX_REPORTS 条。
+members 发给房间里所有人（含房主，带 is_host），每人附 health / health_note。
 播完（rooms 的 "finished" 事件）自动换下一集并开始播放；期间有人手动换过就作废（按版本号）。
 准备一集（找线路、取 m3u8、探测片段）整体最多 VOD_PREPARE_TIMEOUT 秒，超时按“没有能播的片源”处理。
 """
@@ -51,7 +56,8 @@ CHUNK = 64 * 1024
 VOD_PREPARE_TIMEOUT = 45     # 准备一集的总时限（秒）；网页端的“正在准备…”要比它久
 SEND_QUEUE_MAX = 256         # 单个连接积压的待发消息上限，超过就断开
 MAX_URL_LEN = 2000
-MAX_REPORTS = 5              # 每个连接最多记几条网页端的失败回报
+MAX_REPORTS = 5
+HEALTH_LEVELS = ("green", "yellow", "red")              # 每个连接最多记几条网页端的失败回报
 REPORT_MAX_CHARS = 500
 STATIC_FILES = {
     "index.html": "text/html",
@@ -118,7 +124,10 @@ class _Conn:
     writer: asyncio.Task | None = None
     busy: asyncio.Task | None = None     # 正在处理的换视频（change_video / episode / next_line / resume）
     reports: int = 0                     # 已记录的失败回报数
+    stalls: int = 0                      # 已转发的卡顿报告数
     ua: str = ""                         # 浏览器 User-Agent，只在失败回报的日志里用
+    health: str = ""                     # 网页自报的网络状况：green / yellow / red，空是还没报
+    health_note: str = ""                # 一句话说明（卡顿次数、落后秒数），只给人看
 
     def push(self, msg: dict | None) -> None:
         try:
@@ -288,10 +297,17 @@ class WatchServer:
         return is_host, bool(is_host or (member is not None and member.can_control))
 
     def _members_msg(self, room: Room) -> dict:
-        """只用公开 id；viewer_id 是重连凭据，只在 welcome 里发给本人。"""
+        """发给房间里所有人。只用公开 id；viewer_id 是重连凭据，只在 welcome 里发给本人。
+        health 是各人网页自报的网络状况（同一人多个连接时取任意一个报过的）。"""
+        health: dict[str, tuple[str, str]] = {}
+        for c in self.conns.get(room.room_id, ()):
+            if c.health and c.viewer_id not in health:
+                health[c.viewer_id] = (c.health, c.health_note)
         return {"type": "members", "members": [
-            {"id": m.public_id, "name": m.name, "can_control": m.can_control}
-            for m in room.present() if m.viewer_id != room.host_id]}
+            {"id": m.public_id, "name": m.name, "can_control": m.can_control,
+             "is_host": m.viewer_id == room.host_id,
+             "health": health.get(m.viewer_id, ("", ""))[0], "health_note": health.get(m.viewer_id, ("", ""))[1]}
+            for m in room.present()]}
 
     def _send_you(self, room: Room, conn: _Conn, force: bool = False) -> None:
         you = self._you(room, conn.viewer_id)
@@ -299,11 +315,11 @@ class WatchServer:
             conn.last_you = you
             conn.push({"type": "you", "is_host": you[0], "can_control": you[1]})
 
-    def _send_members_to_host(self, room: Room) -> None:
-        hosts = [c for c in self.conns.get(room.room_id, ()) if c.viewer_id == room.host_id]
-        if hosts:
+    def _send_members(self, room: Room) -> None:
+        conns = list(self.conns.get(room.room_id, ()))
+        if conns:
             msg = self._members_msg(room)
-            for c in hosts:
+            for c in conns:
                 c.push(msg)
 
     def _on_room_event(self, room: Room, kind: str) -> None:
@@ -318,9 +334,9 @@ class WatchServer:
         elif kind in ("permissions", "host"):
             for c in conns:
                 self._send_you(room, c)
-            self._send_members_to_host(room)
+            self._send_members(room)
         elif kind == "members":
-            self._send_members_to_host(room)
+            self._send_members(room)
         elif kind == "closed":
             for c in conns:
                 c.push({"type": "ended"})
@@ -402,8 +418,7 @@ class WatchServer:
             conn.push({"type": "welcome", "viewer_id": member.viewer_id, "name": member.name,
                        "is_host": is_host, "can_control": can_control})
             conn.push(self._state_msg(room))
-            if is_host:
-                conn.push(self._members_msg(room))
+            conn.push(self._members_msg(room))
             async for msg in ws:
                 data = self._parse(msg)
                 if data is not None:
@@ -469,6 +484,10 @@ class WatchServer:
             self._handle_vod(conn, kind, data)
         elif kind == "report":
             self._report(conn, data)
+        elif kind == "health":
+            self._health(conn, data)
+        elif kind == "stall":
+            self._stall(conn, data)
 
     def _report(self, conn: _Conn, data: dict) -> None:
         """网页端播放失败的回报：只记日志，让服务器日志里能看到是哪个房间、哪个视频、浏览器报了什么。"""
@@ -485,6 +504,36 @@ class WatchServer:
                     _one_line(url, 300) if isinstance(url, str) else "",
                     _one_line(env, 300) if isinstance(env, str) else "", _one_line(conn.ua, 300),
                     _one_line(detail, REPORT_MAX_CHARS))
+
+    def _health(self, conn: _Conn, data: dict) -> None:
+        """网页自报的网络状况：存在连接上，level 变了就把 members 重新发给所有人。"""
+        level, note = data.get("level"), data.get("note")
+        if level not in HEALTH_LEVELS:
+            return
+        changed = level != conn.health
+        conn.health = level
+        conn.health_note = _one_line(note, 80) if isinstance(note, str) else ""
+        room = self.rooms.get(conn.room_id)
+        if changed and room is not None:
+            self._send_members(room)
+
+    def _stall(self, conn: _Conn, data: dict) -> None:
+        """观众报告卡顿：记日志，提示房主（房主可以换片源）。每个连接最多 MAX_REPORTS 条。"""
+        detail = data.get("detail")
+        if not isinstance(detail, str) or conn.stalls >= MAX_REPORTS:
+            return
+        conn.stalls += 1
+        room = self.rooms.get(conn.room_id)
+        if room is None:
+            return
+        member = room.members.get(conn.viewer_id)
+        detail = _one_line(detail, REPORT_MAX_CHARS)
+        log.warning("watch client stall (room=%s member=%s video=%s): %s",
+                    conn.room_id, member.public_id if member is not None else "?", room.video.url, detail)
+        notice = {"type": "notice", "message": f"「{member.name if member is not None else '?'}」报告卡顿：{detail}"}
+        for c in self.conns.get(room.room_id, ()):
+            if c.viewer_id == room.host_id and c.viewer_id != conn.viewer_id:
+                c.push(notice)
 
     def _start_busy(self, conn: _Conn, coro) -> None:
         """每个连接同一时刻只换一次视频；正在换就提示请稍候。"""

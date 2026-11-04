@@ -105,6 +105,8 @@
 | `episode` | `index`（从 0 开始） | 房主选集（vod 房间）：停在开头、暂停，优先用当前片源线路。当前视频不是 vod 时忽略 |
 | `next_line` | 无 | 房主换一个片源（vod 房间）：同一集、下一条线路（绕圈），保持当前位置和播放/暂停状态 |
 | `resume` | 无 | 房主或有控制权的人（vod 房间）：跳到建房时的进度快照（需要时先换集），暂停 |
+| `health` | `level`（`green` / `yellow` / `red`）, `note` | 网页自报的网络状况（见下方「同步」）：存在连接上，随 `members` 发给房间里所有人；`level` 变了才重新广播，`note` 最多 80 字 |
+| `stall` | `detail` | 观众报告卡顿（网页在检测到卡顿时显示「网络卡顿？报告给房主」按钮）。服务器记一条 WARNING 日志（`watch client stall`），并给房主推 `notice`；每个连接最多 5 条 |
 | `report` | `detail`, `url`, `env` | 网页端播放失败的回报（stage 上显示的那句原因，如「视频加载失败：片段 HTTP 403 · cdn 域名 [fragLoadError]」；`env` 是播放器模式加浏览器 UA，如 `hls.js 1.5.20; Mozilla/5.0 …`）。服务器只记一条 WARNING 日志（房间号、成员公开 id、当前视频地址、env、连接的 User-Agent），不改房间状态；每个连接最多 5 条 |
 
 **服务器 → 客户端**
@@ -115,11 +117,16 @@
 | `pong` | `t`, `server_time` | 回复 `ping` |
 | `state` | `video`（`source`, `id`, `title`, `duration`, `version`, `mpd`, `hls`, `episode`, `episode_count`, `line`, `line_count`, `show_title`）, `playing`, `position`, `server_time`, `resume` | 房间状态；`mpd` 只对 B 站有值。`hls` 只对 vod 房间有值（播放列表地址），`episode` 从 0 开始，`line` 是当前片源线路的序号（从 0 开始；网页只显示「来源N」，不给线路名），`line_count` 是线路数，`show_title` 是剧名。`resume` 是建房时的进度快照（`episode`, `position`, `text`），没有进度或不是 vod 时为 null，`text` 就是「上次一起看到…」文案 |
 | `you` | `is_host`, `can_control` | 自己的身份或权限变了 |
-| `members` | `members`（`id`（公开 id，不是 `viewer_id`）, `name`, `can_control`） | 只发给房主，不含房主自己 |
+| `members` | `members`（`id`（公开 id，不是 `viewer_id`）, `name`, `can_control`, `is_host`, `health`, `health_note`） | 发给房间里所有人，含房主（`is_host`）。网页用它画房间列表（每人一个红/黄/绿点，没报过是灰点），房主的权限面板里也用它 |
+| `notice` | `message` | 给房主的提示（目前只有「某某报告卡顿：…」），网页显示为 toast |
 | `error` | `message` | 提示信息，如 `正在换视频，请稍候`（上一次 `change_video` 还没处理完时） |
 | `ended` | 无 | 房间已结束 |
 
 同步：客户端取最近 5 次 ping 里往返最小的一次，`offset = server_time + rtt/2 − 本地时间`；期望位置 = `position + (playing ? 现在的服务器时间 − server_time : 0)`。每秒比较一次，差距超过 2 秒直接跳转，0.3–2 秒微调播放速度。只有用户亲手操作才发 `control`，服务器下发状态引起的播放器事件不回传。
+
+缓冲（`isBuffering`：`<video>` 的 `readyState < HAVE_FUTURE_DATA`，YouTube 的 BUFFERING 状态）期间不追赶：不跳转也不调速，因为再跳一次只会重新缓冲（带宽不够的观众以前会卡在「跳转、缓冲、再跳转」的循环里）。跳转后记下这次缓冲花了几秒（`seekCost`），之后只有差距超过 `max(2, 2 × seekCost)` 秒才再跳，否则用 1.05x 慢慢追。
+
+网络状况（`health`）由每个网页按最近 1 分钟的卡顿算：正在卡 3 秒以上、1 分钟内卡了 10 秒以上或落后 8 秒以上是红；1 分钟内卡过或落后 2 秒以上是黄；否则绿。level 变了（最少隔 3 秒）或每 30 秒发一次。
 
 ## 截图限流
 
