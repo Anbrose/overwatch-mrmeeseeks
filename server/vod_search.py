@@ -19,8 +19,16 @@ from live_watch import USER_AGENT
 
 log = logging.getLogger("mrmeeseeks.watch")
 
+# 顺序就是线路顺序（见 merge_shows），所以把观众在中国和澳洲都能直接连上 CDN 的放前面。
+# 2026-10-30 实测（港剧/TVB 片目，国内 8 地 + 悉尼 4 地探测片段）：创享影视、极速、魔都、百度、iKun 两边都通，
+# 且都有粤语线路；1080资源 和 量子 的 CDN 对澳洲 IP 返回 403/404（国内正常），所以排最后，
+# 只在前面的都没有这部剧时才会用到。服务器在新加坡，探测通不代表观众那边通。
 DEFAULT_VOD_SOURCES = (
     "创享影视=https://ys.cxkjg.cn/api/provide/vod,"
+    "极速=https://jszyapi.com/api.php/provide/vod,"
+    "魔都=https://caiji.moduapi.cc/api.php/provide/vod,"
+    "百度=https://api.apibdzy.com/api.php/provide/vod,"
+    "iKun=https://ikunzyapi.com/api.php/provide/vod,"
     "1080资源=https://api.1080zyku.com/inc/apijson.php,"
     "量子=https://cj.lziapi.com/api.php/provide/vod"
 )

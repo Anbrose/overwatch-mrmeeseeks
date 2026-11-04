@@ -175,6 +175,20 @@ input[type="range"]:disabled::-moz-range-thumb { background: transparent; }
 .vol { display: flex; align-items: center; gap: 4px; flex: none; }
 .volume { width: 70px; }
 
+.under { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.people { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; opacity: .85; flex: 1; min-width: 0; }
+.people .person { white-space: nowrap; }
+.dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: #888; margin-right: 5px; vertical-align: middle;
+}
+.dot.green { background: #3cb371; }
+.dot.yellow { background: #e6b800; }
+.dot.red { background: #e5484d; }
+.stall-btn {
+  flex: none; font-size: 12px; padding: 4px 10px; border-radius: 999px;
+  border: 1px solid #e6b800; background: none; color: inherit; cursor: pointer;
+}
 .me {
   text-align: right;
   font-size: 12px;
