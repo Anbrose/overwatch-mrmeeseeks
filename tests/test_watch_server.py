@@ -9,6 +9,7 @@ import logging
 import os
 import sys
 import time
+from collections import Counter
 
 from aiohttp import web
 from aiohttp.test_utils import TestClient, TestServer
@@ -17,6 +18,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "server"))
 
 import watch_server as ws_mod  # noqa: E402
+from geoip import BlockLog, GeoDB  # noqa: E402
+from watch_requests import KIND_NO_RESULTS, KIND_NOT_LISTED, RequestStore  # noqa: E402
 from watch_rooms import RoomManager, Video  # noqa: E402
 from watch_sources import DashStreams, VideoUnavailable  # noqa: E402
 
@@ -226,6 +229,28 @@ async def test_ws_flow():
         await b.send_json({"type": "control", "action": "seek", "position": 9999})
         s = await recv_type(a, "state")
         check("超过时长夹到时长", s and s["position"] == 300.0)
+
+        # 房主交接
+        aid = wa["viewer_id"]
+        apub = rooms.get(rid).members[aid].public_id
+        await b.send_json({"type": "transfer", "target": apub})
+        got = await drain(a)
+        check("非房主发 transfer 无效", not any(m["type"] in ("you", "notice") for m in got) and room.host_id == aid)
+        await a.send_json({"type": "transfer", "target": bpub})
+        yb = await recv_type(b, "you")
+        ya = await recv_type(a, "you")
+        mb = await recv_type(b, "members")     # host 事件先发 you/members，notice 在后面
+        nb = await recv_type(b, "notice")
+        check("transfer：b 成房主、a 不再是房主但有控制权", yb and yb["is_host"] is True and ya and ya["is_host"] is False
+              and ya["can_control"] is True and room.host_id == bid)
+        check("所有人收到房主变更提示、members 里房主标记换成 b", nb and nb["message"] == "房主现在是「" + wb["name"] + "」"
+              and mb and sorted(x["name"] for x in mb["members"]) == sorted([wa["name"], wb["name"]])
+              and {x["name"]: x["is_host"] for x in mb["members"]} == {wa["name"]: False, wb["name"]: True})
+        await b.send_json({"type": "transfer", "target": apub})
+        ya = await recv_type(a, "you")
+        check("交回来", ya and ya["is_host"] is True and room.host_id == aid)
+        await drain(a)
+        await drain(b)
 
         # 普通观众发 grant 无效
         c, wc = await hello(client, rid)
@@ -515,6 +540,18 @@ async def test_pages():
         r = await client.get(f"/r/{room.room_id}")
         text = await r.text()
         check("房间页 200", r.status == 200 and "/static/player.js" in text and r.content_type == "text/html")
+        check("房间页带投屏脚本和按钮", "/static/cast.js" in text and 'id="cast"' in text)
+        check("房间页有「在电视上看」入口", 'id="bs-btn"' in text and 'id="bs-panel"' in text)
+        r = await client.get("/")
+        check("首页是输房间号的页面", r.status == 200 and 'action="/j"' in await r.text()
+              and r.headers.get("Cache-Control") == "no-store")
+        r = await client.get("/j", params={"c": f" {room.room_id.upper()[:3]}-{room.room_id[3:]} "},
+                             allow_redirects=False)
+        check("/j 规范化房间号后跳到房间页", r.status == 303 and r.headers.get("Location") == f"/r/{room.room_id}")
+        r = await client.get("/j", params={"c": "zzzzzz"})
+        check("/j 不存在的房间 404 并提示", r.status == 404 and "没有这个房间" in await r.text())
+        check("/j 不带房间号就是首页", (await client.get("/j")).status == 200)
+        check("/j 全是杂字符当没输", (await client.get("/j", params={"c": "- -"})).status == 200)
         r = await client.get("/r/zzzzzz")
         text = await r.text()
         check("不存在的房间 404 文案", r.status == 404 and "房间不存在或已经结束" in text)
@@ -522,6 +559,9 @@ async def test_pages():
         check("static 白名单内 200", r.status == 200 and "javascript" in r.content_type)
         r = await client.get("/static/style.css")
         check("static css 类型", r.status == 200 and r.content_type == "text/css")
+        r = await client.get("/static/cast.js")
+        check("cast.js 在 static 白名单", r.status == 200 and "javascript" in r.content_type
+              and "WatchCast" in await r.text())
         check("static 白名单外 404", (await client.get("/static/../watch_server.py")).status == 404)
         check("static 编码穿越 404", (await client.get("/static/..%2Fwatch_server.py")).status == 404)
         check("static 未列名文件 404", (await client.get("/static/player-v2.html")).status == 404)
@@ -703,6 +743,7 @@ async def test_vod_playlist_route():
         body = await r.text()
         check("vod 播放列表 200 且类型对", r.status == 200 and r.content_type == "application/vnd.apple.mpegurl"
               and r.headers.get("Cache-Control") == "no-store" and body.startswith("#EXTM3U"))
+        check("vod 播放列表放开 CORS（Chromecast 接收端跨域取）", r.headers.get("Access-Control-Allow-Origin") == "*")
         check("播放列表去掉了广告、地址绝对", AD_SEGMENT not in body and f"{base}/l0/0/1000k/hls/" in body)
         check("命中缓存不再取上游", len(up.m3u8_requests) == n_req)
         check("密钥地址换成本服务器的 key0", 'URI="key0"' in body and "enc.key" not in body)
@@ -1155,6 +1196,745 @@ async def test_vod_auto_next():
         await up_client.close()
 
 
+# ---------------- 管理后台 ----------------
+class FakeStats:
+    def __init__(self):
+        self.calls = 0
+
+    def sample(self):
+        self.calls += 1
+        return {"cpu_percent": 12.5, "mem": {"total": 100, "available": 60, "used": 40}}
+
+
+async def test_admin():
+    rooms = RoomManager()
+    reqs = RequestStore(None)
+    reqs.add("绝命毒师", KIND_NOT_LISTED, 1, "小明", 555)
+    reqs.add("老友记", KIND_NO_RESULTS, 2, "小红", 556)
+    stats = FakeStats()
+    server = ws_mod.WatchServer(rooms, FakeSources(), "127.0.0.1", 0, admin_key="JihyosDog", admin_password="Nwcambrosia4",
+                                requests=reqs, stats=stats, channel_name=lambda cid: "general" if cid == 1 else None)
+    client = TestClient(TestServer(server.app))
+    await client.start_server()
+    token = server.admin_token
+    auth = {"Cookie": f"watch_admin={token}"}
+    try:
+        room = rooms.create(1, 2, "发起人", yt(duration=300.0))
+        rooms.create(2, 3, "另一个", bili())
+        a, wa = await hello(client, room.room_id, key=room.owner_key)
+        b, wb = await hello(client, room.room_id)
+        rooms.control(room.room_id, wa["viewer_id"], "play", 10.0)
+
+        r = await client.get("/admin")
+        text = await r.text()
+        check("没登录：登录页（密钥 + 密码两个框）", r.status == 200 and 'name="key"' in text and 'name="password"' in text
+              and "/static/admin.js" not in text and r.headers.get("Cache-Control") == "no-store")
+        check("没登录 api 401", (await client.get("/admin/api")).status == 401)
+        check("令牌不是密钥本身，?k= 不再生效", token != "JihyosDog" and len(token) == 64
+              and "/static/admin.js" not in await (await client.get("/admin?k=JihyosDog")).text()
+              and (await client.get("/admin", headers={"Cookie": "watch_admin=JihyosDog"})).status == 200
+              and "/static/admin.js" not in await (await client.get("/admin", headers={"Cookie": "watch_admin=JihyosDog"})).text())
+        r = await client.post("/admin/login", data={"key": "JihyosDog", "password": "wrong"})
+        check("密码错：401 + 提示", r.status == 401 and "密钥或密码不对" in await r.text() and "Set-Cookie" not in r.headers)
+        r = await client.post("/admin/login", data={"key": "wrong", "password": "Nwcambrosia4"})
+        check("密钥错：401", r.status == 401)
+        r = await client.post("/admin/login", data={"key": "JihyosDog"})
+        check("缺密码：401", r.status == 401)
+        r = await client.post("/admin/login", data={"key": "JihyosDog", "password": "Nwcambrosia4"}, allow_redirects=False)
+        cookie = r.headers.get("Set-Cookie", "")
+        check("都对：303 回 /admin、写 cookie", r.status == 303 and r.headers.get("Location") == "/admin"
+              and f"watch_admin={token}" in cookie and "HttpOnly" in cookie and "Path=/admin" in cookie)
+        r = await client.get("/admin", headers=auth)
+        check("带 cookie 开后台页", r.status == 200 and "/static/admin.js" in await r.text())
+        check("admin.js 在 static 白名单", (await client.get("/static/admin.js")).status == 200)
+        r = await client.get("/admin/api", headers=auth)
+        body = await r.text()
+        d = json.loads(body)
+        check("api 200 JSON 不缓存", r.status == 200 and r.content_type == "application/json"
+              and r.headers.get("Cache-Control") == "no-store")
+        client.session.cookie_jar.clear()     # TestClient 的 jar 会记下登录 cookie，先清掉再测头
+        check("api 也认 X-Admin-Token 头", (await client.get("/admin/api", headers={"X-Admin-Token": token})).status == 200
+              and (await client.get("/admin/api", headers={"X-Admin-Token": "JihyosDog"})).status == 401)
+        r = await client.get("/admin/logout", allow_redirects=False)
+        check("退出：清 cookie 回登录页", r.status == 303 and "watch_admin=" in r.headers.get("Set-Cookie", "")
+              and ("Max-Age=0" in r.headers.get("Set-Cookie", "") or "expires" in r.headers.get("Set-Cookie", "").lower()))
+        check("概览", d["summary"] == {"rooms": 2, "viewers": 2, "bili_rooms": 1, "bili_bytes_today": 0}
+              and isinstance(d["server_time"], float) and d["started_at"] <= d["server_time"])
+        r0 = d["rooms"][0]
+        check("房间信息", r0["room_id"] == room.room_id and r0["url"] == f"/r/{room.room_id}"
+              and r0["channel"] == {"id": "1", "name": "general"} and r0["title"] == "YT" and r0["source"] == "youtube"
+              and r0["source_label"] == "YouTube" and r0["playing"] is True and r0["finished"] is False
+              and 10.0 <= r0["position"] < 12.0 and r0["duration"] == 300.0 and r0["host"] == "发起人"
+              and r0["creator"] == "发起人" and r0["age"] >= 0 and r0["episode"] is None)
+        names = {m["name"]: m for m in r0["viewers"]}
+        check("观众名单含房主标记", len(r0["viewers"]) == 2 and names[wa["name"]]["is_host"] and not names[wb["name"]]["is_host"]
+              and names[wb["name"]]["online"] and names[wb["name"]]["can_control"] is False)
+        check("没名字的频道只给 id", d["rooms"][1]["channel"] == {"id": "2", "name": None} and d["rooms"][1]["host"] is None
+              and d["rooms"][1]["viewers"] == [] and d["rooms"][1]["source_label"] == "B 站")
+        check("不泄露房主密钥、viewer_id、后台密钥", room.owner_key not in body and wa["viewer_id"] not in body
+              and wb["viewer_id"] not in body and "JihyosDog" not in body and "Nwcambrosia4" not in body)
+        check("请求记录", [q["query"] for q in d["requests"]] == ["绝命毒师", "老友记"]
+              and d["requests"][0]["kind_label"] == "搜到了但没有想看的" and d["requests"][1]["kind"] == "no_results"
+              and d["requests"][0]["channel"] == {"id": "555", "name": None} and d["requests"][0]["key"] == "绝命毒师"
+              and d["request_limit"] == 5)
+        check("资源用量来自 stats、短时间内不重采", d["stats"]["cpu_percent"] == 12.5 and stats.calls == 1)
+        await client.get("/admin/api", headers=auth)
+        check("2 秒内复用采样", stats.calls == 1)
+        check("没开地区限制", d["geo"] == {"enabled": False} and d["blocked"] == [])
+
+        # 连续输错锁 IP
+        old = ws_mod.ADMIN_LOGIN_MAX_FAILURES
+        ws_mod.ADMIN_LOGIN_MAX_FAILURES = 3
+        try:
+            hdr = {"X-Forwarded-For": "8.8.8.8"}
+            for _ in range(3):
+                await client.post("/admin/login", data={"key": "x", "password": "y"}, headers=hdr)
+            r = await client.post("/admin/login", data={"key": "JihyosDog", "password": "Nwcambrosia4"}, headers=hdr,
+                                  allow_redirects=False)
+            check("输错 3 次后即使对了也是 429", r.status == 429 and "输错太多次" in await r.text())
+            r = await client.post("/admin/login", data={"key": "JihyosDog", "password": "Nwcambrosia4"},
+                                  headers={"X-Forwarded-For": "8.8.4.4"}, allow_redirects=False)
+            check("别的 IP 不受影响", r.status == 303)
+        finally:
+            ws_mod.ADMIN_LOGIN_MAX_FAILURES = old
+        await a.close()
+        await b.close()
+    finally:
+        await client.close()
+
+    # 只配密钥没配密码：登录页只有密钥框，密钥对就进
+    server = ws_mod.WatchServer(rooms, FakeSources(), "127.0.0.1", 0, admin_key="onlykey")
+    client = TestClient(TestServer(server.app))
+    await client.start_server()
+    try:
+        text = await (await client.get("/admin")).text()
+        r = await client.post("/admin/login", data={"key": "onlykey"}, allow_redirects=False)
+        check("没配密码：只要密钥", 'name="password"' not in text and r.status == 303 and server.admin_password is None)
+    finally:
+        await client.close()
+
+    # 没有 admin_key：一律 404；没有 requests / stats 也能出快照
+    server = ws_mod.WatchServer(rooms, FakeSources(), "127.0.0.1", 0, admin_password="pw")
+    client = TestClient(TestServer(server.app))
+    await client.start_server()
+    try:
+        check("没配密钥：/admin 全 404", (await client.get("/admin")).status == 404
+              and (await client.get("/admin/api")).status == 404
+              and (await client.post("/admin/login", data={"key": "", "password": "pw"})).status == 404
+              and server.admin_key is None and server.admin_token is None)
+        snap = server.admin_snapshot()
+        check("无 requests / stats 的快照", snap["requests"] == [] and snap["stats"] is None and snap["request_limit"] is None)
+    finally:
+        await client.close()
+
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        p = os.path.join(d, "watch_admin_key")
+        k1 = ws_mod.load_admin_key(p)
+        k2 = ws_mod.load_admin_key(p)
+        with open(p, encoding="utf-8") as f:
+            saved = f.read().strip()
+        check("自动生成的密钥存文件、重启不变", len(k1) >= 24 and k1 == k2 and saved == k1)
+        check("配置了就用配置的", ws_mod.load_admin_key(p, " mykey ") == "mykey" and ws_mod.load_admin_key(None, "") != "")
+
+
+async def test_geo_block():
+    import ipaddress
+
+    def ip4(s):
+        return int(ipaddress.IPv4Address(s))
+    geo = GeoDB(None, allowed=("AU", "NZ"))
+    geo.set_ranges([(ip4("1.0.0.0"), ip4("1.0.0.255"), "AU"), (ip4("8.8.8.0"), ip4("8.8.8.255"), "US")], [], fetched_at=1.0)
+    blocks = BlockLog(None)
+    rooms = RoomManager()
+    sources = FakeSources()
+    server = ws_mod.WatchServer(rooms, sources, "127.0.0.1", 0, admin_key="k", geo=geo, blocks=blocks)
+    client = TestClient(TestServer(server.app))
+    await client.start_server()
+    try:
+        room = rooms.create(1, 2, "发起人", yt(duration=300.0))
+        rid = room.room_id
+        check("房间页不拦", (await client.get(f"/r/{rid}", headers={"X-Forwarded-For": "8.8.8.8"})).status == 200)
+
+        ws = await client.ws_connect(f"/ws/{rid}", headers={"X-Forwarded-For": "8.8.8.8"})
+        await ws.send_json({"type": "hello", "viewer_id": None, "key": room.owner_key})
+        got = await drain(ws, timeout=1.0)
+        blocked = got[0] if got else {}
+        check("美国 IP：只收到 blocked 然后断开", blocked.get("type") == "blocked" and blocked.get("country") == "US"
+              and len(blocked.get("id", "")) == 6 and blocked.get("message") == ws_mod.BLOCKED_MSG
+              and got[-1]["type"].startswith("__"))
+        check("被拦的人不进房、房主密钥没被消耗", rooms.get(rid).members == {} and not room.key_used)
+        entry = blocks.all()[0]
+        check("记录 IP、编号、国家、房间", entry.ip == "8.8.8.8" and entry.id == blocked["id"] and entry.country == "US"
+              and entry.rooms == [rid] and entry.hits == 1)
+
+        ws2, w2 = await hello(client, rid)
+        check("没有 XFF（本机）放行", w2 is not None and w2["name"])
+        ws3 = await client.ws_connect(f"/ws/{rid}", headers={"X-Forwarded-For": "8.8.8.8, 1.0.0.9"})
+        await ws3.send_json({"type": "hello", "viewer_id": None, "key": None})
+        w3 = await recv_type(ws3, "welcome")
+        check("XFF 以最后一段为准（伪造的前段无效）：澳洲放行", w3 is not None)
+        ws4 = await client.ws_connect(f"/ws/{rid}", headers={"X-Forwarded-For": "1.0.0.9, 8.8.8.8"})
+        await ws4.send_json({"type": "hello", "viewer_id": None, "key": None})
+        got4 = await drain(ws4, timeout=1.0)
+        check("最后一段是美国 → 拦", got4 and got4[0].get("type") == "blocked" and blocks.entries["8.8.8.8"].hits == 2)
+        ws5 = await client.ws_connect(f"/ws/{rid}", headers={"X-Forwarded-For": "9.9.9.9"})
+        await ws5.send_json({"type": "hello", "viewer_id": None, "key": None})
+        got5 = await drain(ws5, timeout=1.0)
+        check("不在分配表里的 IP 也拦、国家为 None", got5 and got5[0].get("type") == "blocked" and got5[0]["country"] is None
+              and blocks.entries["9.9.9.9"].country is None)
+        ws6 = await client.ws_connect("/ws/zzzzzz", headers={"X-Forwarded-For": "8.8.8.8"})
+        got6 = await drain(ws6, timeout=1.0)
+        check("不存在的房间不记", got6 and got6[0]["type"] == "ended" and blocks.entries["8.8.8.8"].hits == 2)
+
+        broom = rooms.create(1, 2, "发起人", bili())
+        r = await client.get(f"/bili/{broom.room_id}/0/manifest.mpd", headers={"X-Forwarded-For": "8.8.8.8"})
+        check("B 站媒体路由 403", r.status == 403 and sources.calls == 0 and blocks.entries["8.8.8.8"].hits == 3
+              and broom.room_id in blocks.entries["8.8.8.8"].rooms)
+
+        snap = server.admin_snapshot()
+        check("后台快照里有地区状态和拦截记录", snap["geo"]["enabled"] and snap["geo"]["loaded"] and snap["geo"]["allowed"] == ["AU", "NZ"]
+              and snap["geo"]["ranges"] == 2 and {b["ip"] for b in snap["blocked"]} == {"8.8.8.8", "9.9.9.9"}
+              and snap["blocked"][0]["hits"] >= 1 and "id" in snap["blocked"][0])
+        await ws2.close()
+        await ws3.close()
+    finally:
+        await client.close()
+
+    # 数据还没加载：不拦
+    server = ws_mod.WatchServer(rooms, sources, "127.0.0.1", 0, geo=GeoDB(None), blocks=BlockLog(None))
+    client = TestClient(TestServer(server.app))
+    await client.start_server()
+    try:
+        room = rooms.create(1, 2, "发起人", yt(duration=300.0))
+        ws = await client.ws_connect(f"/ws/{room.room_id}", headers={"X-Forwarded-For": "8.8.8.8"})
+        await ws.send_json({"type": "hello", "viewer_id": None, "key": None})
+        check("地区数据没加载时放行", (await recv_type(ws, "welcome")) is not None and server.blocks.all() == []
+              and server.admin_snapshot()["geo"]["loaded"] is False)
+        await ws.close()
+    finally:
+        await client.close()
+
+# ---------------- 电视直播 ----------------
+TV_ALLOW = lambda ip: ip == "127.0.0.1"  # noqa: E731
+
+
+class TvUpstream:
+    """假直播源：/{name}/index.m3u8 每次请求序号 +1（分片在往前走），/{name}/seg{n}.ts 返回 2 KB；
+    /bad/ 和 fail 里的名字一律 500；delay 让每个请求先等一会（制造“正在换源”的窗口）。"""
+
+    def __init__(self):
+        self.hits = Counter()
+        self.seq = Counter()
+        self.fail = set()
+        self.delay = 0.0
+        self.server = None
+
+    @property
+    def base(self):
+        return f"http://127.0.0.1:{self.server.port}"
+
+    def total(self):
+        return sum(self.hits.values())
+
+    async def start(self):
+        @web.middleware
+        async def count(request, handler):
+            self.hits[request.path] += 1
+            return await handler(request)
+
+        async def handle(request):
+            name, file = request.match_info["name"], request.match_info["file"]
+            if self.delay:
+                await asyncio.sleep(self.delay)
+            if name == "bad" or name in self.fail:
+                return web.Response(status=500, text="boom")
+            if file == "index.m3u8":
+                self.seq[name] += 1
+                s = self.seq[name]
+                body = "".join(f"#EXTINF:2,\nseg{s + k}.ts\n" for k in range(3))
+                return web.Response(text=f"#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:{s}\n{body}",
+                                    content_type="application/vnd.apple.mpegurl")
+            if file.startswith("seg") and file.endswith(".ts"):
+                return web.Response(body=tv_seg_bytes(name, file), content_type="video/mp2t")
+            return web.Response(status=404)
+
+        app = web.Application(middlewares=[count])
+        app.router.add_get("/{name}/{file}", handle)
+        self.server = TestServer(app, host="127.0.0.1")
+        await self.server.start_server()
+
+
+def tv_seg_bytes(name, file):
+    return (f"{name}/{file};".encode() * 200)[:2048]
+
+
+def tv_channel(base, names=("bad", "ok1", "ok2")):
+    from tv_channels import Candidate, Channel
+    return Channel(key="测试台", name="测试台",
+                   candidates=[Candidate(f"{base}/{n}/index.m3u8", None, 0, False) for n in names])
+
+
+async def make_tv(**kw):
+    import tv_net
+    up = TvUpstream()
+    await up.start()
+    rooms = RoomManager(max_tv_rooms=5)
+    server = ws_mod.WatchServer(rooms, FakeSources(), "127.0.0.1", 0, ip_allowed=TV_ALLOW,
+                                tv_session_factory=lambda: tv_net.make_session(TV_ALLOW),
+                                tv_prepare_timeout=kw.pop("tv_prepare_timeout", 5.0), **kw)
+    client = TestClient(TestServer(server.app))
+    await client.start_server()
+    return up, rooms, server, client
+
+
+async def wait_until(cond, timeout=5.0, step=0.02):
+    deadline = time.monotonic() + timeout
+    while not cond():
+        if time.monotonic() >= deadline:
+            return False
+        await asyncio.sleep(step)
+    return True
+
+
+def count_handled(server, kinds):
+    """包一层 server._handle，记下处理过的指定类型消息数（_handle 是同步的，记完就说明已经做完决定）。"""
+    seen = Counter()
+    orig = server._handle
+
+    def spy(conn, data):
+        orig(conn, data)
+        if data.get("type") in kinds:
+            seen[data["type"]] += 1
+    server._handle = spy
+    return seen
+
+
+def tv_idle(server, rid):
+    return rid not in server._tv_switching and not server._tasks
+
+
+def tv_headers_ok(r):
+    return (r.headers.get("X-Content-Type-Options") == "nosniff"
+            and r.headers.get("Cache-Control") == "no-store")
+
+
+async def test_tv_routes():
+    up, rooms, server, client = await make_tv()
+    try:
+        check("电视常量", ws_mod.NO_TV_SOURCE == "这个台暂时没有能播的源" and ws_mod.TV_SWITCHED == "已切换片源"
+              and ws_mod.TV_PREPARE_TIMEOUT == 20.0 and ws_mod.STALL_COOLDOWN == 15.0
+              and ws_mod.WatchServer(RoomManager(), FakeSources(), "127.0.0.1", 0).tv_prepare_timeout == 20.0)
+        ch = tv_channel(up.base)
+        video = await server.prepare_tv(ch)
+        info = video.tv
+        check("prepare_tv 跳过坏源，选 ok1（下标 1）", video.source == "tv" and info.index == 1
+              and video.url == f"{up.base}/ok1/index.m3u8" and info.bad == {0}
+              and [c.url for c in info.order] == [c.url for c in ch.ordered()])
+        check("prepare_tv 探测过坏源", up.hits["/bad/index.m3u8"] >= 1)
+        room = rooms.create(1, 2, "发起人", video)
+        rid = room.room_id
+
+        r = await client.get(f"/tv/{rid}/0/index.m3u8")
+        text = await r.text()
+        segs = [ln for ln in text.splitlines() if ln and not ln.startswith("#")]
+        check("tv 播放列表 200、类型、头", r.status == 200 and r.content_type == "application/vnd.apple.mpegurl"
+              and tv_headers_ok(r))
+        check("tv 播放列表只含本站分片路径", segs and all(ln.startswith(f"/tv/{rid}/0/s/") for ln in segs)
+              and "127.0.0.1" not in text)
+        r = await client.get(segs[-1])
+        body = await r.read()
+        check("tv 分片 200、上游内容、头", r.status == 200 and body.startswith(b"ok1/seg")
+              and len(body) == 2048 and r.content_type == "video/mp2t" and tv_headers_ok(r))
+
+        n = up.total()
+        r = await client.get(f"/tv/{rid}/0/s/999")
+        check("没发过的分片编号 404、不碰上游", r.status == 404 and up.total() == n and tv_headers_ok(r))
+        for path in (f"/tv/{rid}/0/s/abc", f"/tv/{rid}/0/s/-1", f"/tv/{rid}/1/index.m3u8",
+                     f"/tv/{rid}/-1/index.m3u8", f"/tv/{rid}/x/index.m3u8", "/tv/zzzzzz/0/index.m3u8",
+                     "/tv/zzzzzz/0/s/0"):
+            r = await client.get(path)
+            check(f"{path} → 404", r.status == 404 and tv_headers_ok(r))
+        yt_room = rooms.create(1, 2, "x", yt())
+        r = await client.get(f"/tv/{yt_room.room_id}/0/index.m3u8")
+        r2 = await client.get(f"/tv/{yt_room.room_id}/0/s/0")
+        check("别的房间（不是 tv）→ 404", r.status == 404 and r2.status == 404)
+        check("404 们都没碰上游", up.total() == n)
+
+        # 另一个 tv 房间发出去的分片编号，拿到本房间来要 → 404、不碰上游
+        import tv_relay
+        ids1 = {int(ln.rsplit("/", 1)[1]) for ln in segs}
+        other = rooms.create(1, 2, "x", await server.prepare_tv(ch))
+        orig_coalesce = tv_relay.COALESCE_SECONDS
+        tv_relay.COALESCE_SECONDS = 0.0      # 让另一个房间多取几次列表，编号走到本房间没发过的范围
+        try:
+            ids2 = set()
+            for _ in range(3):
+                r = await client.get(f"/tv/{other.room_id}/0/index.m3u8")
+                ids2 |= {int(ln.rsplit("/", 1)[1]) for ln in (await r.text()).splitlines()
+                         if ln.startswith(f"/tv/{other.room_id}/0/s/")}
+        finally:
+            tv_relay.COALESCE_SECONDS = orig_coalesce
+        foreign = sorted(ids2 - ids1)
+        n = up.total()
+        statuses = []
+        for k in foreign:
+            r = await client.get(f"/tv/{rid}/0/s/{k}")
+            statuses.append(r.status)
+        check(f"别的 tv 房间发出的编号 {foreign} 在本房间 → 404、不碰上游",
+              foreign and all(st == 404 for st in statuses) and up.total() == n)
+        rooms.close(other.room_id)
+
+        a, _ = await hello(client, rid, key=room.owner_key)
+        s = await recv_type(a, "state")
+        v = s and s["video"]
+        check("tv state.video 字段", v and v["source"] == "tv" and v["live"] is True
+              and v["hls"] == f"/tv/{rid}/0/index.m3u8" and v["line_count"] == 3 and v["line"] == 1
+              and v["mpd"] is None and s["position"] == 0)
+        await a.send_json({"type": "control", "action": "play", "position": 0})
+        s = await recv_type(a, "state")
+        await asyncio.sleep(0.05)
+        a2, _ = await hello(client, rid)
+        s2 = await recv_type(a2, "state")
+        check("tv 播放中 position 仍是 0", s and s["playing"] is True and s2 and s2["position"] == 0)
+        c, _ = await hello(client, yt_room.room_id)
+        s = await recv_type(c, "state")
+        check("非 tv 的 state：live 为 False", s and s["video"]["live"] is False)
+        await a.close()
+        await a2.close()
+        await c.close()
+
+        rooms.close(rid)
+        check("关房后清掉直播流", not any(k[0] == rid for k in server._tv_streams))
+    finally:
+        await client.close()
+        await up.server.close()
+
+
+async def test_tv_switch():
+    up, rooms, server, client = await make_tv()
+    orig_cooldown = ws_mod.STALL_COOLDOWN
+    try:
+        # 四个源：坏、ok1、ok2、ok3（多一个好源，赛跑时不管谁赢都还有源可换）
+        room = rooms.create(1, 2, "发起人", await server.prepare_tv(tv_channel(up.base, ("bad", "ok1", "ok2", "ok3"))))
+        rid = room.room_id
+        a, _ = await hello(client, rid, key=room.owner_key)
+        b, _ = await hello(client, rid)
+        c, _ = await hello(client, rid)
+        for w in (a, b, c):
+            await drain(w)
+        r = await client.get(f"/tv/{rid}/0/index.m3u8")
+        old_segs = [ln for ln in (await r.text()).splitlines() if ln.startswith(f"/tv/{rid}/0/s/")]
+        seen = count_handled(server, ("tv_next", "tv_stall"))
+
+        await b.send_json({"type": "tv_next"})
+        await wait_until(lambda: seen["tv_next"] == 1)
+        check("非房主 tv_next 被忽略", room.version == 0 and tv_idle(server, rid))
+
+        await a.send_json({"type": "tv_next"})
+        s = await recv_type(a, "state", 5)
+        n = await recv_type(a, "notice", 5)
+        nb = await recv_type(b, "notice", 5)
+        check("房主 tv_next → 下一个源（下标 2）、版本 +1", s and s["video"]["version"] == 1
+              and s["video"]["line"] == 2 and s["video"]["hls"] == f"/tv/{rid}/1/index.m3u8"
+              and s["position"] == 0)
+        check("换源后所有人收到“已切换片源”", n and n["message"] == "已切换片源" and nb and nb["message"] == "已切换片源")
+        check("换源后旧版本的直播流被清掉", (rid, 0) not in server._tv_streams)
+        r = await client.get(f"/tv/{rid}/0/index.m3u8")
+        check("旧版本号 404", r.status == 404)
+        n_up = up.total()
+        statuses = []
+        for path in old_segs:
+            r = await client.get(path)
+            statuses.append(r.status)
+        check("换源后旧版本真实发过的分片 → 404、不碰上游", old_segs and all(st == 404 for st in statuses)
+              and up.total() == n_up)
+
+        await a.send_json({"type": "tv_next"})
+        s = await recv_type(a, "state", 5)
+        check("再 tv_next → 最后一个源（下标 3）", s and s["video"]["version"] == 2 and s["video"]["line"] == 3)
+        bad_hits = up.hits["/bad/index.m3u8"]
+        await a.send_json({"type": "tv_next"})
+        s = await recv_type(a, "state", 5)
+        check("最后一个源再 tv_next → 绕回、跳过探测失败的 0", s and s["video"]["version"] == 3
+              and s["video"]["line"] == 1 and room.video.tv.index == 1 and room.video.tv.bad == {0}
+              and up.hits["/bad/index.m3u8"] > bad_hits)
+        await wait_until(lambda: tv_idle(server, rid))
+        for w in (a, b, c):
+            await drain(w)
+
+        # tv_stall 和房主 tv_next 赛跑 → 只换一次
+        ws_mod.STALL_COOLDOWN = 0.0
+        up.delay = 0.2
+        v = room.version
+        stalls, nexts = seen["tv_stall"], seen["tv_next"]
+        await b.send_json({"type": "tv_stall", "version": v})
+        await a.send_json({"type": "tv_next"})
+        ok = await wait_until(lambda: seen["tv_stall"] == stalls + 1 and seen["tv_next"] == nexts + 1
+                              and tv_idle(server, rid))
+        check("tv_stall 与 tv_next 赛跑 → 版本只 +1", ok and room.version == v + 1 and room.video.tv.index == 2)
+        up.delay = 0.0
+        await wait_until(lambda: tv_idle(server, rid))
+
+        # 两个人同时 tv_stall → 只换一次
+        up.delay = 0.2
+        v = room.version
+        stalls = seen["tv_stall"]
+        await b.send_json({"type": "tv_stall", "version": v})
+        await c.send_json({"type": "tv_stall", "version": v})
+        ok = await wait_until(lambda: seen["tv_stall"] == stalls + 2 and tv_idle(server, rid))
+        check("两个人同时 tv_stall → 版本只 +1", ok and room.version == v + 1)
+        check("自动换源跳过当前源（记为坏）", room.video.tv.index == 3 and 2 in room.video.tv.bad)
+        up.delay = 0.0
+        for w in (a, b, c):
+            await drain(w)
+
+        # 冷却：刚换过 15 秒内的 tv_stall 不换
+        ws_mod.STALL_COOLDOWN = orig_cooldown
+        v = room.version
+        await b.send_json({"type": "tv_stall", "version": v})
+        ok = await wait_until(lambda: seen["tv_stall"] == stalls + 3)
+        check("15 秒内第三次 tv_stall → 不换", ok and room.version == v and tv_idle(server, rid))
+
+        ws_mod.STALL_COOLDOWN = 0.0
+        for bad_v in (v - 1, v + 1, str(v), None):
+            await b.send_json({"type": "tv_stall", "version": bad_v})
+        ok = await wait_until(lambda: seen["tv_stall"] == stalls + 7)
+        check("版本号不对的 tv_stall 被忽略", ok and room.version == v and tv_idle(server, rid))
+
+        # 所有源都坏了：自动换源 → 所有人收到错误、版本不变
+        for w in (a, b, c):
+            await drain(w)
+        up.fail = {"ok1", "ok2", "ok3"}
+        ws_mod.STALL_COOLDOWN = orig_cooldown
+        server._tv_last_switch.pop(rid, None)     # 让这次 tv_stall 不被前面成功换源的冷却挡住
+        await b.send_json({"type": "tv_stall", "version": v})
+        ea = await recv_type(a, "error", 5)
+        ec = await recv_type(c, "error", 5)
+        await wait_until(lambda: tv_idle(server, rid))
+        check("全坏时自动换源 → 所有人收到“这个台暂时没有能播的源”、版本不变",
+              ea and ea["message"] == "这个台暂时没有能播的源" and ec and ec["message"] == "这个台暂时没有能播的源"
+              and room.version == v)
+        eb = [m for m in await drain(b, 0.2) if m["type"] == "error"]
+        await drain(a, 0.05)
+        await drain(c, 0.05)
+        check("第一次全坏只广播一次错误", len(eb) == 1)
+        n_up, n_stall = up.total(), seen["tv_stall"]
+        await b.send_json({"type": "tv_stall", "version": v})
+        ok = await wait_until(lambda: seen["tv_stall"] == n_stall + 1)
+        got = [m for w in (a, b, c) for m in await drain(w, 0.3)]
+        check("全坏后冷却内再 tv_stall → 不再探测、不再广播错误", ok and tv_idle(server, rid)
+              and up.total() == n_up and not any(m["type"] == "error" for m in got) and room.version == v)
+        ws_mod.STALL_COOLDOWN = 0.0
+        try:
+            await server.prepare_tv(tv_channel(up.base))
+            raised = None
+        except Exception as e:
+            raised = e
+        check("全坏时 prepare_tv 抛 TvUnavailable", isinstance(raised, ws_mod.TvUnavailable)
+              and raised.message == "这个台暂时没有能播的源")
+        up.fail = set()
+
+        # 准备超时 → TvUnavailable
+        server.tv_prepare_timeout = 0.3
+        up.delay = 2.0
+        t0 = time.monotonic()
+        try:
+            await server.prepare_tv(tv_channel(up.base))
+            raised = None
+        except Exception as e:
+            raised = e
+        took = time.monotonic() - t0
+        check(f"prepare_tv 超时 → TvUnavailable（{took:.2f}s）", isinstance(raised, ws_mod.TvUnavailable)
+              and took < 1.5)
+        up.delay = 0.0
+        server.tv_prepare_timeout = 5.0
+
+        # 只有一个源的台：tv_next 被忽略
+        solo = rooms.create(1, 2, "x", await server.prepare_tv(tv_channel(up.base, ("ok1",))))
+        d, _ = await hello(client, solo.room_id, key=solo.owner_key)
+        await drain(d)
+        n_next = seen["tv_next"]
+        await d.send_json({"type": "tv_next"})
+        ok = await wait_until(lambda: seen["tv_next"] == n_next + 1)
+        await wait_until(lambda: tv_idle(server, solo.room_id))
+        got = await drain(d, 0.2)
+        check("只有一个源时 tv_next 被忽略", ok and solo.version == 0 and not any(m["type"] == "state" for m in got))
+
+        yt_room = rooms.create(1, 2, "x", yt())
+        e, _ = await hello(client, yt_room.room_id, key=yt_room.owner_key)
+        await drain(e)
+        await e.send_json({"type": "tv_next"})
+        await e.send_json({"type": "tv_stall", "version": 0})
+        got = await drain(e, 0.3)
+        check("不是 tv 房间时 tv 消息被忽略", yt_room.version == 0 and not got)
+    finally:
+        ws_mod.STALL_COOLDOWN = orig_cooldown
+        await client.close()
+        await up.server.close()
+
+
+async def test_tv_dead_auto_switch():
+    import tv_relay
+    up, rooms, server, client = await make_tv()
+    orig_dead = tv_relay.DEAD_SECONDS
+    try:
+        tv_relay.DEAD_SECONDS = 0.3
+        room = rooms.create(1, 2, "发起人", await server.prepare_tv(tv_channel(up.base)))
+        rid = room.room_id
+        a, _ = await hello(client, rid, key=room.owner_key)
+        await drain(a)
+        r = await client.get(f"/tv/{rid}/0/index.m3u8")
+        check("断流前播放列表 200", r.status == 200)
+        await r.read()
+
+        up.fail = {"ok1"}
+        statuses = []
+
+        async def poll():
+            while room.version == 0:
+                r = await client.get(f"/tv/{rid}/0/index.m3u8")
+                statuses.append(r.status)
+                await r.read()
+                await asyncio.sleep(0.1)
+        try:
+            await asyncio.wait_for(poll(), 6)
+        except asyncio.TimeoutError:
+            pass
+        check("上游失败期间播放列表 502", 502 in statuses)
+        check("断流超过 DEAD_SECONDS → 自动换源（版本 +1，换到 ok2）", room.version == 1
+              and room.video.tv.index == 2 and 1 in room.video.tv.bad)
+        n = await recv_type(a, "notice", 3)
+        check("自动换源后也提示“已切换片源”", n and n["message"] == "已切换片源")
+        await wait_until(lambda: tv_idle(server, rid))
+        r = await client.get(f"/tv/{rid}/1/index.m3u8")
+        check("换源后新版本播放列表 200", r.status == 200 and "/tv/" in await r.text())
+        check("自动换源后版本不再变", room.version == 1)
+    finally:
+        tv_relay.DEAD_SECONDS = orig_dead
+        await client.close()
+        await up.server.close()
+
+
+async def test_tv_stale_error_and_duration():
+    up, rooms, server, client = await make_tv()
+    orig_cooldown = ws_mod.STALL_COOLDOWN
+    try:
+        ws_mod.STALL_COOLDOWN = 0.0
+        # 三个源：坏源在建房时已记进 bad，自动换源还得真去探 ok2，才有“正在找源”的窗口
+        room = rooms.create(1, 2, "发起人", await server.prepare_tv(tv_channel(up.base, ("bad", "ok1", "ok2"))))
+        rid = room.room_id
+        a, wa = await hello(client, rid, key=room.owner_key)
+        b, _ = await hello(client, rid)
+        await drain(a)
+        await drain(b)
+
+        seen = count_handled(server, ("duration",))
+        await a.send_json({"type": "duration", "value": 120.0})
+        ok = await wait_until(lambda: seen["duration"] == 1)
+        got = await drain(b, 0.3)
+        check("直播房间不接受 duration", ok and room.video.duration is None and room.version == 0
+              and not any(m["type"] == "state" for m in got))
+
+        # 自动换源找源期间房主换成了 YouTube：失败后不发过时的错误、不记冷却
+        up.fail = {"ok1", "ok2"}
+        up.delay = 0.3
+        await b.send_json({"type": "tv_stall", "version": 0})
+        await wait_until(lambda: rid in server._tv_switching)
+        check("换成 YouTube", rooms.change_video(rid, wa["viewer_id"], yt()))
+        await wait_until(lambda: tv_idle(server, rid))
+        got = [m for w in (a, b) for m in await drain(w, 0.3)]
+        check("视频已换走 → 换源失败不广播错误、不记冷却", room.video.source == "youtube"
+              and not any(m["type"] == "error" for m in got) and rid not in server._tv_last_switch)
+
+        # 找源期间房间被关：同样静默
+        up.delay = 0.0
+        up.fail = set()
+        room2 = rooms.create(1, 2, "发起人", await server.prepare_tv(tv_channel(up.base, ("bad", "ok2", "ok1"))))
+        rid2 = room2.room_id
+        c, _ = await hello(client, rid2)
+        await drain(c)
+        up.fail = {"ok1", "ok2"}
+        up.delay = 0.3
+        await c.send_json({"type": "tv_stall", "version": 0})
+        await wait_until(lambda: rid2 in server._tv_switching)
+        rooms.close(rid2)
+        await wait_until(lambda: tv_idle(server, rid2))
+        check("房间已关 → 换源失败不记冷却", rid2 not in server._tv_last_switch)
+    finally:
+        ws_mod.STALL_COOLDOWN = orig_cooldown
+        up.delay = 0.0
+        await client.close()
+        await up.server.close()
+
+
+async def test_tv_bad_memory():
+    """prepare_tv 探测失败的源记进 bad：自动换源不再先探；手动绕回开头清空 bad 后会再试。"""
+    up, rooms, server, client = await make_tv()
+    orig_cooldown = ws_mod.STALL_COOLDOWN
+    try:
+        ws_mod.STALL_COOLDOWN = 0.0
+        room = rooms.create(1, 2, "发起人", await server.prepare_tv(tv_channel(up.base, ("bad", "ok1", "ok2"))))
+        rid = room.room_id
+        check("建房时探测失败的源记进 bad", room.video.tv.index == 1 and room.video.tv.bad == {0})
+        a, _ = await hello(client, rid, key=room.owner_key)
+        b, _ = await hello(client, rid)
+        await drain(a)
+        await drain(b)
+
+        up.fail = {"ok2"}
+        bad_hits = up.hits["/bad/index.m3u8"]
+        await b.send_json({"type": "tv_stall", "version": 0})
+        await wait_until(lambda: rid in server._tv_last_switch and tv_idle(server, rid))
+        check("自动换源不再探测已知坏源", up.hits["/bad/index.m3u8"] == bad_hits and room.version == 0
+              and room.video.tv.index == 1)
+        await drain(a)
+        await drain(b)
+
+        # 手动：ok1 → ok2（bad 保持 {0}），再手动就绕回开头
+        up.fail = set()
+        await a.send_json({"type": "tv_next"})
+        s = await recv_type(a, "state", 5)
+        check("手动换到 ok2", s and s["video"]["line"] == 2 and room.video.tv.bad == {0})
+        bad_hits = up.hits["/bad/index.m3u8"]
+        await a.send_json({"type": "tv_next"})
+        s = await recv_type(a, "state", 5)
+        check("手动绕回开头：清空 bad、重新探测坏源", s and s["video"]["line"] == 1
+              and up.hits["/bad/index.m3u8"] > bad_hits and room.video.tv.bad == {0})
+    finally:
+        ws_mod.STALL_COOLDOWN = orig_cooldown
+        await client.close()
+        await up.server.close()
+
+
+async def test_tv_manual_same():
+    """手动换源别的源全坏、绕回当前源：不换版本、不发“已切换片源”，只告诉房主没有能播的源。"""
+    up, rooms, server, client = await make_tv()
+    try:
+        room = rooms.create(1, 2, "发起人", await server.prepare_tv(tv_channel(up.base, ("ok1", "bad", "ok2"))))
+        rid = room.room_id
+        a, _ = await hello(client, rid, key=room.owner_key)
+        b, _ = await hello(client, rid)
+        await drain(a)
+        await drain(b)
+        up.fail = {"ok2"}
+        ok2_hits = up.hits["/ok2/index.m3u8"]
+        await a.send_json({"type": "tv_next"})
+        e = await recv_type(a, "error", 5)
+        await wait_until(lambda: tv_idle(server, rid))
+        got_a = await drain(a, 0.3)
+        got_b = await drain(b, 0.3)
+        check("绕回当前源 → 房主收到“这个台暂时没有能播的源”", e and e["message"] == "这个台暂时没有能播的源")
+        check("绕回当前源 → 版本不变、源不变", room.version == 0 and room.video.tv.index == 0
+              and up.hits["/ok2/index.m3u8"] > ok2_hits)
+        check("绕回当前源 → 没人收到“已切换片源”或新 state",
+              not any(m["type"] in ("notice", "state") for m in got_a + got_b)
+              and not any(m["type"] == "error" for m in got_b))
+    finally:
+        await client.close()
+        await up.server.close()
+
+
 async def main():
     await test_ws_flow()
     await test_duration_and_change_video()
@@ -1174,6 +1954,14 @@ async def main():
     await test_vod_auto_next()
     await test_client_report()
     await test_health_and_stall()
+    await test_admin()
+    await test_geo_block()
+    await test_tv_routes()
+    await test_tv_switch()
+    await test_tv_dead_auto_switch()
+    await test_tv_stale_error_and_duration()
+    await test_tv_bad_memory()
+    await test_tv_manual_same()
 
 
 if __name__ == "__main__":

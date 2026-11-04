@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>一起看</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; min-height: 100vh; background: #0f1115; color: #e6e6e6;
+      font: 16px/1.5 system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    body { display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+    .join { width: 100%; max-width: 420px; text-align: center; }
+    h1 { font-size: 22px; font-weight: 600; margin: 0 0 20px; opacity: .9; }
+    form { display: flex; gap: 10px; }
+    input {
+      flex: 1; min-width: 0; font: 600 28px/1 ui-monospace, Menlo, Consolas, monospace; letter-spacing: .2em;
+      text-align: center; text-transform: lowercase; color: inherit; background: #1a1d24;
+      border: 1px solid #2a2f3a; border-radius: 8px; padding: 12px 10px;
+    }
+    input:focus { border-color: #7c8cff; outline: none; }
+    button {
+      flex: none; font: inherit; font-size: 18px; color: #0f1115; background: #7c8cff;
+      border: 0; border-radius: 8px; padding: 0 20px; cursor: pointer;
+    }
+    button:focus { outline: 2px solid #fff; }
+    .err { color: #e5676b; margin: 14px 0 0; }
+    .hint { font-size: 13px; opacity: .55; margin: 18px 0 0; }
+  </style>
+</head>
+<body>
+  <main class="join">
+    <h1>一起看</h1>
+    <form action="/j" method="get">
+      <input name="c" placeholder="房间号" maxlength="12" autofocus autocomplete="off"
+             autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="text" required>
+      <button type="submit">进入</button>
+    </form>
+    <!--ERROR-->
+    <p class="hint">房间号在房间页的「📺 在电视上看」里，6 位，不分大小写。</p>
+  </main>
+</body>
+</html>

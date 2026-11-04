@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>一起看 · 管理后台</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .admin { max-width: 1100px; margin: 0 auto; padding: 14px 16px 32px; }
+    .admin h1 { font-size: 18px; font-weight: 600; margin: 0; flex: 1; }
+    .admin h2 { font-size: 14px; font-weight: 600; opacity: .7; margin: 22px 0 8px; display: flex; align-items: center; gap: 10px; }
+    .admin h2 .sub { font-weight: 400; opacity: .7; }
+    .status { font-size: 12px; opacity: .6; white-space: nowrap; }
+    .status.err { color: var(--danger); opacity: 1; }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+    .tile { background: var(--panel); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+    .tile .label { font-size: 12px; opacity: .6; }
+    .tile .value { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 2px; overflow-wrap: anywhere; }
+    .tile .detail { font-size: 12px; opacity: .6; margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .bar { height: 4px; background: var(--chip); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+    .bar > i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .4s; }
+    .bar.hot > i { background: var(--danger); }
+    .tablewrap { overflow-x: auto; background: var(--panel); border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 10px; vertical-align: top; border-top: 1px solid var(--chip); }
+    th { font-weight: 500; opacity: .6; border-top: 0; white-space: nowrap; }
+    td { font-variant-numeric: tabular-nums; }
+    td.num { text-align: right; white-space: nowrap; }
+    .empty { padding: 14px 12px; opacity: .5; }
+    .tag { display: inline-block; background: var(--chip); border-radius: 10px; padding: 0 8px; font-size: 12px; margin: 1px 4px 1px 0; white-space: nowrap; }
+    .tag.host { outline: 1px solid var(--accent); }
+    .tag.ctl { color: var(--accent); }
+    .tag.off { opacity: .5; }
+    .tag.kind-no_results { color: var(--danger); }
+    .muted { opacity: .55; }
+    .title-cell { min-width: 180px; overflow-wrap: anywhere; }
+    a.room { color: var(--accent); text-decoration: none; font-family: ui-monospace, Menlo, Consolas, monospace; }
+    a.room:hover { text-decoration: underline; }
+    select.period { background: var(--chip); color: inherit; border: 0; border-radius: 10px; padding: 2px 8px; font-size: 12px; }
+    .nowrap { white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <main class="admin">
+    <header class="topbar">
+      <h1>🎬 一起看 · 管理后台</h1>
+      <span id="status" class="status">加载中…</span>
+      <a class="perm-btn" href="/admin/logout" style="text-decoration:none">退出</a>
+    </header>
+
+    <div id="summary" class="tiles"></div>
+
+    <h2>服务器资源 <span class="sub">CPU、内存、负载是整台服务器的；网络流量是本容器的（含 B 站转流）</span></h2>
+    <div id="stats" class="tiles"></div>
+
+    <h2>房间 <span id="rooms-sub" class="sub"></span></h2>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>房间</th><th>频道</th><th>正在播放</th><th>状态</th><th>在看</th><th>房主</th><th>开了多久</th></tr>
+        </thead>
+        <tbody id="rooms"></tbody>
+      </table>
+      <div id="rooms-empty" class="empty" hidden>现在没有房间</div>
+    </div>
+
+    <h2>被拦截的访问 <span id="geo-sub" class="sub"></span></h2>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>编号</th><th>IP</th><th>可能的地区</th><th>房间</th><th>次数</th><th>首次</th><th>最近</th></tr>
+        </thead>
+        <tbody id="blocked"></tbody>
+      </table>
+      <div id="blocked-empty" class="empty" hidden>还没有拦过谁</div>
+    </div>
+
+    <h2>想看但没有的片
+      <select id="period" class="period">
+        <option value="1">今天</option>
+        <option value="7" selected>最近 7 天</option>
+        <option value="30">最近 30 天</option>
+        <option value="0">全部</option>
+      </select>
+      <span id="requests-sub" class="sub"></span>
+    </h2>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>片名</th><th>次数</th><th>情况</th><th>谁提的</th><th>频道</th><th>最近一次</th></tr>
+        </thead>
+        <tbody id="requests"></tbody>
+      </table>
+      <div id="requests-empty" class="empty" hidden>这段时间没有人提</div>
+    </div>
+  </main>
+  <script src="/static/admin.js"></script>
+</body>
+</html>

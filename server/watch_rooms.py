@@ -14,6 +14,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable
 
+from tv_channels import Candidate, Channel
 from vod_search import Show
 
 log = logging.getLogger(__name__)
@@ -37,6 +38,14 @@ class RoomsFull(Exception):
         self.limit = limit
 
 
+class TvRoomsFull(Exception):
+    """同时在播直播的房间已达上限。"""
+
+    def __init__(self, limit: int):
+        super().__init__(f"直播房间已满（最多 {limit} 个），请稍后再试")
+        self.limit = limit
+
+
 @dataclass
 class VodInfo:
     show: Show
@@ -57,14 +66,28 @@ def vod_video(info: VodInfo, duration: float) -> Video:
 
 
 @dataclass
+class TvInfo:
+    channel: Channel
+    order: list[Candidate]         # 建房时 channel.ordered() 的快照；换源就沿着它往下走
+    index: int                     # order 的下标
+    bad: set[int] = field(default_factory=set)
+
+
+def tv_video(info: TvInfo) -> Video:
+    return Video(source="tv", id=info.channel.key, page=1, title=info.channel.name, duration=None,
+                 url=info.order[info.index].url, tv=info)
+
+
+@dataclass
 class Video:
-    source: str          # "bilibili" | "youtube" | "vod"
+    source: str          # "bilibili" | "youtube" | "vod" | "tv"
     id: str
     page: int
     title: str
     duration: float | None
     url: str
     vod: VodInfo | None = None   # source == "vod" 时才有
+    tv: TvInfo | None = None     # source == "tv" 时才有
 
 
 @dataclass
@@ -110,6 +133,7 @@ class Room:
     version: int = 0                      # 每次换视频 +1
     finished_version: int | None = None   # 已经通知过 finished 的 version
     owner_viewer_id: str | None = None    # 用房主链接拿回房主身份的人
+    created_at: float = 0.0               # 建房时间（clock），管理后台显示「开了多久」
     now: Callable[[], float] = field(default=time.time, repr=False)
 
     def present(self) -> list[Member]:
@@ -144,9 +168,11 @@ def random_name(taken: set[str], rng: random.Random | None = None) -> str:
 
 
 class RoomManager:
-    def __init__(self, clock: Callable[[], float] = time.time, max_bili_rooms: int = 2):
+    def __init__(self, clock: Callable[[], float] = time.time, max_bili_rooms: int = 2,
+                 max_tv_rooms: int = 2):
         self.clock = clock
         self.max_bili_rooms = max_bili_rooms
+        self.max_tv_rooms = max_tv_rooms
         self.rooms: dict[str, Room] = {}
         self.listeners: list[Callable[[Room, str], None]] = []
 
@@ -166,6 +192,19 @@ class RoomManager:
         if video.source == "bilibili" and self._bili_count(exclude) >= self.max_bili_rooms:
             raise RoomsFull(self.max_bili_rooms)
 
+    def _tv_count(self, exclude: Room | None = None) -> int:
+        return sum(1 for r in self.rooms.values()
+                   if not r.closed and r is not exclude and r.video.source == "tv")
+
+    def _check_tv(self, video: Video, exclude: Room | None = None) -> None:
+        if video.source == "tv" and self._tv_count(exclude) >= self.max_tv_rooms:
+            raise TvRoomsFull(self.max_tv_rooms)
+
+    def check_tv(self) -> None:
+        """直播名额已满就抛 TvRoomsFull。bot 在探测前先查一次，免得白等；create 仍然再查（防并发）。"""
+        if self._tv_count() >= self.max_tv_rooms:
+            raise TvRoomsFull(self.max_tv_rooms)
+
     def _ensure_host(self, room: Room) -> bool:
         """房主不在房间里就交给最早进来的人；房间空了就没有房主。返回房主是否变了。"""
         present = room.present()
@@ -182,6 +221,7 @@ class RoomManager:
     # ---------------- 对外 ----------------
     def create(self, channel_id, creator_id, creator_name, video: Video) -> Room:
         self._check_bili(video)
+        self._check_tv(video)
         now = self.clock()
         while True:
             room_id = "".join(secrets.choice(_ROOM_ALPHABET) for _ in range(_ROOM_ID_LEN))
@@ -189,7 +229,7 @@ class RoomManager:
                 break
         room = Room(room_id=room_id, channel_id=channel_id, creator_id=creator_id, creator_name=creator_name,
                     owner_key=secrets.token_urlsafe(16), video=video,
-                    playback=Playback(False, 0.0, now), empty_since=now, now=self.clock)
+                    playback=Playback(False, 0.0, now), empty_since=now, created_at=now, now=self.clock)
         self.rooms[room_id] = room
         return room
 
@@ -245,6 +285,13 @@ class RoomManager:
             return False
         now = self.clock()
         pb = room.playback
+        if room.video.source == "tv":
+            # 直播没有进度：不能拖，播放/暂停时位置固定 0
+            if action not in ("play", "pause"):
+                return False
+            room.playback = Playback(action == "play", 0.0, now)
+            self._notify(room, "playback")
+            return True
         if action == "seek":
             if position is None:
                 return False
@@ -272,6 +319,22 @@ class RoomManager:
         self._notify(room, "permissions")
         return True
 
+    def transfer_host(self, room_id, actor_id, target_public_id) -> Member | None:
+        """房主把房主身份交给房间里的另一个人（公开 id 指定，必须在场）。原房主保留控制权。
+        成功返回新房主，否则 None。"""
+        room = self.get(room_id)
+        if room is None or not self._is_host(room, actor_id):
+            return None
+        target = next((m for m in room.present() if m.public_id == target_public_id), None)
+        if target is None or target.viewer_id == actor_id:
+            return None
+        old = room.members.get(actor_id)
+        if old is not None:
+            old.can_control = True
+        room.host_id = target.viewer_id
+        self._notify(room, "host")
+        return target
+
     def _set_video(self, room: Room, video: Video, position: float, playing: bool) -> None:
         room.video = video
         room.version += 1
@@ -291,6 +354,7 @@ class RoomManager:
         if room is None or not self._is_host(room, actor_id) or not self._valid_position(position):
             return False
         self._check_bili(video, exclude=room)
+        self._check_tv(video, exclude=room)
         self._set_video(room, video, position, playing)
         return True
 
@@ -313,10 +377,18 @@ class RoomManager:
         self._set_video(room, video, 0.0, True)
         return True
 
-    def set_duration(self, room_id: str, value: float) -> bool:
-        """播放器报告时长：只在视频还没有时长时接受（有限正数）。"""
+    def switch_tv(self, room_id: str, expected_version: int, video: Video) -> bool:
+        """直播换片源：不看人，只认版本号；版本变了（别人已经切过）就丢弃。"""
         room = self.get(room_id)
-        if room is None or room.video.duration is not None:
+        if room is None or room.video.source != "tv" or room.version != expected_version:
+            return False
+        self._set_video(room, video, 0.0, room.playback.playing)
+        return True
+
+    def set_duration(self, room_id: str, value: float) -> bool:
+        """播放器报告时长：只在视频还没有时长时接受（有限正数）；直播没有时长，一律不收。"""
+        room = self.get(room_id)
+        if room is None or room.video.duration is not None or room.video.source == "tv":
             return False
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
             return False

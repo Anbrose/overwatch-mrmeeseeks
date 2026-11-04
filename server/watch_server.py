@@ -1,6 +1,7 @@
 """一起看网页服务：房间页、WebSocket 同步协议、B 站 DASH 转流、资源站剧集的 m3u8。
 
 路由：
+- GET /                                        首页：输房间号进房（电视浏览器用）；GET /j?c=<房间号> 规范化后 303 到 /r/，没有就 404
 - GET /r/{room_id}                          房间页（index.html）；房间不存在 → 404 页面
 - GET /static/{name}                        watch_web 下白名单里的文件
 - GET /ws/{room_id}                         WebSocket（协议见 watch_web/player.js）
@@ -8,6 +9,12 @@
 - GET /bili/{room_id}/{version}/{video|audio}  转发 B 站 CDN（只请求 Sources 给的地址）
 - GET /vod/{room_id}/{version}/index.m3u8      改写过（去广告、地址绝对）的 vod 播放列表；
                                                片段由浏览器直接从资源站 CDN 取，本服务器只取房间当前集的 m3u8
+- GET /admin                                   管理后台：没登录显示输入密钥的页面，登录后是 admin.html（房间、观众、
+                                               「想看但没有」的片、被拦的 IP、服务器资源）。没配密钥时 404
+- POST /admin/login（表单字段 key、password）  密钥 + 密码都对 → 写 cookie（值是两者派生的令牌）、303 回 /admin；
+                                               错 → 登录页带提示（401）；同一 IP 错太多次 429
+- GET /admin/logout                            清 cookie
+- GET /admin/api                               后台页面轮询的 JSON（令牌放 cookie 或 X-Admin-Token 头），没登录 401
 - GET /vod/{room_id}/{version}/key{n}          播放列表里第 n 把 AES 密钥，由本服务器向资源站取后中转
                                                （有些地区连不上资源站的密钥域名；见 vod_playlist）
 
@@ -24,27 +31,52 @@ vod 房间额外的客户端消息（当前视频不是 vod 时一律忽略）�
 members 发给房间里所有人（含房主，带 is_host），每人附 health / health_note。
 播完（rooms 的 "finished" 事件）自动换下一集并开始播放；期间有人手动换过就作废（按版本号）。
 准备一集（找线路、取 m3u8、探测片段）整体最多 VOD_PREPARE_TIMEOUT 秒，超时按“没有能播的片源”处理。
+
+地区限制（geo 不为 None 时）：房间页照常打开；WebSocket 连上后先按客户端 IP 查国家，不在放行名单里就只发一条
+{"type": "blocked", "id", "country", "message"} 然后关闭（不进房、不算人数），/bili、/vod、/tv 的媒体路由返回 403；
+被拦的 IP、编号、推测国家记在 BlockLog，管理后台能看。地区数据还没加载好时不拦。
+电视直播（source == "tv"）：
+- GET /tv/{room_id}/{version}/index.m3u8      改写过的直播媒体列表（只含本站路径，见 tv_relay）
+- GET /tv/{room_id}/{version}/s/{n}           按编号转发分片；没发过的编号 404，不碰上游
+  房间不存在 / 不是 tv / 版本号不是当前的 → 404；上游失败 → 502；所有 /tv 响应都带 nosniff、no-store。
+  每次请求后流若已判死（dead_reason），后台自动换源（按版本号，换过就作废）。
+- {"type": "tv_next"}                 房主手动换下一个源（绕圈；绕回开头时清空坏源记录）
+- {"type": "tv_stall", "version": v}  在场的人报告卡住；v 必须是当前版本，每个房间 STALL_COOLDOWN 秒内最多换一次
+换源每个房间同一时刻只跑一个；成功后所有人收到 notice（TV_SWITCHED），自动换源找不到源时所有人收到 NO_TV_SOURCE。
 """
 from __future__ import annotations
 
 import asyncio
 import datetime
+import functools
 import json
 import logging
 import math
+import hashlib
+import os
+import re
+import secrets
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Callable
 from xml.sax.saxutils import escape, quoteattr
 
 import aiohttp
 from aiohttp import web
 
+import tv_net
+import tv_relay
+import tv_stream
+from geoip import BLOCKED_MSG, BlockLog, GeoDB, client_ip
 from live_watch import USER_AGENT
+from sysstats import SystemStats
+from tv_channels import Candidate, Channel
 from vod_playlist import NO_PLAYABLE, Playlist, PlaylistError, fetch_key, fetch_playlist, find_playable
 from vod_search import Show
 from watch_progress import ProgressRecorder, resume_line
-from watch_rooms import Room, RoomManager, RoomsFull, Video, VodInfo, vod_video
+from watch_requests import KIND_LABEL, RequestStore
+from watch_rooms import Room, RoomManager, RoomsFull, TvInfo, Video, VodInfo, tv_video, vod_video
 from watch_sources import BILI_REFERER, DashStreams, Sources, VideoUnavailable
 
 log = logging.getLogger(__name__)
@@ -62,8 +94,33 @@ REPORT_MAX_CHARS = 500
 STATIC_FILES = {
     "index.html": "text/html",
     "player.js": "application/javascript",
+    "cast.js": "application/javascript",
     "style.css": "text/css",
+    "admin.js": "application/javascript",
 }
+ADMIN_COOKIE = "watch_admin"
+ADMIN_LOGIN_MAX_FAILURES = 10        # 同一 IP 连续输错这么多次就锁
+ADMIN_LOGIN_LOCK_SECONDS = 900       # 锁 15 分钟
+ADMIN_LOGIN_HTML = """<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex"><title>一起看 · 管理后台</title>
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0f1115;color:#e6e6e6;
+font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+form{background:#1a1d24;padding:24px 28px;border-radius:10px;display:flex;flex-direction:column;gap:12px;min-width:260px}
+h1{font-size:16px;margin:0;font-weight:600}input{font:inherit;color:inherit;background:#0f1115;border:1px solid #2a2f3a;
+border-radius:6px;padding:8px 10px}input:focus{border-color:#7c8cff;outline:none}
+button{font:inherit;background:#7c8cff;color:#0f1115;border:0;border-radius:6px;padding:8px;cursor:pointer;font-weight:600}
+.err{color:#e5676b;font-size:13px;margin:0}</style></head>
+<body><form method="post" action="/admin/login"><h1>🎬 一起看 · 管理后台</h1>
+<input type="text" name="key" placeholder="密钥" autofocus autocomplete="username" required>
+{password_field}<button type="submit">进入</button>{error}</form></body></html>
+"""
+ADMIN_PASSWORD_FIELD = ('<input type="password" name="password" placeholder="密码" '
+                        'autocomplete="current-password" required>' + chr(10))
+ADMIN_WRONG_KEY = '<p class="err">密钥或密码不对</p>'
+ADMIN_LOCKED = '<p class="err">输错太多次了，请 15 分钟后再试</p>'
+STATS_MIN_INTERVAL = 2.0     # 资源用量采样的最短间隔（秒）
+SOURCE_LABEL = {"bilibili": "B 站", "youtube": "YouTube", "vod": "片源", "tv": "直播"}
 NOT_FOUND_HTML = """<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>一起看</title>
@@ -71,8 +128,29 @@ NOT_FOUND_HTML = """<!doctype html>
 background:#0f1115;color:#e6e6e6;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif}</style>
 </head><body><p>房间不存在或已经结束</p></body></html>
 """
+JOIN_ERROR = '<p class="err">没有这个房间，看看房间号有没有输错</p>'
+_CODE_JUNK = re.compile(r"[^a-z0-9]")
 CHANGING_MSG = "正在换视频，请稍候"
+HOST_CHANGED = "房主现在是「{name}」"
 ROOMS_FULL_MSG = "B 站房间已满（最多 {limit} 个），请稍后再试或换 YouTube 视频"
+NO_TV_SOURCE = "这个台暂时没有能播的源"
+TV_SWITCHED = "已切换片源"
+TV_PREPARE_TIMEOUT = 20.0    # 开一个台（依次探测候选源）的总时限（秒）
+STALL_COOLDOWN = 15.0        # tv_stall 引起的换源：每个房间至少隔这么久（秒）
+TV_HEADERS = {"X-Content-Type-Options": "nosniff", "Cache-Control": "no-store"}
+
+
+class TvUnavailable(Exception):
+    """这个台没有能播的源（都探测失败，或超过准备时限）。"""
+
+    def __init__(self, message: str = NO_TV_SOURCE):
+        super().__init__(message)
+        self.message = message
+
+
+def normalize_code(raw: str) -> str:
+    """电视遥控器输的房间号：去空格和横线、不分大小写。"""
+    return _CODE_JUNK.sub("", (raw or "").strip().lower())[:12]
 
 
 def build_mpd(s: DashStreams, room_id: str, version: int) -> str:
@@ -113,6 +191,33 @@ def _finite(v) -> bool:
     return not isinstance(v, bool) and isinstance(v, (int, float)) and math.isfinite(v)
 
 
+def load_admin_key(path: Path | None, configured: str | None = None) -> str:
+    """管理后台密钥：.env 里的 WATCH_ADMIN_KEY 优先；没配就生成一个存在 path（重启后链接不变），存不了就只在内存里。"""
+    if configured and configured.strip():
+        return configured.strip()
+    if path is not None:
+        try:
+            key = Path(path).read_text(encoding="utf-8").strip()
+            if key:
+                return key
+        except OSError:
+            pass
+    key = secrets.token_urlsafe(24)
+    if path is not None:
+        try:
+            os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+            Path(path).write_text(key, encoding="utf-8")
+        except OSError:
+            log.warning("Could not save the watch admin key to %s; it will change on restart", path)
+    return key
+
+
+def _key_matches(given, expected: str) -> bool:
+    return (isinstance(given, str) and bool(expected)
+            and secrets.compare_digest(given.encode("utf-8", "surrogatepass"),
+                                       expected.encode("utf-8", "surrogatepass")))
+
+
 @dataclass(eq=False)
 class _Conn:
     """一个 WebSocket 连接；消息经队列由单独的任务按顺序发出，监听回调里不阻塞。"""
@@ -144,9 +249,21 @@ class WatchServer:
     def __init__(self, rooms: RoomManager, sources: Sources, host: str, port: int,
                  web_dir: Path = Path(__file__).parent / "watch_web", origin: str = "",
                  recorder: ProgressRecorder | None = None, allow_http: bool = False,
-                 vod_prepare_timeout: float = VOD_PREPARE_TIMEOUT):
+                 vod_prepare_timeout: float = VOD_PREPARE_TIMEOUT,
+                 tv_session_factory: Callable[[], aiohttp.ClientSession] = tv_net.make_session,
+                 ip_allowed=tv_net.is_public_ip, tv_prepare_timeout: float = TV_PREPARE_TIMEOUT,
+                 admin_key: str | None = None,
+                 requests: RequestStore | None = None, stats: SystemStats | None = None,
+                 channel_name: Callable[[int], str | None] | None = None,
+                 geo: GeoDB | None = None, blocks: BlockLog | None = None, admin_password: str | None = None):
         """origin = WATCH_PUBLIC_URL（探测片段跨域用）；recorder 自己注册监听，这里只定时调 tick()。
-        allow_http 仅供测试（连本地 http 假上游），生产不要传；vod_prepare_timeout 测试里调小。"""
+        allow_http 仅供测试（连本地 http 假上游），生产不要传；vod_prepare_timeout 测试里调小。
+        tv_session_factory / ip_allowed 仅供测试放行 127.0.0.1，生产用默认（只连公网地址）。
+        admin_key 为空时没有管理后台（/admin 一律 404）；admin_password 配了就要密钥 + 密码一起输。
+        requests、stats、channel_name 只给管理后台用。
+        geo 为 None 时不限制地区；blocks 记被拦的 IP。"""
+        self.geo = geo
+        self.blocks = blocks
         self.rooms = rooms
         self.sources = sources
         self.host = host
@@ -156,25 +273,54 @@ class WatchServer:
         self.recorder = recorder
         self.allow_http = allow_http
         self.vod_prepare_timeout = vod_prepare_timeout
+        self.admin_key = admin_key or None
+        self.admin_password = (admin_password or None) if self.admin_key else None
+        # 登录后 cookie 里存的令牌：由密钥和密码派生，只知道密钥拼不出来
+        self.admin_token = (hashlib.sha256((self.admin_key + "\n" + (self.admin_password or ""))
+                                           .encode("utf-8", "surrogatepass")).hexdigest()
+                            if self.admin_key else None)
+        self.requests = requests
+        self.stats = stats
+        self.channel_name = channel_name
+        self.started_at = time.time()
+        self._stats_cache: dict | None = None
+        self._stats_at = float("-inf")
+        self.tv_session_factory = tv_session_factory
+        self.ip_allowed = ip_allowed
+        self.tv_prepare_timeout = tv_prepare_timeout
         self.conns: dict[str, set[_Conn]] = {}
         self._streams: dict[tuple[str, int], DashStreams] = {}
         self._stream_locks: dict[tuple[str, int], asyncio.Lock] = {}
         self._playlists: dict[tuple[str, int], Playlist] = {}
         self._keys: dict[tuple[str, int, int], bytes] = {}      # (room, version, n) → 密钥
         self._playlist_locks: dict[tuple[str, int], asyncio.Lock] = {}
-        self._tasks: set[asyncio.Task] = set()     # 自动下一集的后台任务
+        self._tasks: set[asyncio.Task] = set()     # 自动下一集、直播换源的后台任务
+        self._tv_streams: dict[tuple[str, int], tv_relay.LiveStream] = {}
+        self._tv_dead_seen: set[tuple[str, int]] = set()   # 已经因为断流发起过自动换源的 (房间, 版本)
+        self._tv_switching: set[str] = set()                # 正在换源的房间
+        self._tv_last_switch: dict[str, float] = {}         # 房间 → 上次换源成功的时间（monotonic）
         self._session: aiohttp.ClientSession | None = None
         self._vod_session: aiohttp.ClientSession | None = None
+        self._tv_session: aiohttp.ClientSession | None = None
         self._runner: web.AppRunner | None = None
         self.bili_bytes = 0          # 当天（UTC）转流字节数
         rooms.listeners.append(self._on_room_event)
 
         self.app = web.Application()
+        self.app.router.add_get("/", self._join_page)
+        self.app.router.add_get("/j", self._join)
         self.app.router.add_get("/r/{room_id}", self._page)
         self.app.router.add_get("/static/{name}", self._static)
         self.app.router.add_get("/ws/{room_id}", self._ws)
         self.app.router.add_get("/bili/{room_id}/{version}/{name}", self._bili)
         self.app.router.add_get("/vod/{room_id}/{version}/index.m3u8", self._vod)
+        self.app.router.add_get("/admin", self._admin_page)
+        self.app.router.add_post("/admin/login", self._admin_login)
+        self.app.router.add_get("/admin/logout", self._admin_logout)
+        self.app.router.add_get("/admin/api", self._admin_api)
+        self._login_failures: dict[str, list[float]] = {}     # ip -> 最近失败时间
+        self.app.router.add_get("/tv/{room_id}/{version}/index.m3u8", self._tv_playlist)
+        self.app.router.add_get("/tv/{room_id}/{version}/s/{n}", self._tv_segment)
         self.app.router.add_get(r"/vod/{room_id}/{version}/key{index:\d+}", self._vod_key)
         self._sockets: set[web.WebSocketResponse] = set()
         self.app.on_shutdown.append(self._shutdown)
@@ -210,7 +356,7 @@ class WatchServer:
             task.cancel()
         if self._tasks:
             await asyncio.gather(*self._tasks, return_exceptions=True)
-        for name in ("_session", "_vod_session"):
+        for name in ("_session", "_vod_session", "_tv_session"):
             session = getattr(self, name)
             if session is not None:
                 await session.close()
@@ -230,6 +376,10 @@ class WatchServer:
                     self.recorder.tick()
                 except Exception:
                     log.exception("watch progress tick failed")
+            try:
+                self._stats_now()      # 定期采样，后台页面打开时 CPU、网速马上有数
+            except Exception:
+                log.exception("system stats sample failed")
             today = datetime.datetime.now(datetime.timezone.utc).date()
             if today != day:
                 log.info("一起看 B 站转流 %s：%d 字节（%.1f MiB）", day.isoformat(), self.bili_bytes,
@@ -250,7 +400,30 @@ class WatchServer:
             self._vod_session = aiohttp.ClientSession()
         return self._vod_session
 
+    def _tv_http(self) -> aiohttp.ClientSession:
+        """直播探测和中继共用；解析器只放行 ip_allowed 的地址（见 tv_net）。"""
+        if self._tv_session is None or self._tv_session.closed:
+            self._tv_session = self.tv_session_factory()
+        return self._tv_session
+
     # ---------------- 页面 ----------------
+    # 首页就是「输房间号进房」：给电视、盒子的浏览器用，不用输长网址，也不需要 JS。
+    async def _join_page(self, request: web.Request) -> web.StreamResponse:
+        return self._join_html("")
+
+    async def _join(self, request: web.Request) -> web.StreamResponse:
+        code = normalize_code(request.query.get("c", ""))
+        if not code:
+            return self._join_html("")
+        if self.rooms.get(code) is None:
+            return self._join_html(JOIN_ERROR, status=404)
+        raise web.HTTPSeeOther(f"/r/{code}")
+
+    def _join_html(self, error: str, status: int = 200) -> web.Response:
+        html = (self.web_dir / "join.html").read_text(encoding="utf-8").replace("<!--ERROR-->", error)
+        return web.Response(status=status, text=html, content_type="text/html",
+                            headers={"Cache-Control": "no-store"})
+
     async def _page(self, request: web.Request) -> web.StreamResponse:
         if self.rooms.get(request.match_info["room_id"]) is None:
             return web.Response(status=404, text=NOT_FOUND_HTML, content_type="text/html")
@@ -265,6 +438,164 @@ class WatchServer:
         return web.Response(body=(self.web_dir / name).read_bytes(), content_type=ctype, charset="utf-8",
                             headers={"Cache-Control": "no-cache"})
 
+    # ---------------- 地区限制 ----------------
+    def _geo_block(self, request: web.Request, room_id: str) -> dict | None:
+        """被拦返回 {"id", "country"}（并记一笔），放行 / 没开限制 / 数据没加载返回 None。"""
+        if self.geo is None:
+            return None
+        ip = client_ip(request)
+        verdict = self.geo.check(ip)
+        if verdict.allowed is not False:
+            return None
+        entry_id = ""
+        if self.blocks is not None:
+            entry_id = self.blocks.record(ip, verdict.country, room_id).id
+        log.info("watch geo-blocked ip=%s country=%s room=%s id=%s", ip, verdict.country, room_id, entry_id)
+        return {"id": entry_id, "country": verdict.country}
+
+    # ---------------- 管理后台 ----------------
+    def _admin_ok(self, request: web.Request) -> bool:
+        if self.admin_token is None:
+            return False
+        for given in (request.headers.get("X-Admin-Token"), request.cookies.get(ADMIN_COOKIE)):
+            if _key_matches(given, self.admin_token):
+                return True
+        return False
+
+    def _credentials_ok(self, key, password) -> bool:
+        if not _key_matches(key, self.admin_key):
+            return False
+        return self.admin_password is None or _key_matches(password, self.admin_password)
+
+    def _set_admin_cookie(self, resp: web.StreamResponse) -> None:
+        resp.set_cookie(ADMIN_COOKIE, self.admin_token, path="/admin", httponly=True, samesite="Strict",
+                        secure=self.origin.startswith("https"), max_age=30 * 86400)
+
+    def _login_locked(self, ip: str) -> bool:
+        now = time.time()
+        fails = [t for t in self._login_failures.get(ip, ()) if now - t < ADMIN_LOGIN_LOCK_SECONDS]
+        if fails:
+            self._login_failures[ip] = fails
+        else:
+            self._login_failures.pop(ip, None)
+        return len(fails) >= ADMIN_LOGIN_MAX_FAILURES
+
+    def _login_page(self, error: str = "", status: int = 200) -> web.Response:
+        # 模板里有 CSS 的花括号，不能用 str.format
+        html = (ADMIN_LOGIN_HTML.replace("{error}", error)
+                .replace("{password_field}", ADMIN_PASSWORD_FIELD if self.admin_password else ""))
+        return web.Response(text=html, status=status, content_type="text/html", charset="utf-8",
+                            headers={"Cache-Control": "no-store"})
+
+    async def _admin_page(self, request: web.Request) -> web.StreamResponse:
+        if self.admin_key is None:
+            raise web.HTTPNotFound()
+        if not self._admin_ok(request):
+            return self._login_page()
+        return web.Response(body=(self.web_dir / "admin.html").read_bytes(), content_type="text/html",
+                            charset="utf-8", headers={"Cache-Control": "no-store"})
+
+    async def _admin_login(self, request: web.Request) -> web.StreamResponse:
+        if self.admin_key is None:
+            raise web.HTTPNotFound()
+        ip = client_ip(request) or "?"
+        if self._login_locked(ip):
+            return self._login_page(ADMIN_LOCKED, status=429)
+        form = await request.post()
+        if not self._credentials_ok(form.get("key"), form.get("password")):
+            self._login_failures.setdefault(ip, []).append(time.time())
+            log.info("watch admin login failed from %s", ip)
+            return self._login_page(ADMIN_WRONG_KEY, status=401)
+        self._login_failures.pop(ip, None)
+        resp = web.HTTPSeeOther("/admin")
+        self._set_admin_cookie(resp)
+        return resp
+
+    async def _admin_logout(self, request: web.Request) -> web.StreamResponse:
+        resp = web.HTTPSeeOther("/admin")
+        resp.del_cookie(ADMIN_COOKIE, path="/admin")
+        return resp
+
+    async def _admin_api(self, request: web.Request) -> web.StreamResponse:
+        if self.admin_key is None:
+            raise web.HTTPNotFound()
+        if not self._admin_ok(request):
+            raise web.HTTPUnauthorized()
+        return web.json_response(self.admin_snapshot(), headers={"Cache-Control": "no-store"},
+                                 dumps=lambda o: json.dumps(o, ensure_ascii=False))
+
+    def _stats_now(self) -> dict | None:
+        if self.stats is None:
+            return None
+        now = time.monotonic()
+        if self._stats_cache is None or now - self._stats_at >= STATS_MIN_INTERVAL:
+            self._stats_cache, self._stats_at = self.stats.sample(), now
+        return self._stats_cache
+
+    def _channel(self, channel_id: int) -> dict:
+        name = None
+        if self.channel_name is not None:
+            try:
+                name = self.channel_name(channel_id)
+            except Exception:
+                log.exception("channel_name lookup failed for %s", channel_id)
+        return {"id": str(channel_id), "name": name}
+
+    def _room_info(self, room: Room, now: float) -> dict:
+        v, vod = room.video, room.video.vod
+        pos = room.playback.position_at(now, v.duration)
+        if vod is not None and 0 <= vod.line < len(vod.show.lines):
+            source = f"片源：{vod.show.lines[vod.line].name}"
+        else:
+            source = SOURCE_LABEL.get(v.source, v.source)
+        return {
+            "room_id": room.room_id,
+            "url": f"/r/{room.room_id}",
+            "channel": self._channel(room.channel_id),
+            "title": v.title,
+            "source": v.source,
+            "source_label": source,
+            "show_title": vod.show.title if vod is not None else None,
+            "episode": vod.episode if vod is not None else None,
+            "episode_count": vod.show.episode_count if vod is not None else None,
+            "playing": room.playback.playing,
+            "finished": bool(v.duration and pos >= v.duration),
+            "position": pos,
+            "duration": v.duration,
+            "viewers": [{"name": m.name, "is_host": m.viewer_id == room.host_id, "can_control": m.can_control,
+                         "online": m.connections > 0} for m in room.present()],
+            "host": room.host_name() if room.present() else None,
+            "creator": room.creator_name,
+            "created_at": room.created_at,
+            "age": max(0.0, self.rooms.clock() - room.created_at),
+            "version": room.version,
+        }
+
+    def admin_snapshot(self) -> dict:
+        """后台页面轮询的全部内容。房主密钥和 viewer_id 都不在里面。"""
+        now = time.time()
+        rooms = [self._room_info(r, now) for r in sorted(self.rooms.active(), key=lambda r: r.created_at)]
+        requests = []
+        if self.requests is not None:
+            requests = [{"query": r.query, "key": r.key, "kind": r.kind, "kind_label": KIND_LABEL.get(r.kind, r.kind),
+                         "user_name": r.user_name, "channel": self._channel(r.channel_id), "at": r.at}
+                        for r in self.requests.all()]
+        return {
+            "server_time": now,
+            "started_at": self.started_at,
+            "summary": {"rooms": len(rooms), "viewers": sum(len(r["viewers"]) for r in rooms),
+                        "bili_rooms": sum(1 for r in rooms if r["source"] == "bilibili"),
+                        "bili_bytes_today": self.bili_bytes},
+            "rooms": rooms,
+            "requests": requests,
+            "request_limit": self.requests.limit if self.requests is not None else None,
+            "stats": self._stats_now(),
+            "geo": {"enabled": True, **self.geo.status()} if self.geo is not None else {"enabled": False},
+            "blocked": [{"ip": e.ip, "id": e.id, "country": e.country, "rooms": list(e.rooms), "hits": e.hits,
+                         "first_at": e.first_at, "last_at": e.last_at}
+                        for e in self.blocks.all()] if self.blocks is not None else [],
+        }
+
     # ---------------- 推送 ----------------
     def _state_msg(self, room: Room) -> dict:
         v = room.video
@@ -272,7 +603,14 @@ class WatchServer:
         video = {"source": v.source, "id": v.id, "title": v.title, "duration": v.duration,
                  "version": room.version,
                  "mpd": f"/bili/{room.room_id}/{room.version}/manifest.mpd" if v.source == "bilibili" else None,
-                 "hls": f"/vod/{room.room_id}/{room.version}/index.m3u8" if v.vod is not None else None}
+                 "hls": f"/vod/{room.room_id}/{room.version}/index.m3u8" if v.vod is not None else None,
+                 "live": False}
+        position = room.playback.position_at(now, v.duration)
+        if v.tv is not None:
+            # 直播没有进度：位置永远是 0
+            video.update(hls=f"/tv/{room.room_id}/{room.version}/index.m3u8", live=True,
+                         line_count=len(v.tv.order), line=v.tv.index)
+            position = 0
         resume = None
         if v.vod is not None:
             show = v.vod.show
@@ -286,7 +624,7 @@ class WatchServer:
             "type": "state",
             "video": video,
             "playing": room.playback.playing,
-            "position": room.playback.position_at(now, v.duration),
+            "position": position,
             "server_time": now,
             "resume": resume,
         }
@@ -347,10 +685,14 @@ class WatchServer:
             self._start_auto_next(room)
 
     def _evict(self, room_id: str, keep: int | None = None) -> None:
-        """清掉这个房间除 keep 版本以外的 B 站地址、vod 播放列表和密钥缓存。"""
-        for cache in (self._streams, self._stream_locks, self._playlists, self._playlist_locks, self._keys):
+        """清掉这个房间除 keep 版本以外的 B 站地址、vod 播放列表、密钥和直播流缓存；keep 为 None（关房）全清。"""
+        for cache in (self._streams, self._stream_locks, self._playlists, self._playlist_locks, self._keys,
+                      self._tv_streams):
             for key in [k for k in cache if k[0] == room_id and k[1] != keep]:
                 cache.pop(key, None)
+        self._tv_dead_seen = {k for k in self._tv_dead_seen if k[0] != room_id or k[1] == keep}
+        if keep is None:
+            self._tv_last_switch.pop(room_id, None)
 
     async def _writer(self, conn: _Conn) -> None:
         try:
@@ -377,20 +719,26 @@ class WatchServer:
         await ws.prepare(request)
         self._sockets.add(ws)
         try:
-            return await self._ws_session(ws, room_id, request.headers.get("User-Agent", ""))
+            blocked = self._geo_block(request, room_id) if self.rooms.get(room_id) is not None else None
+            return await self._ws_session(ws, room_id, request.headers.get("User-Agent", ""), blocked)
         finally:
             self._sockets.discard(ws)
 
-    async def _ws_session(self, ws: web.WebSocketResponse, room_id: str, ua: str = "") -> web.WebSocketResponse:
-        async def end():
+    async def _ws_session(self, ws: web.WebSocketResponse, room_id: str, ua: str = "",
+                          blocked: dict | None = None) -> web.WebSocketResponse:
+        async def end(msg: dict | None = None):
             try:
-                await ws.send_str(json.dumps({"type": "ended"}))
+                await ws.send_str(json.dumps(msg or {"type": "ended"}, ensure_ascii=False))
                 await ws.close()
             except (ConnectionResetError, aiohttp.ClientError):
                 pass   # 客户端已经走了
 
         if self.rooms.get(room_id) is None:
             await end()
+            return ws
+        if blocked is not None:
+            # 地区不在放行名单：告诉他编号和原因就断开，不进房、不发房间状态
+            await end({"type": "blocked", "id": blocked["id"], "country": blocked["country"], "message": BLOCKED_MSG})
             return ws
         try:
             first = await ws.receive(timeout=HELLO_TIMEOUT)
@@ -473,6 +821,14 @@ class WatchServer:
             target, allowed = data.get("target"), data.get("allowed")
             if isinstance(target, str) and isinstance(allowed, bool):
                 self.rooms.set_permission(rid, vid, target, allowed)
+        elif kind == "transfer":
+            target = data.get("target")
+            if isinstance(target, str):
+                new_host = self.rooms.transfer_host(rid, vid, target)
+                if new_host is not None:
+                    msg = {"type": "notice", "message": HOST_CHANGED.format(name=new_host.name)}
+                    for c in self.conns.get(rid, ()):
+                        c.push(msg)
         elif kind == "change_video":
             url = data.get("url")
             room = self.rooms.get(rid)
@@ -482,6 +838,8 @@ class WatchServer:
             self._start_busy(conn, self._change_video(conn, url))
         elif kind in ("episode", "next_line", "resume"):
             self._handle_vod(conn, kind, data)
+        elif kind in ("tv_next", "tv_stall"):
+            self._handle_tv(conn, kind, data)
         elif kind == "report":
             self._report(conn, data)
         elif kind == "health":
@@ -677,6 +1035,8 @@ class WatchServer:
             raise web.HTTPNotFound()
         if room is None or room.video.vod is None or version != room.version:
             raise web.HTTPNotFound()
+        if self._geo_block(request, room.room_id) is not None:
+            raise web.HTTPForbidden(text=BLOCKED_MSG)
         key = (room.room_id, version)
         playlist = self._playlists.get(key)
         if playlist is None:
@@ -696,9 +1056,189 @@ class WatchServer:
 
     async def _vod(self, request: web.Request) -> web.StreamResponse:
         _room, _version, playlist = await self._vod_lookup(request)
+        # Chromecast 的接收端（Google 的页面）跨域来取这份列表，所以要放开 CORS；
+        # 列表里没有任何秘密，片段地址本来就在资源站 CDN 上。
         return web.Response(text=playlist.text, content_type="application/vnd.apple.mpegurl",
-                            headers={"Cache-Control": "no-store"})
+                            headers={"Cache-Control": "no-store", "Access-Control-Allow-Origin": "*"})
 
+    # ---------------- 电视直播 ----------------
+    async def prepare_tv(self, channel: Channel, order: list[Candidate] | None = None,
+                         start: int = 0, bad: set[int] = frozenset()) -> Video:
+        """从 order[start] 起依次（绕圈、跳过 bad、每个最多一次）探测，第一个能播的做成 tv 视频；
+        都不能播或超过 tv_prepare_timeout 秒抛 TvUnavailable。建房、手动换源、自动换源都走这里。
+        这次探测失败的源也记进返回的 TvInfo.bad，之后自动换源不再先去探它们（手动绕回开头时才清空）。"""
+        order = list(channel.ordered() if order is None else order)
+        bad = set(bad)
+
+        async def find() -> int | None:
+            probe = functools.partial(tv_stream.probe, self._tv_http(), ip_allowed=self.ip_allowed)
+            n = len(order)
+            for k in range(n):
+                i = (start + k) % n
+                if i in bad:
+                    continue
+                if await probe(order[i]):
+                    return i
+                bad.add(i)
+            return None
+
+        try:
+            index = await asyncio.wait_for(find(), self.tv_prepare_timeout)
+        except asyncio.TimeoutError:
+            log.info("watch tv prepare timed out (%r)", channel.name)
+            index = None
+        if index is None:
+            raise TvUnavailable()
+        return tv_video(TvInfo(channel, order, index, bad))
+
+    def _tv_conns(self, room_id: str, host_only: bool = False) -> list[_Conn]:
+        room = self.rooms.get(room_id)
+        conns = list(self.conns.get(room_id, ()))
+        if host_only:
+            conns = [c for c in conns if room is not None and c.viewer_id == room.host_id]
+        return conns
+
+    def _handle_tv(self, conn: _Conn, kind: str, data: dict) -> None:
+        room = self.rooms.get(conn.room_id)
+        if room is None or room.video.tv is None:
+            return
+        if kind == "tv_next":
+            if self._you(room, conn.viewer_id)[0] and len(room.video.tv.order) > 1:
+                if not self._start_tv_switch(room.room_id, room.version, manual=True):
+                    conn.push({"type": "error", "message": CHANGING_MSG})
+            return
+        version = data.get("version")
+        if type(version) is not int or version != room.version or conn.viewer_id not in room.members:
+            return
+        last = self._tv_last_switch.get(room.room_id)
+        if last is not None and time.monotonic() - last < STALL_COOLDOWN:
+            return
+        self._start_tv_switch(room.room_id, version, manual=False)
+
+    def _start_tv_switch(self, room_id: str, version: int, manual: bool) -> bool:
+        """后台换源；同一房间已经在换就不再开（返回 False）。占位在同步代码里做，两条消息挨着到也只开一个。"""
+        if room_id in self._tv_switching:
+            return False
+        self._tv_switching.add(room_id)
+        task = asyncio.get_running_loop().create_task(self._tv_switch(room_id, version, manual))
+        self._tasks.add(task)
+
+        def done(t: asyncio.Task) -> None:
+            # 用回调而不是 finally 清占位：任务还没开始就被取消时 finally 不会跑
+            self._tasks.discard(t)
+            self._tv_switching.discard(room_id)
+        task.add_done_callback(done)
+        return True
+
+    async def _tv_switch(self, room_id: str, version: int, manual: bool) -> None:
+        room = self.rooms.get(room_id)
+        if room is None or room.video.tv is None or room.version != version:
+            return
+        info = room.video.tv
+        if manual:
+            if len(info.order) <= 1:
+                return
+            start = info.index + 1
+            if start == len(info.order):
+                start, bad = 0, set()      # 绕回开头：之前判坏的源也再给一次机会
+            else:
+                bad = set(info.bad)
+        else:
+            start, bad = info.index + 1, info.bad | {info.index}
+        try:
+            if len(bad) >= len(info.order):
+                raise TvUnavailable()
+            video = await self.prepare_tv(info.channel, info.order, start=start, bad=bad)
+        except TvUnavailable as e:
+            log.info("watch tv switch: no playable source (room=%s, manual=%s)", room_id, manual)
+            room = self.rooms.get(room_id)
+            if room is None or room.version != version or room.video.tv is None:
+                return      # 找源期间房间关了或视频换了：这条错误已经过时
+            if not manual:
+                # 失败的自动换源也计入冷却，否则全坏的台每次 tv_stall 都会重新探测、重复广播错误
+                self._tv_last_switch[room_id] = time.monotonic()
+            msg = {"type": "error", "message": e.message}
+            for c in self._tv_conns(room_id, host_only=manual):
+                c.push(msg)
+            return
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("watch tv switch failed (room=%s)", room_id)
+            return
+        if manual and video.tv.index == info.index:
+            # 别的源全都不行，绕一圈又回到正在播的这个：不换版本、不说“已切换”，只告诉房主
+            log.info("watch tv switch: no other playable source (room=%s)", room_id)
+            room = self.rooms.get(room_id)
+            if room is None or room.version != version or room.video.tv is None:
+                return
+            msg = {"type": "error", "message": NO_TV_SOURCE}
+            for c in self._tv_conns(room_id, host_only=True):
+                c.push(msg)
+            return
+        if self.rooms.switch_tv(room_id, version, video):
+            self._tv_last_switch[room_id] = time.monotonic()
+            log.info("watch tv switched (room=%s, manual=%s): line %d → %d",
+                     room_id, manual, info.index, video.tv.index)
+            msg = {"type": "notice", "message": TV_SWITCHED}
+            for c in self._tv_conns(room_id):
+                c.push(msg)
+
+    def _tv_stream(self, request: web.Request) -> tuple[Room, int, tv_relay.LiveStream]:
+        """校验房间和版本，取（没有就建）这个版本的直播流；不合法一律 404。"""
+        room = self.rooms.get(request.match_info["room_id"])
+        try:
+            version = int(request.match_info["version"])
+        except ValueError:
+            raise web.HTTPNotFound(headers=TV_HEADERS)
+        if room is None or room.video.tv is None or version != room.version:
+            raise web.HTTPNotFound(headers=TV_HEADERS)
+        if self._geo_block(request, room.room_id) is not None:
+            raise web.HTTPForbidden(text=BLOCKED_MSG, headers=TV_HEADERS)
+        key = (room.room_id, version)
+        stream = self._tv_streams.get(key)
+        if stream is None:
+            info = room.video.tv
+            stream = self._tv_streams[key] = tv_relay.LiveStream(
+                self._tv_http(), info.order[info.index], f"/tv/{room.room_id}/{version}",
+                ip_allowed=self.ip_allowed)
+        return room, version, stream
+
+    def _check_dead(self, room: Room, version: int, stream: tv_relay.LiveStream) -> None:
+        """流判死了：每个 (房间, 版本) 只发起一次自动换源（不受 tv_stall 冷却限制）。"""
+        key = (room.room_id, version)
+        if stream.dead_reason is None or key in self._tv_dead_seen:
+            return
+        if room.closed or room.version != version:
+            return
+        if self._start_tv_switch(room.room_id, version, manual=False):
+            self._tv_dead_seen.add(key)
+
+    async def _tv_playlist(self, request: web.Request) -> web.StreamResponse:
+        room, version, stream = self._tv_stream(request)
+        try:
+            text = await stream.playlist()
+        except tv_stream.StreamError:
+            raise web.HTTPBadGateway(headers=TV_HEADERS)
+        finally:
+            self._check_dead(room, version, stream)
+        return web.Response(text=text, content_type="application/vnd.apple.mpegurl", headers=TV_HEADERS)
+
+    async def _tv_segment(self, request: web.Request) -> web.StreamResponse:
+        room, version, stream = self._tv_stream(request)
+        try:
+            n = int(request.match_info["n"])
+        except ValueError:
+            raise web.HTTPNotFound(headers=TV_HEADERS)
+        try:
+            body, ctype = await stream.segment(n)
+        except KeyError:
+            raise web.HTTPNotFound(headers=TV_HEADERS)
+        except tv_stream.StreamError:
+            raise web.HTTPBadGateway(headers=TV_HEADERS)
+        finally:
+            self._check_dead(room, version, stream)
+        return web.Response(body=body, content_type=ctype, headers=TV_HEADERS)
     async def _vod_key(self, request: web.Request) -> web.StreamResponse:
         """播放列表里第 n 把密钥：按 (房间, 版本, n) 缓存，只向播放列表里记下的地址取。"""
         room, version, playlist = await self._vod_lookup(request)
@@ -742,6 +1282,8 @@ class WatchServer:
         if (room is None or room.video.source != "bilibili" or version != room.version
                 or name not in ("manifest.mpd", "video", "audio")):
             raise web.HTTPNotFound()
+        if self._geo_block(request, room.room_id) is not None:
+            raise web.HTTPForbidden(text=BLOCKED_MSG)
         try:
             streams = await self._get_streams(room, version)
         except VideoUnavailable as e:
