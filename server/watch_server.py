@@ -626,6 +626,7 @@ class WatchServer:
             "playing": room.playback.playing,
             "position": position,
             "server_time": now,
+            "auto": room.playback.auto,
             "resume": resume,
         }
 
@@ -809,7 +810,7 @@ class WatchServer:
         elif kind == "control":
             action, pos = data.get("action"), data.get("position")
             if action in ("play", "pause", "seek") and _finite(pos):
-                if not self.rooms.control(rid, vid, action, float(pos)):
+                if not self.rooms.control(rid, vid, action, float(pos), auto=data.get("auto") is True):
                     room = self.rooms.get(rid)
                     if room is not None:
                         conn.push(self._state_msg(room))     # 被拒绝：让发送者撤回乐观更新

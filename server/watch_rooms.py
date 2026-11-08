@@ -106,6 +106,7 @@ class Playback:
     playing: bool
     position: float
     at: float
+    auto: bool = False   # 房主网页卡顿恢复后自动发的 seek（不是人手动操作）：观众网页不跟着跳
 
     def position_at(self, now: float, duration: float | None) -> float:
         """播放中按时间推进，夹到 [0, duration]。"""
@@ -275,11 +276,13 @@ class RoomManager:
             member.gone_since = self.clock()
         self._notify(room, "members")
 
-    def control(self, room_id, viewer_id, action: str, position: float | None) -> bool:
+    def control(self, room_id, viewer_id, action: str, position: float | None, auto: bool = False) -> bool:
+        """auto：房主网页自动把房间拉到自己位置的 seek；只有房主的 seek 才算，别的一律当手动。"""
         room = self.get(room_id)
         member = room.members.get(viewer_id) if room else None
         if member is None or not (member.can_control or self._is_host(room, viewer_id)):
             return False
+        auto = bool(auto) and action == "seek" and self._is_host(room, viewer_id)
         if position is not None and (isinstance(position, bool) or not isinstance(position, (int, float))
                                      or not math.isfinite(position)):
             return False
@@ -303,7 +306,7 @@ class RoomManager:
             return False
         if room.video.duration is not None:
             pos = min(pos, room.video.duration)
-        room.playback = Playback(playing, max(0.0, float(pos)), now)
+        room.playback = Playback(playing, max(0.0, float(pos)), now, auto)
         self._notify(room, "playback")
         return True
 

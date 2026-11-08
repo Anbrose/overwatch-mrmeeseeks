@@ -119,7 +119,7 @@
 |---|---|---|
 | `hello` | `viewer_id`（或 null）, `key`（房主密钥或 null） | 握手 |
 | `ping` | `t`（`performance.now()`） | 连上后每 10 秒一次，用来估算时钟偏差 |
-| `control` | `action`（`play` / `pause` / `seek`）, `position` | 播放控制，只有房主和被授权的人有效；被拒绝时服务器只给发送者回一条 `state`，让它撤回乐观更新 |
+| `control` | `action`（`play` / `pause` / `seek`）, `position`, `auto`（可选） | 播放控制，只有房主和被授权的人有效；被拒绝时服务器只给发送者回一条 `state`，让它撤回乐观更新。`auto: true` 是房主网页在自己卡顿恢复后自动发的 `seek`（把房间拉到自己的位置，见下文「同步」）；只有房主的 `seek` 才认这个标记，其它一律当手动 |
 | `duration` | `value` | YouTube 播放器加载后上报一次视频时长；只接受房主和有控制权的人，且只在时长未知时 |
 | `grant` | `target`（成员的公开 `id`）, `allowed` | 房主开关某人的控制权限 |
 | `transfer` | `target`（成员的公开 `id`，必须在场） | 房主把房主身份交给这个人；原房主保留控制权。成功后所有人收到 `you`、新房主收到 `members`，并广播 `notice`「房主现在是「名字」」 |
@@ -139,7 +139,7 @@
 |---|---|---|
 | `welcome` | `viewer_id`, `name`, `is_host`, `can_control` | 握手回复 |
 | `pong` | `t`, `server_time` | 回复 `ping` |
-| `state` | `video`（`source`, `id`, `title`, `duration`, `version`, `mpd`, `hls`, `live`, `episode`, `episode_count`, `line`, `line_count`, `show_title`）, `playing`, `position`, `server_time`, `resume` | 房间状态；`mpd` 只对 B 站有值。`hls` 只对 vod 和直播房间有值（播放列表地址）。直播房间 `source` 是 `tv`、`live` 为 true（其它为 false），`line_count` 是候选源个数、`line` 是当前源下标，`position` 永远是 0；直播房间不接受 `seek` 和 `duration`。vod 房间里 `episode` 从 0 开始，`line` 是当前片源线路的序号（从 0 开始；网页只显示「来源N」，不给线路名），`line_count` 是线路数，`show_title` 是剧名。`resume` 是建房时的进度快照（`episode`, `position`, `text`），没有进度或不是 vod 时为 null，`text` 就是「上次一起看到…」文案 |
+| `state` | `video`（`source`, `id`, `title`, `duration`, `version`, `mpd`, `hls`, `live`, `episode`, `episode_count`, `line`, `line_count`, `show_title`）, `playing`, `position`, `server_time`, `auto`, `resume` | 房间状态；`auto` 为 true 表示这次播放状态是房主网页自动拉回来的（不是人操作的），观众网页收到后不跳，只微调速度并显示「同步」按钮。`mpd` 只对 B 站有值。`hls` 只对 vod 和直播房间有值（播放列表地址）。直播房间 `source` 是 `tv`、`live` 为 true（其它为 false），`line_count` 是候选源个数、`line` 是当前源下标，`position` 永远是 0；直播房间不接受 `seek` 和 `duration`。vod 房间里 `episode` 从 0 开始，`line` 是当前片源线路的序号（从 0 开始；网页只显示「来源N」，不给线路名），`line_count` 是线路数，`show_title` 是剧名。`resume` 是建房时的进度快照（`episode`, `position`, `text`），没有进度或不是 vod 时为 null，`text` 就是「上次一起看到…」文案 |
 | `you` | `is_host`, `can_control` | 自己的身份或权限变了 |
 | `members` | `members`（`id`（公开 id，不是 `viewer_id`）, `name`, `can_control`, `is_host`, `health`, `health_note`） | 发给房间里所有人，含房主（`is_host`）。网页用它画房间列表（每人一个红/黄/绿点，没报过是灰点），房主的权限面板里也用它 |
 | `notice` | `message` | 给房主的提示（目前只有「某某报告卡顿：…」），网页显示为 toast |
@@ -148,9 +148,9 @@
 | `ended` | 无 | 房间已结束 |
 | `blocked` | `id`（6 位访客编号）, `country`（两位国家码或 null）, `message` | 地区不在放行名单：这是该连接收到的唯一一条消息，随后服务器关闭连接；页面显示原因和编号，不重连 |
 
-同步：客户端取最近 5 次 ping 里往返最小的一次，`offset = server_time + rtt/2 − 本地时间`；期望位置 = `position + (playing ? 现在的服务器时间 − server_time : 0)`。每秒比较一次，差距超过 2 秒直接跳转，0.3–2 秒微调播放速度。只有用户亲手操作才发 `control`，服务器下发状态引起的播放器事件不回传。
+同步：客户端取最近 5 次 ping 里往返最小的一次，`offset = server_time + rtt/2 − 本地时间`；期望位置 = `position + (playing ? 现在的服务器时间 − server_time : 0)`。每秒比较一次。有人操作引起的房间变化（收到不带 `auto` 的新 `state`：播放 / 暂停 / 拖动 / 换集，或自己点了控制）且差距超过 2 秒就直接跳到房间位置。除此之外**观众（非房主）在观看时绝不被自动跳转**：无论是自己卡过、标签页被浏览器限速，还是房主把房间拉回自己那里（`auto` 的 `state`），都只在 0.3 秒以上时微调播放速度（落后 1.05x、超前 0.95x），差距超过 2 秒时显示「落后 / 超前 N 秒 · 同步」按钮，点了才跳。房主则相反：房主的播放就是房间的基准线，房主自己落后或超前 2 秒以上时发一条 `control seek`（`auto: true`）把房间拉到自己的位置（`anchorRoom`，最少隔 3 秒一次），房主自己从不跳。除房主这一条外只有用户亲手操作才发 `control`，服务器下发状态引起的播放器事件不回传。
 
-缓冲（`isBuffering`：`<video>` 的 `readyState < HAVE_FUTURE_DATA`，YouTube 的 BUFFERING 状态）期间不追赶：不跳转也不调速，因为再跳一次只会重新缓冲（带宽不够的观众以前会卡在「跳转、缓冲、再跳转」的循环里）。跳转后记下这次缓冲花了几秒（`seekCost`），之后只有差距超过 `max(2, 2 × seekCost)` 秒才再跳，否则用 1.05x 慢慢追。
+缓冲（`isBuffering`：`<video>` 的 `readyState < HAVE_FUTURE_DATA`，YouTube 的 BUFFERING 状态）期间不追赶：不跳转也不调速，因为再跳一次只会重新缓冲（带宽不够的观众以前会卡在「跳转、缓冲、再跳转」的循环里）；房间状态变了例外，立刻跳过去，旧位置的下载已经没用了。
 
 网络状况（`health`）由每个网页按最近 1 分钟的卡顿算：正在卡 3 秒以上、1 分钟内卡了 10 秒以上或落后 8 秒以上是红；1 分钟内卡过或落后 2 秒以上是黄；否则绿。level 变了（最少隔 3 秒）或每 30 秒发一次。
 投屏（只有 vod 片源）：Chromecast 走 `cast.js`，电视端用 Google 默认媒体接收端直接播 `/vod/…/index.m3u8`，页面只发 load / play / pause / seek、读回位置（SDK 的估计值，约半秒延迟）；AirPlay 走 `<video>` 自带的 Remote Playback API（Safari）或 webkit 前缀接口，元素继续当播放器，换集时只换 `src` 不重建元素，否则 AirPlay 会断。远端播放时不调倍速：播放中差距超过 1.5 秒就跳到目标再加 0.5 秒（补 seek 的往返），暂停时超过 1 秒重定位，两次跳转至少隔 3 秒，电视在 seeking / buffering 时不比较。Cast 会话连上时把页面当成已点过「开始观看」；房间换成 B 站或 YouTube 时结束会话；会话结束（电视停了、投屏失败）就重建本地播放器。
