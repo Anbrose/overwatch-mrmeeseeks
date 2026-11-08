@@ -8,9 +8,14 @@
 //
 // One deliberate exception: the host's playback is the room's reference. When
 // the host's own player ends up more than HARD_DRIFT from the room clock (it
-// buffered), the host page sends a `seek` to where it actually is instead of
-// jumping (anchorRoom), so the room follows the host. It reacts to its own
-// position only, never to a pushed state, so it cannot echo.
+// buffered), the host page sends a `seek` (flagged `auto`) to where it actually
+// is instead of jumping (anchorRoom), so the room follows the host. It reacts
+// to its own position only, never to a pushed state, so it cannot echo.
+//
+// Viewers (not the host) are never seeked while they watch, except by a state
+// a person caused (play/pause/seek/new video) or by their own click on the 同步
+// button. Their own lag, and the host's `auto` re-anchoring, only change their
+// playback rate a little and offer that button.
 //
 // Live TV (video.source === "tv"): the same HLS player, but no position. The
 // room only says playing/paused; play jumps to the live edge. Any viewer whose
@@ -229,8 +234,9 @@
       }
     }
     // Buffering: leave it alone. Seeking again would restart the download.
-    if (buffering) { player.setRate(1); renderSyncButton(drift); return; }
-    // From here on the drift is our own doing (we buffered, the tab was throttled).
+    if (buffering) { player.setRate(1); renderSyncButton(me.isHost ? 0 : drift); return; }
+    // From here on the drift is nobody's deliberate action: we buffered, the tab
+    // was throttled, or the host re-anchored the room to itself after its stall.
     if (me.isHost) {
       // The host is the room's reference: move the room to the host, not the host to the room.
       if (Math.abs(drift) > HARD_DRIFT) anchorRoom();
@@ -238,32 +244,26 @@
       renderSyncButton(0);
       return;
     }
-    if (drift < -HARD_DRIFT) {
-      // Ahead of the room: going back is cheap (already buffered) and skips nothing.
-      player.seek(target);
-      player.setRate(1);
-      renderSyncButton(0);
-      return;
-    }
-    // Behind: never skip content on our own. Nudge the rate and, beyond
-    // HARD_DRIFT, offer the 同步 button so the viewer decides when to jump.
+    // A viewer is never jumped on its own: nudge the rate (both directions) and,
+    // beyond HARD_DRIFT, offer the 同步 button so the viewer decides.
     player.setRate(chooseRate(drift, player.getRate(), RATE_STEPS[player.source]));
     renderSyncButton(drift);
   }
 
   // Host only: after the host's own stall, bring the room to the host's position.
+  // `auto` tells the other pages this was not a person's seek, so they don't jump.
   function anchorRoom() {
     const now = performance.now();
     if (now - lastAnchor < ANCHOR_GAP_MS) return;
     lastAnchor = now;
-    sendControl("seek", player.getTime());
+    sendControl("seek", player.getTime(), { auto: true });
   }
 
-  // Shown to a viewer (not the host) who is more than HARD_DRIFT behind the room
-  // for reasons of their own; clicking jumps to the room position.
+  // Shown to a viewer (not the host) who is more than HARD_DRIFT away from the
+  // room for reasons nobody chose; clicking jumps to the room position.
   function renderSyncButton(drift) {
-    const show = drift > HARD_DRIFT;
-    if (show) ui.syncBtn.textContent = `落后 ${Math.round(drift)} 秒 · 同步`;
+    const show = Math.abs(drift) > HARD_DRIFT;
+    if (show) ui.syncBtn.textContent = `${drift > 0 ? "落后" : "超前"} ${Math.round(Math.abs(drift))} 秒 · 同步`;
     ui.syncBtn.hidden = !show;
   }
 
@@ -1318,17 +1318,18 @@
   // ---------------------------------------------------------------- user actions
   // These are the ONLY places that send `control`.
 
-  function sendControl(action, position) {
+  function sendControl(action, position, opts) {
     if (!me.canControl || !room) return;
     if (isLive()) {
       if (action === "seek") return;   // the server refuses it anyway
       position = 0;
     }
-    send({ type: "control", action, position });
+    const auto = !!(opts && opts.auto);
+    send({ type: "control", action, position, auto });
     // Apply optimistically; the server's broadcast `state` confirms it. A rejected
     // control gets a fresh `state` sent back to us only, which snaps us back.
     room = { ...room, playing: action === "play" ? true : action === "pause" ? false : room.playing,
-             position, server_time: serverNow() };
+             position, server_time: serverNow(), auto };
     snapPending = true;
     renderControls();
     syncTick();
@@ -1583,7 +1584,10 @@
     const firstState = room === null;
     room = msg;
     serverState = msg;
-    snapPending = true;   // the server only sends state when the playback or video changed
+    // The server only sends state when the playback or video changed. Follow it
+    // at once unless it is the host re-anchoring the room after its own stall
+    // (`auto`): then a viewer only drifts a little and gets the 同步 button.
+    if (!msg.auto || firstState || msg.video.version !== playerVersion) snapPending = true;
     const title = msg.video.title || "";
     ui.title.textContent = title;
     document.title = title ? `${title} · 一起看` : "一起看";

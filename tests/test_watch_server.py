@@ -228,7 +228,17 @@ async def test_ws_flow():
         check("负数 position 夹到 0", s and s["position"] == 0 and s["playing"] is False)
         await b.send_json({"type": "control", "action": "seek", "position": 9999})
         s = await recv_type(a, "state")
-        check("超过时长夹到时长", s and s["position"] == 300.0)
+        check("超过时长夹到时长", s and s["position"] == 300.0 and s["auto"] is False)
+        await drain(b)
+        # 房主网页卡顿恢复后自动拉回：state 带 auto；非房主带 auto 不算
+        await a.send_json({"type": "control", "action": "seek", "position": 12, "auto": True})
+        s1, s2 = await recv_type(a, "state"), await recv_type(b, "state")
+        check("房主 auto seek → 两边 state 带 auto", s1 and s2 and s1["auto"] is True and s2["auto"] is True
+              and s1["position"] == 12)
+        await b.send_json({"type": "control", "action": "seek", "position": 15, "auto": True})
+        s1, s2 = await recv_type(a, "state"), await recv_type(b, "state")
+        check("非房主的 auto seek 当手动", s1 and s2 and s1["auto"] is False and s2["auto"] is False
+              and s1["position"] == 15)
 
         # 房主交接
         aid = wa["viewer_id"]

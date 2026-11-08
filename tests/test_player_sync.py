@@ -112,7 +112,7 @@ async function session({ host, position = 193, playing = true }) {
   ws.fire("open");
   ws.receive({ type: "welcome", viewer_id: "v1", name: host ? "房主" : "观众", is_host: host, can_control: host });
   const ping = ws.sent.find((m) => m.type === "ping");
-  ws.receive({ type: "pong", t: ping.t, server_time: SERVER_T0 });   // rtt 0：offset 精确
+  ws.receive({ type: "pong", t: ping.t, server_time: serverNow() });   // rtt 0：offset 精确
   let anchor = { pos: position, at: nowMs };   // 最近一条 state 说的位置和发出时刻
   const state = (pos, extra = {}) => {
     anchor = { pos, at: nowMs };
@@ -183,13 +183,28 @@ function serverNow() { return SERVER_T0 + (nowMs - 100000) / 1000; }
     check("缓冲中房间变了也立刻跳", near(s.video.currentTime, 1200));
     s.video.readyState = 4;
 
-    // 超前：退回去（不丢内容）
+    // 超前（比如 hls.js 跳过了缓冲空洞）：不退回，放慢一点，出按钮
     s.tick();
     const before = s.video.seeks.length;
     s.video._t += 5;
     s.tick();
-    check("超前 5 秒退回房间位置", s.video.seeks.length === before + 1 && near(s.video.currentTime, s.roomPos()));
-    check("超前退回不显示按钮", s.syncBtn().hidden === true);
+    check("超前 5 秒不自动退回", s.video.seeks.length === before);
+    check("超前时稍微放慢", s.video.playbackRate === 0.95);
+    check("超前也有按钮", s.syncBtn().hidden === false && /超前 5 秒 · 同步/.test(s.syncBtn().textContent));
+    s.syncBtn().fire("click");
+    check("点同步退回房间位置", s.video.seeks.length === before + 1 && near(s.video.currentTime, s.roomPos()));
+
+    // 房主卡顿后把房间拉回去（state 带 auto）：观众不跳，只放慢
+    s.tick();
+    const before2 = s.video.seeks.length;
+    s.ws.receive(s.state(s.video.currentTime - 7, { auto: true }));
+    s.tick();
+    check("房主自动拉回时观众不跳", s.video.seeks.length === before2);
+    check("房主自动拉回后观众放慢追", s.video.playbackRate === 0.95);
+    check("并显示超前按钮", s.syncBtn().hidden === false && /超前 [78] 秒/.test(s.syncBtn().textContent));
+    // 接着房主亲手拖动（不带 auto）：观众立刻跟
+    s.ws.receive(s.state(2000));
+    check("房主亲手拖动观众照样跟", near(s.video.currentTime, 2000));
 
     // 服务器拒绝 control 时发回的 state 和当前一样：不该把落后的人拽走
     s.video.readyState = 2;
@@ -215,6 +230,11 @@ function serverNow() { return SERVER_T0 + (nowMs - 100000) / 1000; }
     check("房主发 seek 把房间拉到自己的位置",
           ctl.length === 1 && ctl[0].action === "seek" && near(ctl[0].position, s.video.currentTime)
           && near(ctl[0].position, s.roomPos() - 7, 0.5));
+    check("拉回的 seek 带 auto 标记", ctl[0].auto === true);
+    // 服务器广播回来的 auto state：房主自己也不会被它弄跳
+    const seeksBeforeEcho = s.video.seeks.length;
+    s.ws.receive(s.state(s.video.currentTime, { auto: true }));   // onState 自己会 sync 一次
+    check("auto state 回来房主不跳", s.video.seeks.length === seeksBeforeEcho && s.controls().length === 1);
     check("房主从不显示同步按钮（恢复后）", s.syncBtn().hidden === true);
     s.tick();
     check("拉回之后房主和房间一致，不再发", s.controls().length === 1 && s.video.playbackRate === 1);
