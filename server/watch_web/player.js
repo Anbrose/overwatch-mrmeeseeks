@@ -6,6 +6,12 @@
 // to us can never bounce back. The native YouTube controls are off, the <video>
 // has no `controls`, and a transparent shield covers the video area.
 //
+// One deliberate exception: the host's playback is the room's reference. When
+// the host's own player ends up more than HARD_DRIFT from the room clock (it
+// buffered), the host page sends a `seek` to where it actually is instead of
+// jumping (anchorRoom), so the room follows the host. It reacts to its own
+// position only, never to a pushed state, so it cannot echo.
+//
 // Live TV (video.source === "tv"): the same HLS player, but no position. The
 // room only says playing/paused; play jumps to the live edge. Any viewer whose
 // stream stops moving sends `tv_stall` (once per version); the host can send
@@ -21,7 +27,7 @@
   const PING_MS = 10000;
   const SYNC_MS = 1000;
   const RECONNECT_MS = 2000;
-  const HARD_DRIFT = 2;      // seconds: jump instead of nudging
+  const HARD_DRIFT = 2;      // seconds: beyond this, nudging is not enough (see syncTick)
   const SOFT_DRIFT = 0.3;    // seconds: start nudging playbackRate
   const CAUGHT_UP = 0.1;     // seconds: nudging done, back to 1x
   const PAUSED_DRIFT = 0.25; // seconds: while paused, re-seek beyond this
@@ -29,6 +35,7 @@
   const HEALTH_WINDOW_MS = 60000;    // stalls within this window count towards the health level
   const HEALTH_MIN_MS = 3000;        // don't report a level change more often than this
   const HEALTH_HEARTBEAT_MS = 30000; // ...but do repeat the current level this often
+  const ANCHOR_GAP_MS = 3000;        // host: re-anchor the room to itself at most this often
   // Casting (AirPlay / Chromecast): the TV reports its position with ~0.5 s of
   // slack and ignores playbackRate, so sync by seeking, less often and with a
   // wider band. REMOTE_SEEK_LEAD covers the seek round trip.
@@ -56,6 +63,7 @@
     play: $("play"), seek: $("seek"), time: $("time"), mute: $("mute"), volume: $("volume"), fs: $("fs"),
     cast: $("cast"),
     me: $("me"), panel: $("perm-panel"), members: $("members"), people: $("people"), stallBtn: $("stall-btn"),
+    syncBtn: $("sync-btn"),
     changeForm: $("change-form"), changeUrl: $("change-url"), toast: $("toast"),
     resume: $("resume"), vodPanel: $("vod-panel"), episodes: $("episodes"),
     lineLabel: $("line-label"), nextLine: $("next-line"),
@@ -110,10 +118,12 @@
   let autoSwitch = { episode: null, tried: [] };
   // Buffering ("stall") bookkeeping for sync and for the health dots: while the
   // player is buffering we never chase the room position (another seek would
-  // only restart the buffering), and after a seek we remember how long the
-  // buffering took (seekCost) so the next jump is only made when the drift is
-  // worth it; smaller drifts are caught up by playing slightly faster.
-  const stall = { active: false, since: 0, log: [], seekCost: 0, pendingSeek: false, seekAt: 0 };
+  // only restart the buffering). Coming out of a stall behind the room is not
+  // corrected by a jump either: the host moves the room to itself (anchorRoom),
+  // everyone else gets the 同步 button (renderSyncButton) and decides.
+  const stall = { active: false, since: 0, log: [] };
+  let snapPending = false;    // the room's playback just changed (state / own control): next tick follows it
+  let lastAnchor = -Infinity; // performance.now() of the host's last anchorRoom
   let lastDrift = 0;
   let health = { level: "", note: "", sentAt: 0 };
   let stallBtnMuteUntil = 0;
@@ -189,6 +199,8 @@
       && typeof player.isBuffering === "function" && player.isBuffering();
     noteStall(buffering, drift);
     if (!room.playing) {
+      snapPending = false;
+      renderSyncButton(0);
       // A paused target doesn't depend on the clock, so no pong is needed.
       if (Math.abs(drift) > (remote ? REMOTE_PAUSED_DRIFT : PAUSED_DRIFT)) {
         if (remote) remoteSeek(target, true); else player.seek(target, { keepPaused: true });
@@ -197,24 +209,62 @@
       return;
     }
     // While playing, the target depends on clock offset: wait for a real sample.
-    if (atEnd || !clockReady()) { player.setRate(1); return; }
-    // Buffering: leave it alone. Seeking again would restart the download.
-    if (buffering) { player.setRate(1); return; }
+    if (atEnd || !clockReady()) { player.setRate(1); renderSyncButton(0); return; }
     if (remote) {
+      snapPending = false;
+      renderSyncButton(0);
       // No rate nudging on a TV: jump (slightly ahead, the seek takes a moment).
       if (Math.abs(drift) > REMOTE_DRIFT) remoteSeek(target + REMOTE_SEEK_LEAD, false);
       return;
     }
-    // Jump only when the drift exceeds what the last seek cost us in buffering
-    // (twice, to be safe); otherwise catch up by playing a little faster.
-    if (Math.abs(drift) > Math.max(HARD_DRIFT, 2 * stall.seekCost)) {
-      player.seek(target);
-      player.setRate(1);
-      stall.pendingSeek = true;
-      stall.seekAt = performance.now();
+    // The room moved (play/pause/seek by someone, a new video, our own click):
+    // follow it, even mid-buffering — the download at the old spot is useless now.
+    if (snapPending) {
+      snapPending = false;
+      if (Math.abs(drift) > HARD_DRIFT) {
+        player.seek(target);
+        player.setRate(1);
+        renderSyncButton(0);
+        return;
+      }
+    }
+    // Buffering: leave it alone. Seeking again would restart the download.
+    if (buffering) { player.setRate(1); renderSyncButton(drift); return; }
+    // From here on the drift is our own doing (we buffered, the tab was throttled).
+    if (me.isHost) {
+      // The host is the room's reference: move the room to the host, not the host to the room.
+      if (Math.abs(drift) > HARD_DRIFT) anchorRoom();
+      else player.setRate(chooseRate(drift, player.getRate(), RATE_STEPS[player.source]));
+      renderSyncButton(0);
       return;
     }
+    if (drift < -HARD_DRIFT) {
+      // Ahead of the room: going back is cheap (already buffered) and skips nothing.
+      player.seek(target);
+      player.setRate(1);
+      renderSyncButton(0);
+      return;
+    }
+    // Behind: never skip content on our own. Nudge the rate and, beyond
+    // HARD_DRIFT, offer the 同步 button so the viewer decides when to jump.
     player.setRate(chooseRate(drift, player.getRate(), RATE_STEPS[player.source]));
+    renderSyncButton(drift);
+  }
+
+  // Host only: after the host's own stall, bring the room to the host's position.
+  function anchorRoom() {
+    const now = performance.now();
+    if (now - lastAnchor < ANCHOR_GAP_MS) return;
+    lastAnchor = now;
+    sendControl("seek", player.getTime());
+  }
+
+  // Shown to a viewer (not the host) who is more than HARD_DRIFT behind the room
+  // for reasons of their own; clicking jumps to the room position.
+  function renderSyncButton(drift) {
+    const show = drift > HARD_DRIFT;
+    if (show) ui.syncBtn.textContent = `落后 ${Math.round(drift)} 秒 · 同步`;
+    ui.syncBtn.hidden = !show;
   }
 
   function noteStall(buffering, drift) {
@@ -224,14 +274,7 @@
       stall.since = now;
     } else if (!buffering && stall.active) {
       stall.active = false;
-      const dur = (now - stall.since) / 1000;
-      stall.log.push({ end: now, dur });
-      if (stall.pendingSeek) { stall.seekCost = dur; stall.pendingSeek = false; }
-    }
-    // A seek that did not stall within 2 s was free: forget the old cost.
-    if (stall.pendingSeek && !buffering && now - stall.seekAt > 2000) {
-      stall.seekCost = 0;
-      stall.pendingSeek = false;
+      stall.log.push({ end: now, dur: (now - stall.since) / 1000 });
     }
     stall.log = stall.log.filter((s) => now - s.end < HEALTH_WINDOW_MS);
     updateHealth(drift, now);
@@ -895,8 +938,8 @@
     const token = buildToken;
     playerVersion = video.version;
     stall.active = false;
-    stall.seekCost = 0;
-    stall.pendingSeek = false;
+    lastAnchor = -Infinity;
+    ui.syncBtn.hidden = true;
     liveWasPlaying = false;
     liveEdgePending = false;
     resetStallCheck();
@@ -1264,6 +1307,7 @@
   function showEnded() {
     ended = true;
     stopPreparing();
+    ui.syncBtn.hidden = true;
     if (castConnected()) window.WatchCast.stop();
     destroyPlayer();
     ui.start.hidden = true;
@@ -1285,6 +1329,7 @@
     // control gets a fresh `state` sent back to us only, which snaps us back.
     room = { ...room, playing: action === "play" ? true : action === "pause" ? false : room.playing,
              position, server_time: serverNow() };
+    snapPending = true;
     renderControls();
     syncTick();
   }
@@ -1376,6 +1421,12 @@
     if (preparing) return;
     send({ type: "next_line" });
     startPreparing();
+  });
+
+  ui.syncBtn.addEventListener("click", () => {
+    if (!started || !room || !player || !player.ready || isLive()) return;
+    snapPending = true;   // like a room change: jump now, even mid-buffering
+    syncTick();
   });
 
   ui.stallBtn.addEventListener("click", () => {
@@ -1521,6 +1572,7 @@
   function revertOptimistic() {
     if (!serverState || room === serverState) return;
     room = serverState;
+    snapPending = true;
     renderControls();
     syncTick();
   }
@@ -1531,6 +1583,7 @@
     const firstState = room === null;
     room = msg;
     serverState = msg;
+    snapPending = true;   // the server only sends state when the playback or video changed
     const title = msg.video.title || "";
     ui.title.textContent = title;
     document.title = title ? `${title} · 一起看` : "一起看";
