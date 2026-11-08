@@ -22,8 +22,9 @@ vod 房间额外的客户端消息（当前视频不是 vod 时一律忽略）�
 - {"type": "episode", "index": int}   房主选集（从 0 开始），停在开头、暂停，优先用当前片源线路
 - {"type": "next_line"}               房主换一个片源：同一集、下一条线路（绕圈），保持当前位置和播放/暂停状态
 - {"type": "resume"}                  房主或有控制权的人：跳到建房时的进度快照（需要时先换集），暂停
-任何房间都接受 {"type": "report", "detail": str, "url": str, "env": str}：网页端播放失败的回报，只记 WARNING 日志
-（带房间号、成员公开 id、当前视频地址、播放器模式和浏览器 UA），不改房间状态；每个连接最多 MAX_REPORTS 条。
+任何房间都接受 {"type": "report", "detail": str, "url": str, "env": str, "kind": str?}：网页端的回报，只记 WARNING 日志
+（带房间号、成员公开 id、当前视频地址、播放器模式和浏览器 UA），不改房间状态。kind 省略是播放失败，
+kind == "jump" 是「画面自己前跳了几秒」的诊断（不是网页 seek 的）；两种各自每个连接最多 MAX_REPORTS 条。
 {"type": "health", "level": "green"|"yellow"|"red", "note": str}：网页自报的网络状况（卡顿次数、落后秒数），
 存在连接上、随 members 发给房间里所有人；level 变了才重新广播。
 {"type": "stall", "detail": str}：观众报告卡顿：记 WARNING 日志，并给房主推 {"type": "notice", "message": str}
@@ -229,6 +230,7 @@ class _Conn:
     writer: asyncio.Task | None = None
     busy: asyncio.Task | None = None     # 正在处理的换视频（change_video / episode / next_line / resume）
     reports: int = 0                     # 已记录的失败回报数
+    jumps: int = 0                       # 已记录的「画面前跳」诊断数
     stalls: int = 0                      # 已转发的卡顿报告数
     ua: str = ""                         # 浏览器 User-Agent，只在失败回报的日志里用
     health: str = ""                     # 网页自报的网络状况：green / yellow / red，空是还没报
@@ -851,13 +853,18 @@ class WatchServer:
     def _report(self, conn: _Conn, data: dict) -> None:
         """网页端播放失败的回报：只记日志，让服务器日志里能看到是哪个房间、哪个视频、浏览器报了什么。"""
         detail = data.get("detail")
-        if not isinstance(detail, str) or conn.reports >= MAX_REPORTS:
+        jump = data.get("kind") == "jump"
+        if not isinstance(detail, str) or (conn.jumps if jump else conn.reports) >= MAX_REPORTS:
             return
-        conn.reports += 1
+        if jump:
+            conn.jumps += 1
+        else:
+            conn.reports += 1
         room = self.rooms.get(conn.room_id)
         member = room.members.get(conn.viewer_id) if room is not None else None
         url, env = data.get("url"), data.get("env")
-        log.warning("watch client playback failed (room=%s member=%s video=%s src=%s env=%s ua=%s): %s",
+        log.warning("watch client %s (room=%s member=%s video=%s src=%s env=%s ua=%s): %s",
+                    "position jumped" if jump else "playback failed",
                     conn.room_id, member.public_id if member is not None else "?",
                     room.video.url if room is not None else "?",
                     _one_line(url, 300) if isinstance(url, str) else "",

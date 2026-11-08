@@ -50,15 +50,21 @@ function makeElement(tag) {
 class FakeVideo {
   constructor() {
     this._t = 0; this.seeks = []; this.paused = true; this.playbackRate = 1; this.readyState = 4;
-    this.seeking = false; this.duration = NaN; this.volume = 1; this.muted = false;
-    this.style = { setProperty() {} }; this.error = null;
+    this.seeking = false; this.duration = NaN; this.volume = 1; this.muted = false; this.ended = false;
+    this.style = { setProperty() {} }; this.error = null; this.listeners = {};
+    this.buffered = { length: 1, start: () => 0, end: () => this._t + 20 };
   }
   get currentTime() { return this._t; }
   set currentTime(v) { this._t = v; this.seeks.push(v); }
   canPlayType() { return ""; }
-  addEventListener() {} removeEventListener() {}
+  addEventListener(t, fn) { (this.listeners[t] ||= []).push(fn); }
+  removeEventListener() {}
+  fire(t) { for (const fn of this.listeners[t] || []) fn({}); }
   play() { this.paused = false; return Promise.resolve(); }
   pause() { this.paused = true; }
+  // 遥控器 / 媒体键：浏览器直接改 paused 并发事件
+  remotePause() { this.paused = true; this.fire("pause"); }
+  remotePlay() { this.paused = false; this.fire("play"); }
   setAttribute() {} removeAttribute() {} load() {} remove() {}
 }
 
@@ -139,6 +145,8 @@ async function session({ host, position = 193, playing = true }) {
       syncTick();
     },
     controls: () => ws.sent.filter((m) => m.type === "control"),
+    reports: () => ws.sent.filter((m) => m.type === "report"),
+    welcome: (host) => ws.receive({ type: "welcome", viewer_id: "v1", name: host ? "房主" : "观众", is_host: host, can_control: host }),
     syncBtn: () => elements["sync-btn"],
   };
 }
@@ -184,7 +192,7 @@ function serverNow() { return SERVER_T0 + (nowMs - 100000) / 1000; }
     s.video.readyState = 4;
 
     // 超前（比如 hls.js 跳过了缓冲空洞）：不退回，放慢一点，出按钮
-    s.tick();
+    for (let i = 0; i < 4; i++) s.tick();   // 离上一次自己的 seek 超过 3 秒，前跳检测才生效
     const before = s.video.seeks.length;
     s.video._t += 5;
     s.tick();
@@ -206,12 +214,38 @@ function serverNow() { return SERVER_T0 + (nowMs - 100000) / 1000; }
     s.ws.receive(s.state(2000));
     check("房主亲手拖动观众照样跟", near(s.video.currentTime, 2000));
 
-    // 服务器拒绝 control 时发回的 state 和当前一样：不该把落后的人拽走
+    // 画面自己前跳（上面 _t += 5 那次）：报给服务器，30 秒内只报一次，自己 seek 的不报
+    const jumps = s.reports().filter((r) => r.kind === "jump");
+    check("画面自己前跳 5 秒 → 一条 jump 回报", jumps.length === 1 && /画面前跳 5\.0 秒/.test(jumps[0].detail)
+          && /readyState=4/.test(jumps[0].detail) && /^hls\.js/.test(jumps[0].env));
+    s.video._t += 5;
+    s.tick();
+    check("30 秒内不重复报", s.reports().filter((r) => r.kind === "jump").length === 1);
+    s.syncBtn().fire("click");   // 我们自己的 seek 回到房间位置
+    s.tick();
+    check("自己 seek 不算前跳", s.reports().filter((r) => r.kind === "jump").length === 1);
+
+    // 断线重连：服务器再发一条和现在一样的 state，落后的人不该被拽走
     s.video.readyState = 2;
     for (let i = 0; i < 4; i++) s.tick();
     s.video.readyState = 4;
     s.tick();
     check("落后 4 秒出现按钮", s.syncBtn().hidden === false && /落后 [45] 秒/.test(s.syncBtn().textContent));
+    const seeksBeforeReconnect = s.video.seeks.length;
+    s.welcome(false);
+    s.ws.receive(s.state(s.roomPos()));   // 和正在跟的房间状态一样
+    s.tick();
+    check("重连拿到同样的 state 不跳", s.video.seeks.length === seeksBeforeReconnect);
+    s.ws.receive(s.state(s.roomPos() + 60));   // 其间有人拖动过
+    check("重连拿到变了的 state 才跟", s.video.seeks.length === seeksBeforeReconnect + 1 && near(s.video.currentTime, s.roomPos()));
+
+    // 没有控制权的人按遥控器暂停：不发 control，一秒内被同步恢复
+    s.tick();
+    const ctlBefore = s.controls().length;
+    s.video.remotePause();
+    check("无控制权按暂停不发 control", s.controls().length === ctlBefore && s.video.paused === true);
+    s.tick();
+    check("下一秒同步恢复播放", s.video.paused === false);
   }
 
   // ---------- 房主：自己卡了以后把房间拉到自己这里
@@ -254,6 +288,25 @@ function serverNow() { return SERVER_T0 + (nowMs - 100000) / 1000; }
     s.tick();
     check("别人拖动时房主跟着跳", near(s.video.currentTime, s.roomPos()) && near(s.video.currentTime, 1501));
     check("跟着跳不算自己落后，不发 control", s.controls().length === n);
+
+    // 遥控器暂停 / 播放：有控制权 → 当成房间命令
+    s.tick();
+    nowMs += 2000;                       // 离我们自己上一次 play()/pause() 够远
+    s.video.remotePause();
+    let last = s.controls()[s.controls().length - 1];
+    check("房主按遥控器暂停 → 发 pause", s.controls().length === n + 1 && last.action === "pause" && !last.auto
+          && near(last.position, s.video.currentTime));
+    s.tick();
+    check("暂停住了，不被同步拉回播放", s.video.paused === true);
+    nowMs += 2000;
+    s.video.remotePlay();
+    last = s.controls()[s.controls().length - 1];
+    check("房主按遥控器播放 → 发 play", s.controls().length === n + 2 && last.action === "play");
+    s.tick();
+    // 我们自己因为房间暂停而调用的 pause() 不能反过来再发 control
+    s.ws.receive({ ...s.state(s.video.currentTime), playing: false });
+    s.video.fire("pause");               // 浏览器对我们的 pause() 发出的事件
+    check("自己的 pause() 引起的事件不发 control", s.controls().length === n + 2 && s.video.paused === true);
   }
 
   // ---------- 暂停的房间：照旧按位置对齐

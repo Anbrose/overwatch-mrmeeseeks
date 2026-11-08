@@ -1165,6 +1165,14 @@ async def test_client_report():
         await recv_type(a, "pong")
         n = len([r for r in records if "playback failed" in r.getMessage()])
         check("非字符串被忽略；每个连接最多记 MAX_REPORTS 条", n == ws_mod.MAX_REPORTS == 5)
+        # 「画面前跳」诊断：单独的日志措辞和单独的配额
+        await a.send_json({"type": "report", "kind": "jump", "detail": "画面前跳 5.0 秒（1.0 秒内从 193.0 到 199.0，倍速 1）；readyState=4",
+                           "url": "/vod/x/0/index.m3u8", "env": "hls.js 1.5.20; Mozilla/5.0 (Linux; Android 14; Google TV Streamer)"})
+        await a.send_json({"type": "ping", "t": 3})
+        await recv_type(a, "pong")
+        jumps = [r.getMessage() for r in records if "position jumped" in r.getMessage()]
+        check("jump 回报记成 position jumped，失败配额用完了也照记", len(jumps) == 1 and f"room={rid}" in jumps[0]
+              and "画面前跳 5.0 秒" in jumps[0] and "Google TV Streamer" in jumps[0])
         await a.close()
     finally:
         ws_mod.log.removeHandler(handler)

@@ -41,6 +41,10 @@
   const HEALTH_MIN_MS = 3000;        // don't report a level change more often than this
   const HEALTH_HEARTBEAT_MS = 30000; // ...but do repeat the current level this often
   const ANCHOR_GAP_MS = 3000;        // host: re-anchor the room to itself at most this often
+  const JUMP_REPORT_SECONDS = 1.5;   // position got ahead of the clock by this much in one tick → report
+  const JUMP_REPORT_GAP_MS = 30000;  // at most one jump report this often
+  const OWN_ACTION_MS = 1500;        // a play/pause event this soon after our own call is ours
+  const NO_CONTROL_TOAST_MS = 10000; // how often to tell a viewer without control why pause won't stick
   // Casting (AirPlay / Chromecast): the TV reports its position with ~0.5 s of
   // slack and ignores playbackRate, so sync by seeking, less often and with a
   // wider band. REMOTE_SEEK_LEAD covers the seek round trip.
@@ -129,6 +133,11 @@
   const stall = { active: false, since: 0, log: [] };
   let snapPending = false;    // the room's playback just changed (state / own control): next tick follows it
   let lastAnchor = -Infinity; // performance.now() of the host's last anchorRoom
+  let ownSeekAt = -Infinity;      // performance.now() of our last seek (the jump detector ignores it)
+  let ownPlayPauseAt = -Infinity; // performance.now() of our last play()/pause() call on the player
+  let lastTick = null;            // { t, pos, rate, paused } at the previous local sync tick
+  let lastJumpReport = -Infinity;
+  let noControlToastAt = -Infinity;
   let lastDrift = 0;
   let health = { level: "", note: "", sentAt: 0 };
   let stallBtnMuteUntil = 0;
@@ -198,17 +207,19 @@
     if (room.playing && player.isPaused() && !atEnd) player.play();
     if (!room.playing && !player.isPaused()) player.pause();
 
-    const drift = target - player.getTime();
+    const pos = player.getTime();
+    const drift = target - pos;
     lastDrift = drift;
     const buffering = room.playing && !atEnd && !remote
       && typeof player.isBuffering === "function" && player.isBuffering();
     noteStall(buffering, drift);
+    if (!remote) noteTick(pos, drift, buffering);
     if (!room.playing) {
       snapPending = false;
       renderSyncButton(0);
       // A paused target doesn't depend on the clock, so no pong is needed.
       if (Math.abs(drift) > (remote ? REMOTE_PAUSED_DRIFT : PAUSED_DRIFT)) {
-        if (remote) remoteSeek(target, true); else player.seek(target, { keepPaused: true });
+        if (remote) remoteSeek(target, true); else seekTo(target, { keepPaused: true });
       }
       player.setRate(1);
       return;
@@ -227,7 +238,7 @@
     if (snapPending) {
       snapPending = false;
       if (Math.abs(drift) > HARD_DRIFT) {
-        player.seek(target);
+        seekTo(target);
         player.setRate(1);
         renderSyncButton(0);
         return;
@@ -265,6 +276,73 @@
     const show = Math.abs(drift) > HARD_DRIFT;
     if (show) ui.syncBtn.textContent = `${drift > 0 ? "落后" : "超前"} ${Math.round(Math.abs(drift))} 秒 · 同步`;
     ui.syncBtn.hidden = !show;
+  }
+
+  // Every seek we make goes through here so the jump detector can tell our own
+  // seeks from the player moving on its own.
+  function seekTo(t, opts) {
+    ownSeekAt = performance.now();
+    player.seek(t, opts);
+  }
+
+  // Diagnostics only: the position moved forward clearly more than the time
+  // that passed, and we did not seek. hls.js skipping a buffer hole, a TV box
+  // dropping frames to catch up, a browser quirk — whatever it is, it goes to
+  // the server log (`report`, kind "jump") with the player's state.
+  function noteTick(pos, drift, buffering) {
+    const now = performance.now();
+    const prev = lastTick;
+    lastTick = { t: now, pos, rate: player.getRate(), paused: player.isPaused() };
+    if (!prev || now - ownSeekAt < 3000 || now - lastJumpReport < JUMP_REPORT_GAP_MS) return;
+    const elapsed = (now - prev.t) / 1000;
+    if (elapsed > 5) return;   // throttled background tab: the timing means nothing
+    const extra = (pos - prev.pos) - (prev.paused ? 0 : elapsed * prev.rate);
+    if (extra < JUMP_REPORT_SECONDS) return;
+    lastJumpReport = now;
+    const diag = typeof player.diag === "function" ? player.diag() : "";
+    const v = room.video || {};
+    send({ type: "report", kind: "jump",
+           detail: `画面前跳 ${extra.toFixed(1)} 秒（${elapsed.toFixed(1)} 秒内从 ${prev.pos.toFixed(1)} 到 ${pos.toFixed(1)}，`
+             + `倍速 ${prev.rate}，和房间差 ${drift.toFixed(1)} 秒${buffering ? "，正在缓冲" : ""}）${diag ? "；" + diag : ""}`,
+           url: String(v.hls || v.mpd || "").slice(0, 300),
+           env: `${player.mode || player.source}; ${navigator.userAgent}`.slice(0, 300) });
+  }
+
+  function mediaDiag(video, errors) {
+    const ranges = [];
+    try {
+      for (let i = 0; i < video.buffered.length; i++) {
+        ranges.push(`${video.buffered.start(i).toFixed(1)}–${video.buffered.end(i).toFixed(1)}`);
+      }
+    } catch { /* ignore */ }
+    const parts = [`readyState=${video.readyState}`, `buffered=[${ranges.join(", ")}]`];
+    if (errors && errors.length) parts.push(`hls.js 最近错误：${errors.join(" | ")}`);
+    return parts.join("，");
+  }
+
+  // TV remotes, keyboard media keys and lock-screen controls pause/play the
+  // <video> directly, past our buttons. From someone with control that is a
+  // room command; anyone else is told why it won't stick (the sync undoes it).
+  // Our own play()/pause() calls are recognised by time (ownPlayPauseAt), so
+  // this does not break the echo-loop rule: a pushed state never bounces back.
+  function watchNativeControls(video, adapter) {
+    video.addEventListener("pause", () => onNativeToggle(adapter, false));
+    video.addEventListener("play", () => onNativeToggle(adapter, true));
+  }
+
+  function onNativeToggle(adapter, playing) {
+    if (player !== adapter || !started || ended || !room || isRemote()) return;
+    if (room.playing === playing) return;                            // already what the room wants
+    if (performance.now() - ownPlayPauseAt < OWN_ACTION_MS) return;  // we did it
+    if (!playing && adapter.video.ended) return;                     // end of stream, not a person
+    const dur = currentDuration();
+    if (!playing && dur > 0 && adapter.getTime() >= dur - 0.5) return;
+    if (me.canControl) { sendControl(playing ? "play" : "pause", adapter.getTime()); return; }
+    const now = performance.now();
+    if (now - noControlToastAt > NO_CONTROL_TOAST_MS) {
+      noControlToastAt = now;
+      toast(playing ? "只有房主或有控制权的人能播放" : "只有房主或有控制权的人能暂停");
+    }
   }
 
   function noteStall(buffering, drift) {
@@ -339,7 +417,7 @@
     const now = performance.now();
     if (now - lastRemoteSeek < REMOTE_SEEK_GAP_MS) return;
     lastRemoteSeek = now;
-    player.seek(Math.max(0, target), { keepPaused });
+    seekTo(Math.max(0, target), { keepPaused });
   }
 
   // Live: follow playing/paused only; no position, no drift correction.
@@ -420,23 +498,25 @@
     video.preload = "auto";
     ui.host.appendChild(video);
     const dash = window.dashjs.MediaPlayer().create();
-
     const adapter = {
       source: "bilibili",
+      mode: "dash.js",
       ready: true,
       failed: false,
       video,
+      diag: () => mediaDiag(video, null),
       getTime: () => video.currentTime || 0,
       getDuration: () => (Number.isFinite(video.duration) ? video.duration : 0),
       isPaused: () => video.paused,
       isBuffering: () => video.readyState < 3,   // < HAVE_FUTURE_DATA: waiting for data
       play: () => {
+        ownPlayPauseAt = performance.now();
         const p = video.play();
         if (p && p.catch) {
           p.catch((err) => { if (err && err.name === "NotAllowedError") showStartOverlay(); });
         }
       },
-      pause: () => video.pause(),
+      pause: () => { ownPlayPauseAt = performance.now(); video.pause(); },
       seek: (t) => { video.currentTime = t; },
       getRate: () => video.playbackRate,
       setRate: (r) => { if (video.playbackRate !== r) video.playbackRate = r; },
@@ -459,6 +539,7 @@
     }
     const onVideoError = () => onError(null);
     dash.on(window.dashjs.MediaPlayer.events.ERROR, onError);
+    watchNativeControls(video, adapter);
     video.addEventListener("error", onVideoError);
     dash.initialize(video, mpdUrl, false);
     return adapter;
@@ -485,15 +566,18 @@
     const mode = useHls ? `hls.js ${window.Hls.version || "?"}` : native ? "native HLS" : "no HLS support";
     let hls = null;
     let lastHlsError = "";   // last non-fatal hls.js error: context when the <video> errors first
+    const recentErrors = []; // last few non-fatal hls.js errors, for jump reports
 
     const adapter = {
       source: live ? "tv" : "vod",
+      mode,
       live,
       ready: true,
       failed: false,
       failMsg: VOD_FAILED_MSG,
       video,
       native,
+      diag: () => mediaDiag(video, recentErrors),
       remoteAvailable: false,              // an AirPlay / Remote Playback target exists
       remote: () => remotePlaying(video),  // playing on that target right now
       busy: () => video.seeking,
@@ -517,12 +601,13 @@
       isPaused: () => video.paused,
       isBuffering: () => video.readyState < 3,   // < HAVE_FUTURE_DATA: waiting for data
       play: () => {
+        ownPlayPauseAt = performance.now();
         const p = video.play();
         if (p && p.catch) {
           p.catch((err) => { if (err && err.name === "NotAllowedError") showStartOverlay(); });
         }
       },
-      pause: () => video.pause(),
+      pause: () => { ownPlayPauseAt = performance.now(); video.pause(); },
       seek: (t) => { video.currentTime = t; },
       getRate: () => video.playbackRate,
       setRate: (r) => { if (video.playbackRate !== r) video.playbackRate = r; },
@@ -571,6 +656,7 @@
     const onVideoError = () => onError(describeMediaError(video.error)
       + (lastHlsError ? `；hls.js 之前的错误：${lastHlsError}` : ""));
     video.addEventListener("error", onVideoError);
+    watchNativeControls(video, adapter);
     if (useHls) {
       hls = new window.Hls(live ? { liveSyncDurationCount: 3 } : {});
       hls.on(window.Hls.Events.ERROR, (_event, data) => {
@@ -578,7 +664,11 @@
         // Non-fatal errors are retried by hls.js; keep them in the console for triage.
         console.warn("[watch] hls.js error" + (data.fatal ? " (fatal)" : ""), data.details, data);
         if (data.fatal) onError(describeHlsError(data), data);
-        else lastHlsError = describeHlsError(data);
+        else {
+          lastHlsError = describeHlsError(data);
+          recentErrors.push(lastHlsError);
+          if (recentErrors.length > 3) recentErrors.shift();
+        }
       });
       hls.loadSource(hlsUrl);
       hls.attachMedia(video);
@@ -939,6 +1029,7 @@
     playerVersion = video.version;
     stall.active = false;
     lastAnchor = -Infinity;
+    lastTick = null;
     ui.syncBtn.hidden = true;
     liveWasPlaying = false;
     liveEdgePending = false;
@@ -1404,10 +1495,10 @@
         player.play();
       }
     } else if (room && room.playing) {
-      if (clockReady()) player.seek(expectedPosition(room));
+      if (clockReady()) seekTo(expectedPosition(room));
       player.play();
     } else if (room) {
-      player.seek(expectedPosition(room), { keepPaused: true });
+      seekTo(expectedPosition(room), { keepPaused: true });
     }
     syncTick();
   });
@@ -1581,13 +1672,19 @@
   function onState(msg) {
     stopPreparing();
     if (ended || !msg.video) return;
-    const firstState = room === null;
+    const prev = room;
+    const firstState = prev === null;
     room = msg;
     serverState = msg;
-    // The server only sends state when the playback or video changed. Follow it
-    // at once unless it is the host re-anchoring the room after its own stall
-    // (`auto`): then a viewer only drifts a little and gets the 同步 button.
-    if (!msg.auto || firstState || msg.video.version !== playerVersion) snapPending = true;
+    // The server sends state when the playback or video changed, and again on
+    // every (re)connect. Follow it at once only if the room really moved from
+    // what we were already following (so a reconnect alone never jumps anyone),
+    // and not for the host re-anchoring the room after its own stall (`auto`):
+    // then a viewer only drifts a little and gets the 同步 button.
+    const newVideo = msg.video.version !== playerVersion;
+    const moved = firstState || newVideo || prev.playing !== msg.playing
+      || Math.abs(expectedPosition(prev) - expectedPosition(msg)) > HARD_DRIFT;
+    if (moved && (!msg.auto || firstState || newVideo)) snapPending = true;
     const title = msg.video.title || "";
     ui.title.textContent = title;
     document.title = title ? `${title} · 一起看` : "一起看";
