@@ -582,6 +582,8 @@ python tests/test_watch_requests.py # 一起看：「没有我想看的」记录
 python tests/test_player_sync.py   # 一起看：网页同步策略（node 加载 player.js）：缓冲不追、落后出「同步」按钮、房主把房间拉到自己、房间变了立刻跟
 python tests/test_watch_sync_browser.py # 一起看：真实 Chrome 里房主、观众、慢网观众三个页面对比进度 / 帧率 / 丢帧 / 自发跳转（要 pip install playwright、Chrome 或 Edge、ffmpeg、联网；缺了就 SKIP）
 python tests/test_watch_lab_ops.py     # 一起看：同样的实验室跑操作类场景——中途加入、断线重连、遥控器暂停、房主刷新、选集 / 换片源、房主交接
+python tests/test_watch_lab_tv.py      # 一起看：电视直播——两路 ffmpeg 实时假直播源经中继播放、暂停 / 继续回到直播边缘、房主换源、上游断流自动换源
+python tests/test_watch_lab_background.py # 一起看：模拟观众 / 房主的页面切到后台（hidden、定时器每分钟一次）时的同步
 python tests/test_geoip.py         # 一起看：地区限制（RIR 分配表解析、IP 查国家、X-Forwarded-For、被拦记录）
 python tests/test_sysstats.py      # 管理后台：服务器资源采样（/proc、cgroup）
 python tests/test_watch_server.py  # 一起看：HTTP 路由、WebSocket 协议、B 站转流

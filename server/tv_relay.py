@@ -5,8 +5,9 @@
   改写成按编号的本站路径；同一个绝对地址永远是同一个编号，编号表只留最近 200 个左右。
 - segment：按编号转发分片，带小 LRU 缓存；同一编号的并发请求共用一次上游请求；
   没发过的编号直接 KeyError，不碰上游。
-- dead_reason：列表连续失败 10 秒（playlist）、序号 10 秒不动（stalled）、
-  分片连续失败 3 次（segments），一旦设上就不再清掉，由调用方决定换源。
+- dead_reason：列表连续失败 10 秒（playlist）、列表 10 秒没有新分片（stalled：序号和最后一个分片地址
+  都没变；刚开播、窗口还没填满的源序号不动但分片在增加，不算死）、分片连续失败 3 次（segments），
+  一旦设上就不再清掉，由调用方决定换源。
 所有请求都走 tv_net.open_url，每一跳都过 ip_allowed；要请求的地址只来自候选源和它的列表内容。
 模块常量在用的时候才读（测试会 monkeypatch）。
 """
@@ -70,7 +71,7 @@ class LiveStream:
         self._fetches = 0                    # 已发起的列表请求次数，用来认出“我排队时有人刚失败过”
         self._last_err: StreamError | None = None
         self._err_at: float | None = None
-        self._progress = None                # 上次看到的序号（没有序号时用最后一个分片地址）
+        self._progress = None                # 上次看到的 (序号, 最后一个分片地址)
         self._progress_since: float | None = None
 
         self._ids: dict[str, int] = {}       # 绝对地址 -> 编号
@@ -114,8 +115,7 @@ class LiveStream:
             self._last_err = self._err_at = None
             self._fail_since = None
             out, last_url = self._rewrite(text, final)
-            seq = media_sequence(text)
-            progress = seq if seq is not None else last_url
+            progress = (media_sequence(text), last_url)
             if progress != self._progress or self._progress_since is None:
                 self._progress = progress
                 self._progress_since = now

@@ -20,7 +20,9 @@ from aiohttp.test_utils import TestClient, TestServer
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "server"))
 
+import tv_net  # noqa: E402
 import watch_server as ws_mod  # noqa: E402
+from tv_channels import Candidate, Channel  # noqa: E402
 from vod_search import Episode, Line, Show  # noqa: E402
 from watch_rooms import RoomManager  # noqa: E402
 
@@ -79,15 +81,20 @@ class NoSources:
 
 
 class LogCapture(logging.Handler):
+    """收下服务器 INFO 以上的日志；client_warnings() 是网页回报的 WARNING，find() 按子串找。"""
+
     def __init__(self):
-        super().__init__(logging.WARNING)
+        super().__init__(logging.INFO)
         self.records = []
 
     def emit(self, record):
         self.records.append(self.format(record))
 
     def client_warnings(self):
-        return [r for r in self.records if "watch client" in r]
+        return [r for r in self.records if r.startswith("WARNING") and "watch client" in r]
+
+    def find(self, text):
+        return [r for r in self.records if text in r]
 
 
 # ---------------------------------------------------------------- 页面探针
@@ -164,9 +171,43 @@ SAMPLE_JS = r"""
     sync_btn: btn && !btn.hidden ? btn.textContent : "",
     stage: stage ? stage.textContent : "",
     can_control: !!(play && !play.disabled),
+    seek_disabled: document.getElementById("seek").disabled,
+    seek_hidden: document.getElementById("seek").hidden,
+    live_badge: !document.getElementById("live-badge").hidden,
+    connected: document.getElementById("conn").hidden,
+    visibility: document.visibilityState,
     title: document.getElementById("title").textContent,
   };
 }
+"""
+
+
+# 模拟后台标签页（Playwright 下 Chrome 不会真的把页面标成 hidden，也不限速：试过最小化窗口、同窗口开新标签、
+# Page.setWebLifecycleState 都不行）。这里模拟它的两个可观察效果：
+# - document.visibilityState / hidden 变成 "hidden" 并派发 visibilitychange；
+# - setInterval 的回调最多每 period 毫秒跑一次（Chrome 对隐藏超过 5 分钟且没在出声的页面是每分钟一次）。
+# 页面脚本照常注册定时器，只是我们在中间加了一层。
+BG_JS = r"""
+(() => {
+  const native = window.setInterval.bind(window);
+  window.__bg = { period: 0, hidden: false };
+  window.setInterval = (fn, ms, ...args) => native(() => {
+    const p = window.__bg.period;
+    if (p) {
+      const now = performance.now();
+      if (fn.__bgLast !== undefined && now - fn.__bgLast < p) return;
+      fn.__bgLast = now;
+    }
+    fn(...args);
+  }, ms);
+  window.__bg.set = (hidden, period) => {
+    window.__bg.hidden = hidden;
+    window.__bg.period = period || 0;
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => (hidden ? "hidden" : "visible") });
+    Object.defineProperty(document, "hidden", { configurable: true, get: () => hidden });
+    document.dispatchEvent(new Event("visibilitychange"));
+  };
+})();
 """
 
 
@@ -204,6 +245,10 @@ class Client:
 
     async def viewer_id(self, room_id):
         return await self.page.evaluate("(k) => localStorage.getItem(k)", f"watch_viewer_id:{room_id}")
+
+    async def background(self, hidden, period_ms=0):
+        """模拟切到后台（hidden=True，定时器最多每 period_ms 跑一次）/ 切回来。页面要用 bg_shim=True 打开。"""
+        await self.page.evaluate("([h, p]) => window.__bg.set(h, p)", [hidden, period_ms])
 
     async def open_panel(self):
         hidden = await self.page.evaluate("() => document.getElementById('perm-panel').hidden")
@@ -334,14 +379,63 @@ def fmt(xs):
 
 # ---------------------------------------------------------------- 搭台
 
+def allow_loopback(ip):
+    return ip == "127.0.0.1"
+
+
+class LiveSource:
+    """一路假直播：ffmpeg 按实时速度产出 2 秒一片、窗口 8 片的 HLS（没有 ENDLIST），旧分片保留一会儿再删。
+    stop() 杀掉进程 → 列表不再更新，就像上游断流。"""
+
+    def __init__(self, out_dir):
+        self.dir = out_dir
+        self.url_tail = None
+        self.proc = subprocess.Popen(
+            ["ffmpeg", "-loglevel", "error", "-re",
+             "-f", "lavfi", "-i", f"testsrc2=size=160x90:rate={FPS}",
+             "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100",
+             "-c:v", "libx264", "-profile:v", "baseline", "-pix_fmt", "yuv420p", "-preset", "veryfast",
+             "-tune", "zerolatency", "-crf", "32", "-g", str(FPS * SEGMENT_S), "-keyint_min", str(FPS * SEGMENT_S),
+             "-sc_threshold", "0", "-c:a", "aac", "-b:a", "24k", "-ac", "1",
+             "-f", "hls", "-hls_time", str(SEGMENT_S), "-hls_list_size", "8", "-hls_delete_threshold", "6",
+             "-hls_flags", "delete_segments+omit_endlist",
+             "-hls_segment_filename", os.path.join(out_dir, "seg%05d.ts"), os.path.join(out_dir, "index.m3u8")],
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    @property
+    def alive(self):
+        return self.proc.poll() is None
+
+    async def ready(self, timeout=20):
+        """等到列表里至少有 3 片。"""
+        end = time.time() + timeout
+        path = os.path.join(self.dir, "index.m3u8")
+        while time.time() < end:
+            if os.path.exists(path):
+                with open(path, encoding="utf-8") as f:
+                    if f.read().count("#EXTINF") >= 3:
+                        return True
+            await asyncio.sleep(0.5)
+        return False
+
+    def stop(self):
+        if self.alive:
+            self.proc.kill()
+            try:
+                self.proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                pass
+
 class Bench:
     """一次实验：假 CDN、WatchServer、浏览器。用 `async with Bench(clips) as b:`。
     clips: {名字: 秒数}，每段生成一次，`b.clip_url(名字, 前缀)` 给出可以挂在任意前缀下的 m3u8 地址
     （同一段片子可以挂在多个前缀下，当成不同的线路 / 剧集）。"""
 
-    def __init__(self, clips, headed=False):
+    def __init__(self, clips, headed=False, tv=False):
         self.clips = clips
         self.headed = headed
+        self.tv = tv
+        self.live_sources = []
         self.capture = LogCapture()
         self.clients = []
         self.tmp = None
@@ -370,8 +464,13 @@ class Bench:
             self._mounts[name] = d
         self.cdn = TestClient(TestServer(self._cdn_app))
         self.rooms = RoomManager()
+        tv_kw = {}
+        if self.tv:
+            # 直播中继只连公网地址；实验室的上游在 127.0.0.1，放行它
+            tv_kw = dict(ip_allowed=allow_loopback, tv_session_factory=lambda: tv_net.make_session(allow_loopback),
+                         tv_prepare_timeout=10.0)
         self.server = ws_mod.WatchServer(self.rooms, NoSources(), "127.0.0.1", 0, origin="http://127.0.0.1",
-                                         allow_http=True)
+                                         allow_http=True, **tv_kw)
         self.site = TestClient(TestServer(self.server.app))
         await self.site.start_server()
         self.base = str(self.site.make_url("/")).rstrip("/")
@@ -393,6 +492,8 @@ class Bench:
         return self
 
     async def __aexit__(self, *exc):
+        for src in self.live_sources:
+            src.stop()
         try:
             for c in list(self.clients):
                 try:
@@ -410,6 +511,25 @@ class Bench:
                 await self.cdn.close()
             logging.getLogger().removeHandler(self.capture)
             shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def live_source(self, name, prefix):
+        """起一路 ffmpeg 实时直播（滑动窗口 HLS），挂在 CDN 的 prefix 下；返回 LiveSource（.stop() 掐断它）。"""
+        d = os.path.join(self.tmp, "live_" + name)
+        os.makedirs(d)
+        src = LiveSource(d)
+        self.live_sources.append(src)
+        self._cdn_app.router.add_static(prefix, d, show_index=False)
+        src.url_tail = f"{prefix}/index.m3u8"
+        return src
+
+    def tv_channel(self, name, tails):
+        return Channel(key=name, name=name,
+                       candidates=[Candidate(f"{self.cdn_base}{t}", None, 0, False) for t in tails])
+
+    async def make_tv_room(self, channel):
+        await self.start_cdn()
+        video = await self.server.prepare_tv(channel)
+        return self.rooms.create(1, 2, "实验", video)
 
     def mount(self, name, prefix):
         """把一段片子挂到 CDN 的某个前缀下（要在第一次 make_room 之前做完）。返回 m3u8 地址的尾部。"""
@@ -440,9 +560,11 @@ class Bench:
     def viewer_url(self, room):
         return f"{self.base}/r/{room.room_id}"
 
-    async def open_client(self, name, url, before_goto=None):
+    async def open_client(self, name, url, before_goto=None, bg_shim=False):
         ctx = await self.browser.new_context(viewport={"width": 960, "height": 600})
         await ctx.add_init_script(INIT_JS)
+        if bg_shim:
+            await ctx.add_init_script(BG_JS)
         page = await ctx.new_page()
         c = Client(name, page, ctx)
         page.on("console", lambda m: c.console.append(f"{m.type}: {m.text}"))
