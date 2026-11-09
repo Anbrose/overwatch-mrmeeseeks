@@ -36,7 +36,7 @@
 | `server/tv_net.py` | 一起看电视直播的出站请求层（防 SSRF）：`is_public_ip` 只放行公网地址，`FilteringResolver` 丢掉不通过 `ip_allowed` 的 DNS 结果，`open_url` 手动跟随跳转、每一跳都检查。直播的所有出站请求（列表下载、探测、中继）都走这里 |
 | `server/tv_channels.py` | 一起看电视直播的频道表：解析 `WATCH_TV_LISTS` 里的 m3u 列表（BOM、CRLF、`#EXTVLCOPT` 都能处理）、名称归一化和别名、把查询匹配到频道（完全匹配 / 最多 5 个包含匹配）、启动时和每 6 小时重新下载并探测（并发 16、单次 8 秒）、落盘到 `STATE_DIR/tv_channels.json`（坏文件按空表处理） |
 | `server/tv_stream.py` | 一起看电视直播的流处理：跟进主列表、只选 H.264 且不超过 8 Mbps 的最高清晰度、从 TS 的 PMT 识别 H.265、探测一条地址能不能播（最新分片至少 1 KB） |
-| `server/tv_relay.py` | 一起看电视直播的中继：每个 (房间, 版本) 一个 `LiveStream`，把上游媒体列表改写成只含本站 `/tv/...` 路径的列表（1 秒内的请求合并），按编号转发分片（缓存 12 个、单个上限 20 MB），判定断流（10 秒没有列表、序号 10 秒不动或连续 3 个分片失败） |
+| `server/tv_relay.py` | 一起看电视直播的中继：每个 (房间, 版本) 一个 `LiveStream`，把上游媒体列表改写成只含本站 `/tv/...` 路径的列表（1 秒内的请求合并），按编号转发分片（缓存 12 个、单个上限 20 MB），判定断流（10 秒没有列表、10 秒没有新分片——序号和最后一个分片地址都不变——或连续 3 个分片失败） |
 | `server/watch_server.py` | 一起看 HTTP / WebSocket 服务（aiohttp）：首页（输房间号进房）、房间页、静态文件、同步协议、B 站转流和 MPD、vod 播放列表（带 CORS，给 Chromecast 接收端）、电视直播中继和自动换源（`prepare_tv`）、管理后台（`/admin`，密钥 + 密码登录、房间快照、资源用量）、地区限制的拦截点 |
 | `server/watch_ui.py` | 一起看的 Discord 部分：房间卡片（只有公开链接）、房主链接文案（bot 私信或 ephemeral 发给发起人）、搜索选单（`DynamicItem`，含部分匹配的电视台）、人数更新、「没有我想看的」/「我正在寻找这一部影视资源」按钮（`RequestButton`，片名在 custom_id 里） |
 | `server/watch_requests.py` | 「想看但没有」的记录（`STATE_DIR/watch_requests.json`）：每人每天 `WATCH_REQUEST_DAILY_LIMIT` 次（悉尼 0 点重置）、同一天同一部去重、最多 2000 条、按规范化片名合并统计；不依赖 Discord |

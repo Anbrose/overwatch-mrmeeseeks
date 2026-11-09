@@ -405,6 +405,19 @@ async def test_dead(up, stream):
         clk.t += 3
     check("dead: advancing sequence -> None", s.dead_reason is None)
 
+    # 序号不动但列表在长（刚开播、窗口没填满的源）-> 不算死；之后完全不变 10 s -> stalled
+    reset(up)
+    clk = FakeClock()
+    s = stream(clk)
+    for n in range(4, 10):
+        up.body = up.default_body() + f"#EXTINF:5,\na/{n}.ts\n"
+        await s.playlist()
+        clk.t += 3
+    check("dead: growing playlist with fixed sequence -> None", s.dead_reason is None)
+    clk.t += 10
+    await s.playlist()
+    check("dead: then nothing new for 10 s -> stalled", s.dead_reason == "stalled")
+
     # DEAD_SECONDS 在用的时候读
     saved = tv_relay.DEAD_SECONDS
     tv_relay.DEAD_SECONDS = 2.0
