@@ -248,6 +248,9 @@ function serverNow() { return SERVER_T0 + (nowMs - 100000) / 1000; }
     check("无控制权按暂停不发 control", s.controls().length === ctlBefore && s.video.paused === true);
     s.tick();
     check("下一秒同步恢复播放", s.video.paused === false);
+    check("恢复时直接站回房间位置（自己按的暂停，不是卡顿）", near(s.video.currentTime, s.roomPos()) && s.video.playbackRate === 1);
+    s.tick();
+    check("恢复后不发 control", s.controls().length === ctlBefore);
   }
 
   // ---------- 房主：自己卡了以后把房间拉到自己这里
@@ -325,9 +328,10 @@ function serverNow() { return SERVER_T0 + (nowMs - 100000) / 1000; }
     s.tick();
     check("再过一秒还是停在片尾", s.video.currentTime >= 2399.5 && s.video.seeks.length === before && s.controls().length === 0);
     s.syncBtn().fire("click");
-    check("点同步回到房间位置", s.video.seeks.length === before + 1 && near(s.video.currentTime, s.roomPos()));
+    check("点同步回到房间位置并马上继续播（不等下一秒）",
+          s.video.seeks.length === before + 1 && near(s.video.currentTime, s.roomPos()) && s.video.paused === false);
     s.tick();
-    check("回来后继续播", s.video.paused === false && s.syncBtn().hidden === true);
+    check("回来后继续播", s.video.paused === false && s.syncBtn().hidden === true && near(s.video.currentTime, s.roomPos()));
   }
 
   // ---------- 暂停的房间：照旧按位置对齐

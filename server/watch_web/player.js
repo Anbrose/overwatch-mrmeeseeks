@@ -135,6 +135,7 @@
   let lastAnchor = -Infinity; // performance.now() of the host's last anchorRoom
   let ownSeekAt = -Infinity;      // performance.now() of our last seek (the jump detector ignores it)
   let ownPlayPauseAt = -Infinity; // performance.now() of our last play()/pause() call on the player
+  let resumeSnap = false;         // a viewer without control paused the <video> itself: when the sync resumes it, re-align too
   let lastTick = null;            // { t, pos, rate, paused } at the previous local sync tick
   let lastJumpReport = -Infinity;
   let noControlToastAt = -Infinity;
@@ -201,14 +202,20 @@
     if (remote && player.busy && player.busy()) return;
     const target = expectedPosition(room);
     const dur = currentDuration();
-    const pos = player.getTime();
+    let pos = player.getTime();
     // Calling play() on an ended video restarts it from 0; don't — neither when
     // the room is at the end nor when only we are (a viewer that got ahead of a
     // re-anchored room and ran out of video stays at the end with the 同步 button).
     const atEnd = dur > 0 && target >= dur - 0.5;
     const localEnd = dur > 0 && pos >= dur - 0.5;
 
-    if (room.playing && player.isPaused() && !atEnd && !localEnd) player.play();
+    if (room.playing && player.isPaused() && !atEnd && !localEnd) {
+      // Undoing a pause the viewer made without control: it was their own action,
+      // not a stall, so catch up at once rather than at 1.05x for the next minute.
+      if (resumeSnap && Math.abs(target - pos) > CAUGHT_UP) { seekTo(target); pos = player.getTime(); }
+      player.play();
+    }
+    resumeSnap = false;
     if (!room.playing && !player.isPaused()) player.pause();
 
     const drift = target - pos;
@@ -242,6 +249,8 @@
       snapPending = false;
       if (Math.abs(drift) > HARD_DRIFT) {
         seekTo(target);
+        // We may be paused only because we had run out of video (localEnd above): resume now, not next tick.
+        if (room.playing && player.isPaused() && !atEnd) player.play();
         player.setRate(1);
         renderSyncButton(0);
         return;
@@ -341,6 +350,7 @@
     const dur = currentDuration();
     if (!playing && dur > 0 && adapter.getTime() >= dur - 0.5) return;
     if (me.canControl) { sendControl(playing ? "play" : "pause", adapter.getTime()); return; }
+    if (!playing) resumeSnap = true;
     const now = performance.now();
     if (now - noControlToastAt > NO_CONTROL_TOAST_MS) {
       noControlToastAt = now;
@@ -552,7 +562,10 @@
   // where the browser has it (Safari/iOS), hls.js elsewhere. Vod failures are
   // local only: we show a message and never tell the server. With `live` (TV)
   // the playlist is our relay's live window; a failure also reports tv_stall.
-  function createVodPlayer(hlsUrl, live = false) {
+  // `startAt`: where the room is right now, so hls.js loads its first segment
+  // there instead of at 0 (one segment fewer before the first frame; on a slow
+  // network that is seconds).
+  function createVodPlayer(hlsUrl, live = false, startAt = 0) {
     const video = document.createElement("video");
     video.playsInline = true;
     video.setAttribute("playsinline", "");
@@ -661,7 +674,7 @@
     video.addEventListener("error", onVideoError);
     watchNativeControls(video, adapter);
     if (useHls) {
-      hls = new window.Hls(live ? { liveSyncDurationCount: 3 } : {});
+      hls = new window.Hls(live ? { liveSyncDurationCount: 3 } : startAt > 0 ? { startPosition: startAt } : {});
       hls.on(window.Hls.Events.ERROR, (_event, data) => {
         if (!data) return;
         // Non-fatal errors are retried by hls.js; keep them in the console for triage.
@@ -1064,7 +1077,8 @@
           if (!document.createElement("video").canPlayType(HLS_MIME)) throw err;
         }
         if (token !== buildToken) return;
-        player = createVodPlayer(video.hls, video.source === "tv");
+        player = createVodPlayer(video.hls, video.source === "tv",
+                                 video.source === "vod" && room ? expectedPosition(room) : 0);
         onPlayerReady(player);
       } else if (video.source === "youtube") {
         await loadYouTubeApi();
