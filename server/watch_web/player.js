@@ -201,13 +201,16 @@
     if (remote && player.busy && player.busy()) return;
     const target = expectedPosition(room);
     const dur = currentDuration();
-    // Calling play() on an ended video restarts it from 0; don't.
+    const pos = player.getTime();
+    // Calling play() on an ended video restarts it from 0; don't — neither when
+    // the room is at the end nor when only we are (a viewer that got ahead of a
+    // re-anchored room and ran out of video stays at the end with the 同步 button).
     const atEnd = dur > 0 && target >= dur - 0.5;
+    const localEnd = dur > 0 && pos >= dur - 0.5;
 
-    if (room.playing && player.isPaused() && !atEnd) player.play();
+    if (room.playing && player.isPaused() && !atEnd && !localEnd) player.play();
     if (!room.playing && !player.isPaused()) player.pause();
 
-    const pos = player.getTime();
     const drift = target - pos;
     lastDrift = drift;
     const buffering = room.playing && !atEnd && !remote
