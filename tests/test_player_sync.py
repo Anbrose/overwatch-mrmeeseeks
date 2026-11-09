@@ -55,12 +55,13 @@ class FakeVideo {
     this.buffered = { length: 1, start: () => 0, end: () => this._t + 20 };
   }
   get currentTime() { return this._t; }
-  set currentTime(v) { this._t = v; this.seeks.push(v); }
+  set currentTime(v) { this._t = v; this.ended = false; this.seeks.push(v); }
   canPlayType() { return ""; }
   addEventListener(t, fn) { (this.listeners[t] ||= []).push(fn); }
   removeEventListener() {}
   fire(t) { for (const fn of this.listeners[t] || []) fn({}); }
-  play() { this.paused = false; return Promise.resolve(); }
+  // 浏览器的 play()：放完了的视频会从 0 重播
+  play() { if (this.ended) this.currentTime = 0; this.paused = false; return Promise.resolve(); }
   pause() { this.paused = true; }
   // 遥控器 / 媒体键：浏览器直接改 paused 并发事件
   remotePause() { this.paused = true; this.fire("pause"); }
@@ -142,6 +143,7 @@ async function session({ host, position = 193, playing = true }) {
     tick(dt = 1) {
       nowMs += dt * 1000;
       if (v.readyState >= 3 && !v.paused) v._t += dt * v.playbackRate;
+      if (v._t >= v.duration) { v._t = v.duration; v.paused = true; v.ended = true; }   // 放完了
       syncTick();
     },
     controls: () => ws.sent.filter((m) => m.type === "control"),
@@ -307,6 +309,25 @@ function serverNow() { return SERVER_T0 + (nowMs - 100000) / 1000; }
     s.ws.receive({ ...s.state(s.video.currentTime), playing: false });
     s.video.fire("pause");               // 浏览器对我们的 pause() 发出的事件
     check("自己的 pause() 引起的事件不发 control", s.controls().length === n + 2 && s.video.paused === true);
+  }
+
+  // ---------- 观众超前到先把视频放完（房主卡顿后把房间拉回去了，观众没跟）：停在片尾，不从头重播
+  {
+    const s = await session({ host: false, position: 2380 });
+    s.video.duration = 2400;
+    for (let i = 0; i < 4; i++) s.tick();   // 离开始那次 seek 超过 3 秒
+    const before = s.video.seeks.length;
+    s.video._t = 2399.6;                    // 比房间超前约 15 秒
+    s.tick();                               // 这一秒放完了：浏览器把它停住（ended）
+    check("观众先放完：停在片尾，不被 play() 从头重播",
+          s.video.ended && s.video.paused && s.video.currentTime >= 2399.5 && s.video.seeks.length === before);
+    check("观众先放完：显示超前按钮", s.syncBtn().hidden === false && /超前 1[0-9] 秒 · 同步/.test(s.syncBtn().textContent));
+    s.tick();
+    check("再过一秒还是停在片尾", s.video.currentTime >= 2399.5 && s.video.seeks.length === before && s.controls().length === 0);
+    s.syncBtn().fire("click");
+    check("点同步回到房间位置", s.video.seeks.length === before + 1 && near(s.video.currentTime, s.roomPos()));
+    s.tick();
+    check("回来后继续播", s.video.paused === false && s.syncBtn().hidden === true);
   }
 
   // ---------- 暂停的房间：照旧按位置对齐
