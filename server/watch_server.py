@@ -77,7 +77,7 @@ from vod_playlist import NO_PLAYABLE, Playlist, PlaylistError, fetch_key, fetch_
 from vod_search import Show
 from watch_progress import ProgressRecorder, resume_line
 from watch_requests import KIND_LABEL, RequestStore
-from watch_rooms import Room, RoomManager, RoomsFull, TvInfo, Video, VodInfo, tv_video, vod_video
+from watch_rooms import Room, RoomManager, TvInfo, Video, VodInfo, tv_video, vod_video
 from watch_sources import BILI_REFERER, DashStreams, Sources, VideoUnavailable
 
 log = logging.getLogger(__name__)
@@ -88,7 +88,6 @@ REFRESH_MARGIN = 60          # 地址过期前多少秒就重新取
 CHUNK = 64 * 1024
 VOD_PREPARE_TIMEOUT = 45     # 准备一集的总时限（秒）；网页端的“正在准备…”要比它久
 SEND_QUEUE_MAX = 256         # 单个连接积压的待发消息上限，超过就断开
-MAX_URL_LEN = 2000
 MAX_REPORTS = 5
 HEALTH_LEVELS = ("green", "yellow", "red")              # 每个连接最多记几条网页端的失败回报
 REPORT_MAX_CHARS = 500
@@ -134,7 +133,6 @@ JOIN_ERROR = '<p class="err">没有这个房间，看看房间号有没有输错
 _CODE_JUNK = re.compile(r"[^a-z0-9]")
 CHANGING_MSG = "正在换视频，请稍候"
 HOST_CHANGED = "房主现在是「{name}」"
-ROOMS_FULL_MSG = "B 站房间已满（最多 {limit} 个），请稍后再试或换 YouTube 视频"
 NO_TV_SOURCE = "这个台暂时没有能播的源"
 TV_SWITCHED = "已切换片源"
 TV_PREPARE_TIMEOUT = 20.0    # 开一个台（依次探测候选源）的总时限（秒）
@@ -229,7 +227,7 @@ class _Conn:
     queue: asyncio.Queue = field(default_factory=lambda: asyncio.Queue(SEND_QUEUE_MAX))
     last_you: tuple | None = None
     writer: asyncio.Task | None = None
-    busy: asyncio.Task | None = None     # 正在处理的换视频（change_video / episode / next_line / resume）
+    busy: asyncio.Task | None = None     # 正在处理的切换（episode / next_line / resume / tv_next）
     reports: int = 0                     # 已记录的失败回报数
     jumps: int = 0                       # 已记录的「画面前跳」诊断数
     stalls: int = 0                      # 已转发的卡顿报告数
@@ -833,13 +831,6 @@ class WatchServer:
                     msg = {"type": "notice", "message": HOST_CHANGED.format(name=new_host.name)}
                     for c in self.conns.get(rid, ()):
                         c.push(msg)
-        elif kind == "change_video":
-            url = data.get("url")
-            room = self.rooms.get(rid)
-            if not (isinstance(url, str) and 0 < len(url) <= MAX_URL_LEN and room is not None
-                    and room.host_id == vid):
-                return
-            self._start_busy(conn, self._change_video(conn, url))
         elif kind in ("episode", "next_line", "resume"):
             self._handle_vod(conn, kind, data)
         elif kind in ("tv_next", "tv_stall"):
@@ -929,20 +920,6 @@ class WatchServer:
             if (can_control and snap is not None and 0 <= snap.episode < info.show.episode_count
                     and _finite(snap.position)):
                 self._start_busy(conn, self._vod_switch(conn, kind))
-
-    async def _change_video(self, conn: _Conn, url: str) -> None:
-        try:
-            video = await self.sources.resolve(url)
-            self.rooms.change_video(conn.room_id, conn.viewer_id, video)
-        except VideoUnavailable as e:
-            conn.push({"type": "error", "message": e.message if hasattr(e, "message") else str(e)})
-        except RoomsFull as e:
-            conn.push({"type": "error", "message": ROOMS_FULL_MSG.format(limit=e.limit)})
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            log.exception("watch change_video failed")
-            conn.push({"type": "error", "message": "换视频失败，请稍后再试"})
 
     # ---------------- vod ----------------
     async def prepare_vod(self, show: Show, episode: int, start_line: int = 0,

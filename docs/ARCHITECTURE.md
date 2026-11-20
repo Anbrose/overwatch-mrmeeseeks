@@ -123,7 +123,6 @@
 | `duration` | `value` | YouTube 播放器加载后上报一次视频时长；只接受房主和有控制权的人，且只在时长未知时 |
 | `grant` | `target`（成员的公开 `id`）, `allowed` | 房主开关某人的控制权限 |
 | `transfer` | `target`（成员的公开 `id`，必须在场） | 房主把房主身份交给这个人；原房主保留控制权。成功后所有人收到 `you`、新房主收到 `members`，并广播 `notice`「房主现在是「名字」」 |
-| `change_video` | `url` | 房主换视频 |
 | `episode` | `index`（从 0 开始） | 房主选集（vod 房间）：停在开头、暂停，优先用当前片源线路。当前视频不是 vod 时忽略 |
 | `next_line` | 无 | 房主换一个片源（vod 房间）：同一集、下一条线路（绕圈），保持当前位置和播放/暂停状态 |
 | `resume` | 无 | 房主或有控制权的人（vod 房间）：跳到建房时的进度快照（需要时先换集），暂停 |
@@ -143,7 +142,7 @@
 | `you` | `is_host`, `can_control` | 自己的身份或权限变了 |
 | `members` | `members`（`id`（公开 id，不是 `viewer_id`）, `name`, `can_control`, `is_host`, `health`, `health_note`） | 发给房间里所有人，含房主（`is_host`）。网页用它画房间列表（每人一个红/黄/绿点，没报过是灰点），房主的权限面板里也用它 |
 | `notice` | `message` | 给房主的提示（目前只有「某某报告卡顿：…」），网页显示为 toast |
-| `error` | `message` | 提示信息，如 `正在换视频，请稍候`（上一次 `change_video` 还没处理完时） |
+| `error` | `message` | 提示信息，如 `正在换视频，请稍候`（上一次选集 / 换片源还没处理完时） |
 | `notice` | `message` | 非错误的提示，如直播换源成功后发给房间里所有人的 `已切换片源`（网页显示约 3 秒） |
 | `ended` | 无 | 房间已结束 |
 | `blocked` | `id`（6 位访客编号）, `country`（两位国家码或 null）, `message` | 地区不在放行名单：这是该连接收到的唯一一条消息，随后服务器关闭连接；页面显示原因和编号，不重连 |

@@ -251,7 +251,7 @@ class Client:
         await self.page.evaluate("([h, p]) => window.__bg.set(h, p)", [hidden, period_ms])
 
     async def open_panel(self, which="perm"):
-        """打开房主的悬浮面板：perm = 权限（成员 / 换视频），ep = 选集 / 换源。同一时间只开一个。"""
+        """打开房主的悬浮面板：perm = 权限（成员），ep = 选集 / 换源。同一时间只开一个。"""
         hidden = await self.page.evaluate("(id) => document.getElementById(id).hidden", f"{which}-panel")
         if hidden:
             await self.page.click(f"#{which}-btn")

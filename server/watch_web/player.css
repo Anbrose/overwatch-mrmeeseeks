@@ -35,6 +35,8 @@ html, body {
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
+/* 按下的反馈：轻轻缩一下再弹回 */
+.gbtn:active, .ctl:active:not(:disabled), .ep:active:not(:disabled), .line-btn:active:not(:disabled) { scale: .94; }
 [hidden] { display: none !important; }
 :focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
@@ -103,7 +105,7 @@ button:disabled { cursor: not-allowed; }
   align-items: center;
   transition: margin var(--dur-l) var(--ease);
 }
-.row.side-open, .row.side-open + .under {
+.row.side-open {
   margin-inline: calc(-1 * min(var(--side-w) / 2, max(0px, (100vw - 100% - 40px) / 2)));
 }
 .side {
@@ -115,10 +117,12 @@ button:disabled { cursor: not-allowed; }
 }
 .row.side-open .side { width: var(--side-w); }
 
+/* 播放器 + 下面的人名 / 自己的 ID：这一列一起让位，ID 始终贴着播放器的右边 */
+.main-col { flex: 1 1 0; min-width: 0; }
+.side-inner { display: contents; }
+
 .stage-wrap {
   position: relative;
-  flex: 1 1 0;
-  min-width: 0;
   aspect-ratio: 16 / 9;
   border-radius: 28px;
   overflow: hidden;
@@ -154,6 +158,7 @@ button:disabled { cursor: not-allowed; }
   white-space: pre-line;    /* 失败原因分行显示 */
   overflow-wrap: anywhere;
   pointer-events: none;
+  --pop-from: none;
 }
 
 .start {
@@ -221,6 +226,7 @@ button:disabled { cursor: not-allowed; }
   line-height: 20px;
   text-shadow: none;
 }
+.conn, .live-badge { --pop-from: none; }
 .room { font-variant-numeric: tabular-nums; }
 .room b { font-weight: 500; letter-spacing: .08em; text-transform: uppercase; }
 
@@ -277,6 +283,11 @@ button:disabled { cursor: not-allowed; }
 }
 .gbtn > * { position: relative; }
 .gbtn svg { width: 18px; height: 18px; flex: none; }
+.gbtn.pop {
+  transition: color var(--dur-s) var(--ease), scale var(--dur-s) var(--ease),
+    opacity var(--dur) var(--ease), transform var(--dur) var(--ease), display var(--dur) allow-discrete;
+  --pop-from: scale(.9);
+}
 .gbtn[aria-expanded="true"] { color: var(--ink); text-shadow: none; }
 .gbtn[aria-expanded="true"]::before { opacity: .94; }
 
@@ -324,7 +335,7 @@ button:disabled { cursor: not-allowed; }
   font-variant-numeric: tabular-nums;
   background-color: rgba(255, 255, 255, .14);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22);
-  transition: background-color var(--dur-s) var(--ease), color var(--dur-s) var(--ease), box-shadow var(--dur-s) var(--ease);
+  transition: background-color var(--dur-s) var(--ease), color var(--dur-s) var(--ease), box-shadow var(--dur-s) var(--ease), opacity var(--dur-s) var(--ease), scale var(--dur-s) var(--ease);
 }
 .ep:hover:not(:disabled) { background-color: rgba(255, 255, 255, .26); }
 .ep.current, .ep.current:hover {
@@ -345,12 +356,19 @@ button:disabled { cursor: not-allowed; }
   background: linear-gradient(135deg, rgba(255, 255, 255, .3), rgba(255, 255, 255, .1));
   border: 1px solid rgba(255, 255, 255, .34);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 8px 18px -8px rgba(0, 0, 0, .35);
-  transition: background-color var(--dur-s) var(--ease);
+  transition: background-color var(--dur-s) var(--ease), opacity var(--dur-s) var(--ease), scale var(--dur-s) var(--ease);
 }
 .line-btn:hover:not(:disabled) { background-color: rgba(255, 255, 255, .12); }
 
-.members { list-style: none; margin: -4px 0 12px; padding: 0; }
-.members li { display: flex; align-items: center; gap: 12px; min-height: 56px; }
+.members { list-style: none; margin: -4px 0 -8px; padding: 0; }
+.members li {
+  display: flex; align-items: center; gap: 12px; min-height: 56px;
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+/* 新进来的人：淡入 + 上浮，而不是一帧出现 */
+@starting-style {
+  .members li, .person { opacity: 0; transform: translateY(8px); }
+}
 .members .name {
   flex: 1; min-width: 0; font-size: 15px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -360,6 +378,7 @@ button:disabled { cursor: not-allowed; }
 .dot {
   display: inline-block; width: 8px; height: 8px; border-radius: 50%;
   background: rgba(255, 255, 255, .5); margin-right: 10px; vertical-align: middle;
+  transition: background-color var(--dur) var(--ease);
 }
 .dot.green { background: var(--green); }
 .dot.yellow { background: var(--yellow); }
@@ -419,36 +438,6 @@ button:disabled { cursor: not-allowed; }
   mask-size: 14px 14px;
 }
 
-.change-form { display: flex; flex-direction: column; gap: 10px; }
-.change-form label { color: var(--text-2); }
-.change-row { display: flex; gap: 10px; }
-.change-url {
-  flex: 1;
-  min-width: 0;
-  height: 44px;
-  padding: 0 16px;
-  border-radius: 22px;
-  background: rgba(10, 12, 20, .3);
-  border: 1px solid rgba(255, 255, 255, .26);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, .22);
-}
-.change-url::placeholder { color: rgba(255, 255, 255, .62); }
-.change-url:focus { border-color: #fff; outline: none; }
-.change-btn {
-  flex: none;
-  height: 44px;
-  padding: 0 20px;
-  border: 0;
-  border-radius: 22px;
-  background: #fff;
-  color: var(--ink);
-  font-size: 15px;
-  font-weight: 500;
-  text-shadow: none;
-  box-shadow: 0 8px 18px -8px rgba(0, 0, 0, .45);
-}
-.change-hint { font-size: 12px; color: var(--text-2); }
-
 /* ---- 续播 ---- */
 .resume {
   position: absolute;
@@ -506,6 +495,20 @@ button:disabled { cursor: not-allowed; }
   gap: 12px;
   z-index: 5;
 }
+/* 手动收起：整张卡片向下滑出并淡出；收起后右下角留一个小按钮把它叫回来 */
+.dock.pop {
+  transition: opacity var(--dur-l) var(--ease), transform var(--dur-l) var(--ease), display var(--dur-l) allow-discrete;
+  --pop-from: translateY(56px);
+}
+.ctl.dock-show {
+  position: absolute;
+  right: var(--gap);
+  bottom: var(--gap);
+  z-index: 5;
+  transition: background-color var(--dur-s) var(--ease), scale var(--dur-s) var(--ease),
+    opacity var(--dur-l) var(--ease), transform var(--dur-l) var(--ease), display var(--dur-l) allow-discrete;
+  --pop-from: translateY(16px) scale(.7);
+}
 .dock-info { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; min-width: 0; }
 .title {
   min-width: 0;
@@ -539,12 +542,17 @@ button:disabled { cursor: not-allowed; }
   background: rgba(255, 255, 255, .14);
   border: 1px solid rgba(255, 255, 255, .22);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3);
-  transition: background-color var(--dur-s) var(--ease), color var(--dur-s) var(--ease), opacity var(--dur-s) var(--ease);
+  transition: background-color var(--dur-s) var(--ease), color var(--dur-s) var(--ease), opacity var(--dur-s) var(--ease), scale var(--dur-s) var(--ease);
 }
 .ctl:hover:not(:disabled) { background-color: rgba(255, 255, 255, .26); }
 .ctl svg { width: 20px; height: 20px; }
 .ctl:disabled { opacity: .45; }
 .ctl.on { background: #fff; color: var(--ink); }   /* 投屏中点亮 */
+.ctl.pop {
+  transition: background-color var(--dur-s) var(--ease), color var(--dur-s) var(--ease), scale var(--dur-s) var(--ease),
+    opacity var(--dur) var(--ease), transform var(--dur) var(--ease), display var(--dur) allow-discrete;
+  --pop-from: scale(.7);
+}
 
 .ctl.play {
   width: 48px;
@@ -606,10 +614,7 @@ input[type="range"]:disabled::-moz-range-thumb { background: transparent; box-sh
 .volume { width: 96px; }
 
 /* ---- 舞台下方：房间里的人 ---- */
-.under {
-  display: flex; align-items: center; gap: 10px; margin-top: 16px; min-height: 36px;
-  transition: margin var(--dur-l) var(--ease);   /* 跟着播放器一起让位 */
-}
+.under { display: flex; align-items: center; gap: 10px; margin-top: 16px; min-height: 36px; }
 .people { display: flex; flex-wrap: wrap; gap: 8px 10px; flex: 1; min-width: 0; }
 .person {
   height: 36px;
@@ -624,6 +629,7 @@ input[type="range"]:disabled::-moz-range-thumb { background: transparent; box-sh
   backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, .22);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 10px 22px -12px rgba(0, 0, 0, .45);
+  transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
 }
 .person .dot { margin-right: 8px; }
 .me { flex: none; font-size: 12px; color: var(--text-2); white-space: nowrap; }
@@ -681,17 +687,28 @@ input[type="range"]:disabled::-moz-range-thumb { background: transparent; box-sh
 /* ---- 全屏：全屏的是整行，侧边面板在全屏里也能滑出来 ---- */
 .row:fullscreen { width: 100%; height: 100%; margin: 0; background: #000; }
 .row:-webkit-full-screen { width: 100%; height: 100%; margin: 0; background: #000; }
-.row:fullscreen .stage-wrap { height: 100%; aspect-ratio: auto; border-radius: 0; }
-.row:-webkit-full-screen .stage-wrap { height: 100%; aspect-ratio: auto; border-radius: 0; }
+.row:fullscreen .main-col, .row:fullscreen .stage-wrap { height: 100%; aspect-ratio: auto; border-radius: 0; }
+.row:-webkit-full-screen .main-col, .row:-webkit-full-screen .stage-wrap { height: 100%; aspect-ratio: auto; border-radius: 0; }
+.row:fullscreen .under { display: none; }
+.row:-webkit-full-screen .under { display: none; }
 
 /* ---- 窄屏：控件排到画面下面，背后是一片环境光让玻璃有东西可透 ---- */
 @media (max-width: 720px) {
   .page { padding: 12px 12px 24px; justify-content: flex-start; }
   /* 面板收起时播放器落在屏幕偏中的位置；面板向下展开时播放器向上让位 */
-  .row { display: block; margin-top: min(14vh, 120px); transition: margin-top var(--dur-l) var(--ease); }
+  .row { display: flex; flex-direction: column; align-items: stretch; margin-top: min(14vh, 120px); transition: margin-top var(--dur-l) var(--ease); }
+  .main-col { display: contents; }
+  .stage-wrap { order: 1; flex: none; }
+  .side { order: 2; }
+  .under { order: 3; }
   .row.side-open { margin-inline: 0; margin-top: 0; }
-  .row.side-open + .under { margin-inline: 0; }
+  /* 面板向下展开：高度从 0 平滑长出来，下面的人名行跟着被推下去 */
   .side, .row.side-open .side { width: auto; }
+  .side { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--dur-l) var(--ease); }
+  .row.side-open .side { grid-template-rows: 1fr; }
+  .side-inner { display: block; position: relative; min-height: 0; overflow: hidden; margin: 0 -12px -40px; padding: 0 12px 40px; }
+  /* 两个面板互相切换时，退场的那个脱离文档流，不把高度撑成两份 */
+  .row.side-open .panel[hidden] { position: absolute; left: 12px; right: 12px; top: 0; }
   .page::before { inset: 10% -20% -10%; filter: blur(40px); opacity: .75; }
   .stage-wrap {
     aspect-ratio: auto;
@@ -716,9 +733,12 @@ input[type="range"]:disabled::-moz-range-thumb { background: transparent; box-sh
   .alerts { top: 50px; }
   .pill { height: 40px; padding: 0 16px; font-size: 13px; }
   .big-play { top: 50%; width: 64px; }
+  .dock-show { right: 10px; bottom: 10px; }
+  .dock.pop { --pop-from: translateY(-16px); }
   .toast { bottom: 10px; font-size: 13px; }
 
   .dock, .topbar, .panel, .resume { position: static; }
+  .panel { position: relative; left: auto; top: auto; }
   .panel { translate: none; }
   .dock { order: 1; padding: 16px 18px 12px; border-radius: 24px; }
   .resume { order: 2; max-width: none; }
@@ -734,7 +754,7 @@ input[type="range"]:disabled::-moz-range-thumb { background: transparent; box-sh
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .row, .side, .pop, .bs-panel, .bs-card, .chrome, .gbtn, .gbtn::before, .ep, .switch, .switch::after, .swap svg, .ctl {
+  .row, .side, .members li, .person, .dot, .pop, .bs-panel, .bs-card, .chrome, .gbtn, .gbtn::before, .ep, .switch, .switch::after, .swap svg, .ctl {
     transition-duration: 0s;
   }
 }

@@ -73,7 +73,7 @@
     cast: $("cast"),
     me: $("me"), panel: $("perm-panel"), members: $("members"), people: $("people"), stallBtn: $("stall-btn"),
     syncBtn: $("sync-btn"),
-    changeForm: $("change-form"), changeUrl: $("change-url"), toast: $("toast"),
+    toast: $("toast"),
     resume: $("resume"), vodPanel: $("vod-panel"), episodes: $("episodes"),
     lineLabel: $("line-label"), nextLine: $("next-line"),
     bsBtn: $("bs-btn"), bsPanel: $("bs-panel"), bsClose: $("bs-close"),
@@ -81,6 +81,7 @@
     liveBadge: $("live-badge"), tvPanel: $("tv-panel"), tvLineLabel: $("tv-line-label"), tvNext: $("tv-next"),
     epBtn: $("ep-btn"), epLabel: $("ep-btn-label"), epPanel: $("ep-panel"), bigPlay: $("big-play"),
     status: $("status"), roomCode: $("room-code"), shield: $("shield"), row: $("row"),
+    dock: $("dock"), dockHide: $("dock-hide"), dockShow: $("dock-show"),
   };
 
   // ---------------------------------------------------------------- storage
@@ -1382,31 +1383,56 @@
     ui.nextLine.disabled = preparing || (Number(v.line_count) || 0) <= 1;
   }
 
-  function healthDot(m) {
-    const dot = document.createElement("span");
+  function paintDot(dot, m) {
     dot.className = "dot" + (m.health ? ` ${m.health}` : "");
     dot.title = m.health ? m.health_note || "" : "还不知道";
-    return dot;
+  }
+
+  // Rows are kept per member id and only updated: rebuilding them on every
+  // `members` message would make a switch or a health dot jump in one frame
+  // instead of easing (the transitions in player.css need the same element).
+  function syncRows(map, list, parent, create, update) {
+    const seen = new Set();
+    for (const m of list) {
+      const key = String(m.id);
+      seen.add(key);
+      let row = map.get(key);
+      if (!row) {
+        row = create();
+        map.set(key, row);
+        parent.appendChild(row.el);
+      }
+      row.m = m;
+      update(row, m);
+    }
+    for (const [key, row] of map) {
+      if (seen.has(key)) continue;
+      row.el.remove();
+      map.delete(key);
+    }
   }
 
   // Everyone in the room, with a health dot each (host marked with a crown).
+  const peopleRows = new Map();
   function renderPeople(members) {
-    ui.people.textContent = "";
-    for (const m of members) {
-      const chip = document.createElement("span");
-      chip.className = "person";
-      chip.append(healthDot(m), m.name);
-      if (m.is_host) {
-        const mark = document.createElement("span");
-        mark.className = "host-mark";
-        mark.title = "房主";
-        mark.setAttribute("role", "img");
-        mark.setAttribute("aria-label", "房主");
-        chip.append(mark);
-      }
-      chip.title = m.health ? m.health_note || "" : "还不知道";
-      ui.people.appendChild(chip);
-    }
+    syncRows(peopleRows, members, ui.people, () => {
+      const el = document.createElement("span");
+      el.className = "person";
+      const dot = document.createElement("span");
+      const name = document.createElement("span");
+      const mark = document.createElement("span");
+      mark.className = "host-mark";
+      mark.title = "房主";
+      mark.setAttribute("role", "img");
+      mark.setAttribute("aria-label", "房主");
+      el.append(dot, name, mark);
+      return { el, dot, name, mark, m: null };
+    }, (row, m) => {
+      paintDot(row.dot, m);
+      row.name.textContent = m.name;
+      row.mark.hidden = !m.is_host;
+      row.el.title = m.health ? m.health_note || "" : "还不知道";
+    });
   }
 
   // Host-only source switch for live TV, inside the 🔑 panel.
@@ -1420,45 +1446,52 @@
     ui.tvNext.disabled = preparing || count <= 1;
   }
 
+  const memberRows = new Map();
+  let membersEmpty = null;
   function renderMembers(members) {
-    ui.members.textContent = "";
     members = members.filter((m) => !m.is_host);
-    if (!members.length) {
-      const li = document.createElement("li");
-      li.className = "empty";
-      li.textContent = "还没有其他人";
-      ui.members.appendChild(li);
-      return;
+    if (!membersEmpty) {
+      membersEmpty = document.createElement("li");
+      membersEmpty.className = "empty";
+      membersEmpty.textContent = "还没有其他人";
+      ui.members.appendChild(membersEmpty);
     }
-    for (const m of members) {
-      const li = document.createElement("li");
+    membersEmpty.hidden = members.length > 0;
+    syncRows(memberRows, members, ui.members, () => {
+      const el = document.createElement("li");
       const name = document.createElement("span");
       name.className = "name";
-      name.append(healthDot(m), m.name);
+      const dot = document.createElement("span");
+      const label = document.createElement("span");
+      name.append(dot, label);
       const sw = document.createElement("button");
       sw.type = "button";
       sw.className = "switch";
-      sw.setAttribute("role", "switch");
-      sw.setAttribute("aria-checked", String(!!m.can_control));
-      sw.setAttribute("aria-label", `${m.name} 控制播放`);   // the knob is drawn by player.css
-      sw.addEventListener("click", () => {
-        send({ type: "grant", target: m.id, allowed: !m.can_control });
-      });
+      sw.setAttribute("role", "switch");   // the knob is drawn (and eased) by player.css
       // Hand the host role over. The server keeps the old host's control
       // permission, so this is not a way to lose the room.
       const crown = document.createElement("button");
       crown.type = "button";
-      crown.className = "make-host";
+      crown.className = "make-host";       // crown icon: player.css
       crown.title = "设为房主";
-      crown.setAttribute("aria-label", `把房主交给 ${m.name}`);   // crown icon: player.css
+      const row = { el, dot, label, sw, crown, m: null };
+      sw.addEventListener("click", () => {
+        send({ type: "grant", target: row.m.id, allowed: !row.m.can_control });
+      });
       crown.addEventListener("click", () => {
-        if (window.confirm(`把房主交给「${m.name}」？你会保留控制播放的权限。`)) {
-          send({ type: "transfer", target: m.id });
+        if (window.confirm(`把房主交给「${row.m.name}」？你会保留控制播放的权限。`)) {
+          send({ type: "transfer", target: row.m.id });
         }
       });
-      li.append(name, crown, sw);
-      ui.members.appendChild(li);
-    }
+      el.append(name, crown, sw);
+      return row;
+    }, (row, m) => {
+      paintDot(row.dot, m);
+      row.label.textContent = m.name;
+      row.sw.setAttribute("aria-checked", String(!!m.can_control));
+      row.sw.setAttribute("aria-label", `${m.name} 控制播放`);
+      row.crown.setAttribute("aria-label", `把房主交给 ${m.name}`);
+    });
   }
 
   let toastTimer = null;
@@ -1587,6 +1620,20 @@
   ui.epBtn.addEventListener("click", () => setPanel(ui.epPanel.hidden ? "ep" : null));
   ui.shield.addEventListener("click", () => setPanel(null));
 
+  // ---- the control bar can be put away by hand; remembered on this device ----
+  const DOCK_KEY = "watch_dock_hidden";
+  function setDockHidden(on, remember) {
+    ui.dock.hidden = on;
+    ui.dockShow.hidden = !on;
+    if (remember) {
+      try { localStorage.setItem(DOCK_KEY, on ? "1" : ""); } catch { /* private mode etc. */ }
+    }
+    touch();
+  }
+  ui.dockHide.addEventListener("click", () => { setDockHidden(true, true); ui.dockShow.focus(); });
+  ui.dockShow.addEventListener("click", () => { setDockHidden(false, true); ui.dockHide.focus(); });
+  try { if (localStorage.getItem(DOCK_KEY) === "1") setDockHidden(true, false); } catch { /* same */ }
+
   // Any sign of life brings the overlay controls back.
   for (const type of ["pointermove", "pointerdown", "keydown", "touchstart", "focusin"]) {
     document.addEventListener(type, touch, { passive: true });
@@ -1634,14 +1681,6 @@
     if (preparing) return;
     send({ type: "tv_next" });
     startPreparing();
-  });
-
-  ui.changeForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const url = ui.changeUrl.value.trim();
-    if (!url) return;
-    send({ type: "change_video", url });
-    ui.changeUrl.value = "";
   });
 
   // ---------------------------------------------------------------- WebSocket
