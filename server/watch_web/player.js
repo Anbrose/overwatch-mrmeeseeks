@@ -1323,13 +1323,23 @@
   }
 
   // "上次一起看到…": hidden when the room is already at the snapshot.
+  // Dismissing is per snapshot and per device: a later snapshot (another
+  // episode or position) shows the line again.
+  const RESUME_KEY = `watch_resume_dismissed:${roomId}`;
+  let resumeDismissed = null;
+  try { resumeDismissed = localStorage.getItem(RESUME_KEY); } catch { /* private mode etc. */ }
+  function resumeSignature(r) {
+    return `${r.episode}|${Math.round(Number(r.position) || 0)}|${r.text || ""}`;
+  }
+
   function renderResume() {
     const r = room && room.resume;
     const atSnapshot = r && isVod() && room.video.episode === r.episode
       && Math.abs(expectedPosition(room) - r.position) < RESUME_NEAR;
+    const dismissed = !!r && resumeDismissed === resumeSignature(r);
+    ui.resume.hidden = !r || ended || atSnapshot || isLive() || dismissed;
+    if (ui.resume.hidden) return;   // keep the content while it fades out
     ui.resume.textContent = "";
-    ui.resume.hidden = !r || ended || atSnapshot || isLive();
-    if (ui.resume.hidden) return;
     const text = String(r.text || "");
     if (me.canControl) {
       const btn = document.createElement("button");
@@ -1342,8 +1352,22 @@
       });
       ui.resume.appendChild(btn);
     } else {
-      ui.resume.textContent = text;
+      const label = document.createElement("span");
+      label.className = "resume-text";
+      label.textContent = text;
+      ui.resume.appendChild(label);
     }
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "resume-x";
+    close.title = "不再提示";
+    close.setAttribute("aria-label", "关闭「上次一起看到」的提示");
+    close.addEventListener("click", () => {
+      resumeDismissed = resumeSignature(r);
+      try { localStorage.setItem(RESUME_KEY, resumeDismissed); } catch { /* same */ }
+      renderResume();
+    });
+    ui.resume.appendChild(close);
   }
 
   // Host-only episode list and source switch inside the 🔑 panel.

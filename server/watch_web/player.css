@@ -454,14 +454,33 @@ button:disabled { cursor: not-allowed; }
 }
 .resume-btn {
   min-height: 44px;
-  margin: 0 -18px;
-  padding: 0 18px;
+  margin: 0 0 0 -18px;
+  padding: 0 4px 0 18px;
   border: 0;
   border-radius: 22px;
   background: none;
   text-shadow: inherit;
+  text-align: left;
 }
 .resume-btn::before { content: "▸ "; }
+/* 关掉这条提示（按快照记在本机，换了新的快照会再出现） */
+.resume-x {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin: 0 -12px 0 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, .16);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M7 7l10 10M17 7L7 17'/%3E%3C/svg%3E");
+  background-position: center;
+  background-size: 14px 14px;
+  background-repeat: no-repeat;
+  transition: background-color var(--dur-s) var(--ease), scale var(--dur-s) var(--ease);
+}
+.resume-x:hover { background-color: rgba(255, 255, 255, .3); }
+.resume-x:active { scale: .9; }
 
 /* ---- 提示条 ---- */
 .toast {
