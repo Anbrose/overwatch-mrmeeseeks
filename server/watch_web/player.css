@@ -41,6 +41,28 @@ button:disabled { cursor: not-allowed; }
   max-width: max(640px, min(1500px, calc((100vh - 104px) * 16 / 9 + 40px)));
   margin: 0 auto;
   padding: 20px 20px 24px;
+  /* 播放器在页面里垂直居中 */
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+/* 页面背景：深色底上一片柔和的环境光，玻璃控件才有东西可透 */
+.page::before {
+  content: "";
+  position: fixed;
+  inset: -12%;
+  z-index: -1;
+  background:
+    radial-gradient(closest-side at 16% 24%, #6a54b8, transparent),
+    radial-gradient(closest-side at 86% 30%, #ec8f88, transparent),
+    radial-gradient(closest-side at 62% 88%, #2f3f9a, transparent),
+    radial-gradient(closest-side at 22% 86%, #c9739a, transparent),
+    radial-gradient(closest-side at 94% 82%, #3aa6b8, transparent);
+  filter: blur(56px);
+  opacity: .85;
+  pointer-events: none;
 }
 
 /* ---- 玻璃材质 ---- */
@@ -571,12 +593,14 @@ input[type="range"]:disabled::-moz-range-thumb { background: transparent; box-sh
   align-items: center;
   font-size: 13px;
   white-space: nowrap;
-  background: linear-gradient(135deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .04));
-  border: 1px solid rgba(255, 255, 255, .14);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14);
+  background: linear-gradient(135deg, rgba(255, 255, 255, .2), rgba(255, 255, 255, .06));
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, .22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), 0 10px 22px -12px rgba(0, 0, 0, .45);
 }
 .person .dot { margin-right: 8px; }
-.me { flex: none; font-size: 12px; color: #a3a8b5; white-space: nowrap; }
+.me { flex: none; font-size: 12px; color: var(--text-2); white-space: nowrap; }
 
 /* ---- 在电视上看 ---- */
 .bs-panel {
@@ -634,21 +658,8 @@ input[type="range"]:disabled::-moz-range-thumb { background: transparent; box-sh
 
 /* ---- 窄屏：控件排到画面下面，背后是一片环境光让玻璃有东西可透 ---- */
 @media (max-width: 720px) {
-  .page { padding: 12px 12px 24px; }
-  .page::before {
-    content: "";
-    position: fixed;
-    inset: 15% -20% -10%;
-    z-index: -1;
-    background:
-      radial-gradient(closest-side at 28% 22%, #6a54b8, transparent),
-      radial-gradient(closest-side at 78% 38%, #ec8f88, transparent),
-      radial-gradient(closest-side at 50% 62%, #2f3f9a, transparent),
-      radial-gradient(closest-side at 24% 84%, #c9739a, transparent);
-    filter: blur(40px);
-    opacity: .75;
-    pointer-events: none;
-  }
+  .page { padding: 12px 12px 24px; justify-content: flex-start; }
+  .page::before { inset: 10% -20% -10%; filter: blur(40px); opacity: .75; }
   .stage-wrap {
     aspect-ratio: auto;
     overflow: visible;
