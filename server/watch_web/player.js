@@ -80,7 +80,7 @@
     qr: $("qr"), bsHost: $("bs-host"), bsCode: $("bs-code"),
     liveBadge: $("live-badge"), tvPanel: $("tv-panel"), tvLineLabel: $("tv-line-label"), tvNext: $("tv-next"),
     epBtn: $("ep-btn"), epLabel: $("ep-btn-label"), epPanel: $("ep-panel"), bigPlay: $("big-play"),
-    status: $("status"), roomCode: $("room-code"), shield: $("shield"),
+    status: $("status"), roomCode: $("room-code"), shield: $("shield"), row: $("row"),
   };
 
   // ---------------------------------------------------------------- storage
@@ -1181,6 +1181,8 @@
     ui.panel.hidden = !perm;
     ui.epBtn.setAttribute("aria-expanded", String(ep));
     ui.permBtn.setAttribute("aria-expanded", String(perm));
+    // the player gives way: left for the side panel (wide), up for the panel below (narrow)
+    ui.row.classList.toggle("side-open", ep || perm);
     touch();
   }
 
@@ -1534,7 +1536,7 @@
   });
 
   ui.fs.addEventListener("click", () => {
-    const el = ui.stageWrap;
+    const el = ui.row;   // the whole row, so the side panels work in fullscreen too
     const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
     if (fsEl) {
       (document.exitFullscreen || document.webkitExitFullscreen).call(document);

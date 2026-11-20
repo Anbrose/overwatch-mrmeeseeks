@@ -8,6 +8,7 @@
 </head>
 <body>
   <main class="page">
+    <div id="row" class="row">
     <section id="stage-wrap" class="stage-wrap">
       <div id="stage" class="stage">
         <div id="player-host" class="player-host"></div>
@@ -50,37 +51,6 @@
         </button>
       </div>
 
-      <aside id="ep-panel" class="panel glass-card pop" hidden>
-        <div id="vod-panel" class="vod-panel" hidden>
-          <div class="panel-head">选集</div>
-          <div id="episodes" class="episodes"></div>
-          <div class="line-row">
-            <span id="line-label" class="line-label"></span>
-            <button id="next-line" class="line-btn" type="button">换一个片源</button>
-          </div>
-        </div>
-        <div id="tv-panel" class="vod-panel" hidden>
-          <div class="panel-head">直播源</div>
-          <div class="line-row">
-            <span id="tv-line-label" class="line-label"></span>
-            <button id="tv-next" class="line-btn" type="button">换一个源</button>
-          </div>
-        </div>
-      </aside>
-
-      <aside id="perm-panel" class="panel glass-card pop" hidden>
-        <div class="panel-head">谁能控制播放</div>
-        <ul id="members" class="members"></ul>
-        <form id="change-form" class="change-form">
-          <label for="change-url">换一个视频</label>
-          <div class="change-row">
-            <input id="change-url" class="change-url" type="text" inputmode="url" placeholder="粘贴链接" autocomplete="off">
-            <button class="change-btn" type="submit">换视频</button>
-          </div>
-          <span class="change-hint">支持 B 站或 YouTube 链接，可直接粘贴分享文字</span>
-        </form>
-      </aside>
-
       <div id="resume" class="resume glass pop" hidden></div>
 
       <div class="dock glass-card chrome">
@@ -112,6 +82,41 @@
         </div>
       </div>
     </section>
+
+    <!-- 房主的面板：宽屏从播放器右侧滑出（播放器向左让位），窄屏在按钮下方向下展开 -->
+    <div id="side" class="side">
+      <aside id="ep-panel" class="panel glass-card pop" hidden>
+        <div id="vod-panel" class="vod-panel" hidden>
+          <div class="panel-head">选集</div>
+          <div id="episodes" class="episodes"></div>
+          <div class="line-row">
+            <span id="line-label" class="line-label"></span>
+            <button id="next-line" class="line-btn" type="button">换一个片源</button>
+          </div>
+        </div>
+        <div id="tv-panel" class="vod-panel" hidden>
+          <div class="panel-head">直播源</div>
+          <div class="line-row">
+            <span id="tv-line-label" class="line-label"></span>
+            <button id="tv-next" class="line-btn" type="button">换一个源</button>
+          </div>
+        </div>
+      </aside>
+
+      <aside id="perm-panel" class="panel glass-card pop" hidden>
+        <div class="panel-head">谁能控制播放</div>
+        <ul id="members" class="members"></ul>
+        <form id="change-form" class="change-form">
+          <label for="change-url">换一个视频</label>
+          <div class="change-row">
+            <input id="change-url" class="change-url" type="text" inputmode="url" placeholder="粘贴链接" autocomplete="off">
+            <button class="change-btn" type="submit">换视频</button>
+          </div>
+          <span class="change-hint">支持 B 站或 YouTube 链接，可直接粘贴分享文字</span>
+        </form>
+      </aside>
+    </div>
+    </div>
 
     <div class="under">
       <div id="people" class="people" aria-label="房间里的人"></div>
