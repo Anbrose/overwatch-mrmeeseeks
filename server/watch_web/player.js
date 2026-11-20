@@ -79,6 +79,8 @@
     bsBtn: $("bs-btn"), bsPanel: $("bs-panel"), bsClose: $("bs-close"),
     qr: $("qr"), bsHost: $("bs-host"), bsCode: $("bs-code"),
     liveBadge: $("live-badge"), tvPanel: $("tv-panel"), tvLineLabel: $("tv-line-label"), tvNext: $("tv-next"),
+    epBtn: $("ep-btn"), epLabel: $("ep-btn-label"), epPanel: $("ep-panel"), bigPlay: $("big-play"),
+    status: $("status"), roomCode: $("room-code"), shield: $("shield"),
   };
 
   // ---------------------------------------------------------------- storage
@@ -1161,6 +1163,44 @@
     started = false;
     ui.start.hidden = ended;
     renderStartButton();
+    renderBigPlay();
+  }
+
+  // The big glass play button in the middle of a paused picture: the same
+  // action as the small one, only for someone who may control.
+  function renderBigPlay() {
+    const can = me.canControl && !ended && !!room;
+    ui.bigPlay.hidden = !(can && started && !room.playing);
+  }
+
+  // ---- floating panels (选集 / 权限): one open at a time ----
+  function setPanel(which) {
+    const ep = which === "ep" && !ui.epBtn.hidden;
+    const perm = which === "perm" && !ui.permBtn.hidden;
+    ui.epPanel.hidden = !ep;
+    ui.panel.hidden = !perm;
+    ui.epBtn.setAttribute("aria-expanded", String(ep));
+    ui.permBtn.setAttribute("aria-expanded", String(perm));
+    touch();
+  }
+
+  // ---- overlay controls fade out while a video plays and nobody touches anything ----
+  // Wide layout only (the narrow one has the controls below the picture). They
+  // stay clickable while faded; a touch tap on them only brings them back.
+  const IDLE_MS = 3000;
+  let idleTimer = null;
+  let wokeAt = -1e9;
+  function overlayLayout() {
+    return !window.matchMedia || window.matchMedia("(min-width: 721px)").matches;
+  }
+  function touch() {
+    ui.stageWrap.classList.remove("idle");
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      const busy = !started || ended || !room || !room.playing || seeking
+        || !ui.epPanel.hidden || !ui.panel.hidden || !overlayLayout();
+      if (!busy) ui.stageWrap.classList.add("idle");
+    }, IDLE_MS);
   }
 
   // The start tap must reach a ready player so play() runs inside the gesture.
@@ -1222,15 +1262,19 @@
     ui.time.hidden = live;
     ui.liveBadge.hidden = !live;
     const playing = room && room.playing;
-    ui.play.textContent = playing ? "⏸" : "▶";
+    ui.play.classList.toggle("playing", !!playing);
     ui.play.setAttribute("aria-label", playing ? "暂停" : "播放");
     ui.me.textContent = me.name ? `ID：「${me.name}」` : "";
-    ui.permBtn.hidden = !me.isHost || ended;
-    if (!me.isHost || ended) {
-      ui.panel.hidden = true;
-      ui.permBtn.setAttribute("aria-expanded", "false");
-    }
+    const hostUi = me.isHost && !ended;
+    ui.permBtn.hidden = !hostUi;
+    ui.epBtn.hidden = !(hostUi && (isVod() || live));
+    ui.epLabel.textContent = live ? "换源" : "选集";
+    if (ui.permBtn.hidden && !ui.panel.hidden) setPanel(null);
+    if (ui.epBtn.hidden && !ui.epPanel.hidden) setPanel(null);
     ui.conn.hidden = connected || ended;
+    ui.status.classList.toggle("offline", !connected && !ended);
+    renderBigPlay();
+    touch();
     ui.bsBtn.hidden = ended || !room;
     if (ui.bsBtn.hidden) ui.bsPanel.hidden = true;
     renderResume();
@@ -1261,7 +1305,11 @@
   ui.bsBtn.addEventListener("click", openBigScreen);
   ui.bsClose.addEventListener("click", () => { ui.bsPanel.hidden = true; });
   ui.bsPanel.addEventListener("click", (e) => { if (e.target === ui.bsPanel) ui.bsPanel.hidden = true; });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") ui.bsPanel.hidden = true; });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    ui.bsPanel.hidden = true;
+    setPanel(null);
+  });
 
   function isVod() {
     return !!(room && room.video && room.video.source === "vod");
@@ -1310,7 +1358,9 @@
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "ep";
-        btn.textContent = `第 ${i + 1} 集`;
+        btn.textContent = String(i + 1);
+        btn.title = `第 ${i + 1} 集`;
+        btn.setAttribute("aria-label", `第 ${i + 1} 集`);
         btn.addEventListener("click", () => {
           if (preparing) return;
           send({ type: "episode", index: i });
@@ -1337,13 +1387,21 @@
     return dot;
   }
 
-  // Everyone in the room, with a health dot each (host marked with 🔑).
+  // Everyone in the room, with a health dot each (host marked with a crown).
   function renderPeople(members) {
     ui.people.textContent = "";
     for (const m of members) {
       const chip = document.createElement("span");
       chip.className = "person";
-      chip.append(healthDot(m), m.name + (m.is_host ? " 🔑" : ""));
+      chip.append(healthDot(m), m.name);
+      if (m.is_host) {
+        const mark = document.createElement("span");
+        mark.className = "host-mark";
+        mark.title = "房主";
+        mark.setAttribute("role", "img");
+        mark.setAttribute("aria-label", "房主");
+        chip.append(mark);
+      }
       chip.title = m.health ? m.health_note || "" : "还不知道";
       ui.people.appendChild(chip);
     }
@@ -1380,8 +1438,7 @@
       sw.className = "switch";
       sw.setAttribute("role", "switch");
       sw.setAttribute("aria-checked", String(!!m.can_control));
-      sw.setAttribute("aria-label", `${m.name} 控制播放`);
-      sw.textContent = m.can_control ? "● 开" : "○ 关";
+      sw.setAttribute("aria-label", `${m.name} 控制播放`);   // the knob is drawn by player.css
       sw.addEventListener("click", () => {
         send({ type: "grant", target: m.id, allowed: !m.can_control });
       });
@@ -1391,8 +1448,7 @@
       crown.type = "button";
       crown.className = "make-host";
       crown.title = "设为房主";
-      crown.setAttribute("aria-label", `把房主交给 ${m.name}`);
-      crown.textContent = "👑";
+      crown.setAttribute("aria-label", `把房主交给 ${m.name}`);   // crown icon: player.css
       crown.addEventListener("click", () => {
         if (window.confirm(`把房主交给「${m.name}」？你会保留控制播放的权限。`)) {
           send({ type: "transfer", target: m.id });
@@ -1443,13 +1499,15 @@
     syncTick();
   }
 
-  ui.play.addEventListener("click", () => {
+  function togglePlay() {
     if (!room) return;
     const pos = currentPosition();
     sendControl(room.playing ? "pause" : "play", pos);
-  });
+  }
+  ui.play.addEventListener("click", togglePlay);
+  ui.bigPlay.addEventListener("click", togglePlay);
 
-  ui.seek.addEventListener("input", () => { seeking = true; renderProgress(); });
+  ui.seek.addEventListener("input", () => { seeking = true; touch(); renderProgress(); });
   ui.seek.addEventListener("change", () => {
     seeking = false;
     const dur = currentDuration();
@@ -1460,7 +1518,8 @@
   function applyVolume() {
     ui.volume.value = String(Math.round(volume * 100));
     setRangeFill(ui.volume, muted ? 0 : volume);
-    ui.mute.textContent = muted || volume === 0 ? "🔇" : "🔊";
+    ui.mute.classList.toggle("muted", muted || volume === 0);
+    ui.mute.setAttribute("aria-label", muted || volume === 0 ? "取消静音" : "静音");
     if (player && player.ready) player.setVolume(volume, muted);
   }
   ui.volume.addEventListener("input", () => {
@@ -1517,14 +1576,29 @@
     } else if (room) {
       seekTo(expectedPosition(room), { keepPaused: true });
     }
+    renderBigPlay();
+    touch();
     syncTick();
   });
 
-  ui.permBtn.addEventListener("click", () => {
-    const open = ui.panel.hidden;
-    ui.panel.hidden = !open;
-    ui.permBtn.setAttribute("aria-expanded", String(open));
-  });
+  ui.permBtn.addEventListener("click", () => setPanel(ui.panel.hidden ? "perm" : null));
+  ui.epBtn.addEventListener("click", () => setPanel(ui.epPanel.hidden ? "ep" : null));
+  ui.shield.addEventListener("click", () => setPanel(null));
+
+  // Any sign of life brings the overlay controls back.
+  for (const type of ["pointermove", "pointerdown", "keydown", "touchstart", "focusin"]) {
+    document.addEventListener(type, touch, { passive: true });
+  }
+  // A touch tap that lands on a faded-out control only wakes the controls.
+  ui.stageWrap.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "touch" && ui.stageWrap.classList.contains("idle")) wokeAt = performance.now();
+  }, true);
+  ui.stageWrap.addEventListener("click", (e) => {
+    if (performance.now() - wokeAt > 700) return;
+    wokeAt = -1e9;
+    e.stopPropagation();
+    e.preventDefault();
+  }, true);
 
   ui.nextLine.addEventListener("click", () => {
     if (preparing) return;
@@ -1719,6 +1793,7 @@
     window.WatchCast.on("available", renderCastButton);
     window.WatchCast.on("session", onCastSession);
   }
+  ui.roomCode.textContent = roomId;
   applyVolume();
   renderControls();
   renderStartButton();

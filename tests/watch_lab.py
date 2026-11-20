@@ -250,10 +250,11 @@ class Client:
         """模拟切到后台（hidden=True，定时器最多每 period_ms 跑一次）/ 切回来。页面要用 bg_shim=True 打开。"""
         await self.page.evaluate("([h, p]) => window.__bg.set(h, p)", [hidden, period_ms])
 
-    async def open_panel(self):
-        hidden = await self.page.evaluate("() => document.getElementById('perm-panel').hidden")
+    async def open_panel(self, which="perm"):
+        """打开房主的悬浮面板：perm = 权限（成员 / 换视频），ep = 选集 / 换源。同一时间只开一个。"""
+        hidden = await self.page.evaluate("(id) => document.getElementById(id).hidden", f"{which}-panel")
         if hidden:
-            await self.page.click("#perm-btn")
+            await self.page.click(f"#{which}-btn")
 
     async def close(self):
         await self.ctx.close()

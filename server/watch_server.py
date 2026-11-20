@@ -96,7 +96,8 @@ STATIC_FILES = {
     "index.html": "text/html",
     "player.js": "application/javascript",
     "cast.js": "application/javascript",
-    "style.css": "text/css",
+    "style.css": "text/css",          # admin.html
+    "player.css": "text/css",         # index.html（房间页）
     "admin.js": "application/javascript",
 }
 ADMIN_COOKIE = "watch_admin"

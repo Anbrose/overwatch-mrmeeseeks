@@ -197,7 +197,7 @@ async def main(args):
         check("房主刷新后两边贴着真值", max_abs(drifts(seg[-2:], "host")) <= 0.5 and max_abs(drifts(seg[-2:], "viewer")) <= 0.5)
 
         # ---- 8. 选集 ----
-        await host.open_panel()
+        await host.open_panel("ep")
         v0 = room.version
         await host.page.click("#episodes button:nth-child(2)")
         ok, seg = await lab.wait_until(lambda s: s["version"] == v0 + 1 and s["host"]["has_video"] and s["viewer"]["has_video"]

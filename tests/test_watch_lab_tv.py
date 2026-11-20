@@ -104,7 +104,7 @@ async def main(args):
         await lab.run(3, "继续后稳定")
 
         # ---- 3. 房主手动换源 ----
-        await host.open_panel()
+        await host.open_panel("ep")
         v0, i0 = room.version, room.video.tv.index
         before = await lab.take()
         await host.page.click("#tv-next")

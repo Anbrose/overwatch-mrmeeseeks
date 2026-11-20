@@ -569,6 +569,8 @@ async def test_pages():
         check("static 白名单内 200", r.status == 200 and "javascript" in r.content_type)
         r = await client.get("/static/style.css")
         check("static css 类型", r.status == 200 and r.content_type == "text/css")
+        r = await client.get("/static/player.css")
+        check("房间页的 player.css 在 static 白名单", r.status == 200 and r.content_type == "text/css")
         r = await client.get("/static/cast.js")
         check("cast.js 在 static 白名单", r.status == 200 and "javascript" in r.content_type
               and "WatchCast" in await r.text())
