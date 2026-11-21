@@ -470,6 +470,7 @@ class Bench:
             # 直播中继只连公网地址；实验室的上游在 127.0.0.1，放行它
             tv_kw = dict(ip_allowed=allow_loopback, tv_session_factory=lambda: tv_net.make_session(allow_loopback),
                          tv_prepare_timeout=10.0)
+        self._tv_kw = tv_kw
         self.server = ws_mod.WatchServer(self.rooms, NoSources(), "127.0.0.1", 0, origin="http://127.0.0.1",
                                          allow_http=True, **tv_kw)
         self.site = TestClient(TestServer(self.server.app))
@@ -512,6 +513,25 @@ class Bench:
                 await self.cdn.close()
             logging.getLogger().removeHandler(self.capture)
             shutil.rmtree(self.tmp, ignore_errors=True)
+
+    async def restart_server(self, down=3.0):
+        """模拟一次部署：房间存盘、服务器停掉，过 down 秒在同一个端口起一个全新的
+        （新的 RoomManager，只靠存盘文件恢复）。返回恢复的房间数；之后 self.rooms / self.server 是新的。"""
+        from watch_store import RoomStore
+        path = os.path.join(self.tmp, "rooms.json")
+        port = self.site.port
+        self.server.room_store = RoomStore(path, self.rooms)
+        self.server.save_rooms(force=True)
+        await self.site.close()
+        await asyncio.sleep(down)
+        self.rooms = RoomManager()
+        store = RoomStore(path, self.rooms)
+        restored = store.restore()
+        self.server = ws_mod.WatchServer(self.rooms, NoSources(), "127.0.0.1", port, origin="http://127.0.0.1",
+                                         allow_http=True, room_store=store, **self._tv_kw)
+        self.site = TestClient(TestServer(self.server.app, port=port))
+        await self.site.start_server()
+        return restored
 
     def live_source(self, name, prefix):
         """起一路 ffmpeg 实时直播（滑动窗口 HLS），挂在 CDN 的 prefix 下；返回 LiveSource（.stop() 掐断它）。"""

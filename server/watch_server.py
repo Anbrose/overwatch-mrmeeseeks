@@ -83,6 +83,7 @@ from watch_sources import BILI_REFERER, DashStreams, Sources, VideoUnavailable
 log = logging.getLogger(__name__)
 
 TICK_SECONDS = 5
+_ROOM_ID_RE = re.compile(r"[0-9a-z]{1,12}")     # 日志里只写像房间号的东西
 HELLO_TIMEOUT = 10
 REFRESH_MARGIN = 60          # 地址过期前多少秒就重新取
 CHUNK = 64 * 1024
@@ -256,13 +257,16 @@ class WatchServer:
                  admin_key: str | None = None,
                  requests: RequestStore | None = None, stats: SystemStats | None = None,
                  channel_name: Callable[[int], str | None] | None = None,
-                 geo: GeoDB | None = None, blocks: BlockLog | None = None, admin_password: str | None = None):
+                 geo: GeoDB | None = None, blocks: BlockLog | None = None, admin_password: str | None = None,
+                 room_store=None):
         """origin = WATCH_PUBLIC_URL（探测片段跨域用）；recorder 自己注册监听，这里只定时调 tick()。
         allow_http 仅供测试（连本地 http 假上游），生产不要传；vod_prepare_timeout 测试里调小。
         tv_session_factory / ip_allowed 仅供测试放行 127.0.0.1，生产用默认（只连公网地址）。
         admin_key 为空时没有管理后台（/admin 一律 404）；admin_password 配了就要密钥 + 密码一起输。
         requests、stats、channel_name 只给管理后台用。
-        geo 为 None 时不限制地区；blocks 记被拦的 IP。"""
+        geo 为 None 时不限制地区；blocks 记被拦的 IP。
+        room_store（watch_store.RoomStore）：每个 tick 和关闭时存一次房间，重启后由 bot 恢复。"""
+        self.room_store = room_store
         self.geo = geo
         self.blocks = blocks
         self.rooms = rooms
@@ -290,6 +294,7 @@ class WatchServer:
         self.ip_allowed = ip_allowed
         self.tv_prepare_timeout = tv_prepare_timeout
         self.conns: dict[str, set[_Conn]] = {}
+        self._closing = False
         self._streams: dict[tuple[str, int], DashStreams] = {}
         self._stream_locks: dict[tuple[str, int], asyncio.Lock] = {}
         self._playlists: dict[tuple[str, int], Playlist] = {}
@@ -337,9 +342,21 @@ class WatchServer:
         log.info("watch server listening on %s:%s", self.host, self.port)
 
     async def close(self) -> None:
+        self.save_rooms(force=True)          # 先存盘：这时成员还算在线，重启后给他们留着身份
         if self._runner is not None:
             await self._runner.cleanup()     # 依次触发 on_shutdown、等处理函数结束、on_cleanup
             self._runner = None
+
+    def save_rooms(self, force: bool = False) -> None:
+        """把房间存盘（没配 room_store 就什么都不做）。关闭开始后不再存：连接一断成员就都成了离线。"""
+        if self.room_store is None or self._closing:
+            return
+        if force:
+            self._closing = True
+        try:
+            self.room_store.flush(force)
+        except Exception:
+            log.exception("watch rooms save failed")
 
     async def _shutdown(self, _app) -> None:
         """先关掉所有 WebSocket，否则 AppRunner.cleanup() 会等到 shutdown_timeout 才继续。"""
@@ -377,6 +394,7 @@ class WatchServer:
                     self.recorder.tick()
                 except Exception:
                     log.exception("watch progress tick failed")
+            self.save_rooms()
             try:
                 self._stats_now()      # 定期采样，后台页面打开时 CPU、网速马上有数
             except Exception:
@@ -742,6 +760,8 @@ class WatchServer:
                 pass   # 客户端已经走了
 
         if self.rooms.get(room_id) is None:
+            log.info("watch ws: room %s does not exist (closed, or lost in a restart); told the page it ended",
+                     room_id if _ROOM_ID_RE.fullmatch(room_id) else "<malformed id>")
             await end()
             return ws
         if blocked is not None:

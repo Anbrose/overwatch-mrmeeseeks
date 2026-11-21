@@ -233,7 +233,18 @@ class RoomManager:
                     owner_key=secrets.token_urlsafe(16), video=video,
                     playback=Playback(False, 0.0, now), empty_since=now, created_at=now, now=self.clock)
         self.rooms[room_id] = room
+        log.info("watch room %s created: %s %r (channel %s)", room_id, video.source, video.title, channel_id)
         return room
+
+    def adopt(self, room: Room) -> bool:
+        """把重启前存盘的房间接回来（见 watch_store）。不查 B 站 / 直播名额：它们重启前就占着了。
+        房间号已经在用返回 False。"""
+        if room.room_id in self.rooms:
+            return False
+        self.rooms[room.room_id] = room
+        log.info("watch room %s restored: %s %r (channel %s, %d member(s) expected back)", room.room_id,
+                 room.video.source, room.video.title, room.channel_id, len(room.present()))
+        return True
 
     def get(self, room_id: str) -> Room | None:
         room = self.rooms.get(room_id)
@@ -422,12 +433,14 @@ class RoomManager:
                 # 从最后一个人宽限期结束的那一刻开始算
                 room.empty_since = max((m.gone_since + GRACE_SECONDS for m in expired), default=now)
             if room.empty_since is not None and now - room.empty_since >= EMPTY_TTL_SECONDS:
-                self.close(room.room_id)
+                self.close(room.room_id, f"empty for {EMPTY_TTL_SECONDS} s")
 
-    def close(self, room_id: str) -> None:
-        """关闭房间：标记 closed、通知 listener（kind="closed"），并从 rooms 里删掉。"""
+    def close(self, room_id: str, reason: str = "") -> None:
+        """关闭房间：标记 closed、通知 listener（kind="closed"），并从 rooms 里删掉。reason 只进日志。"""
         room = self.rooms.pop(room_id, None)
         if room is None or room.closed:
             return
         room.closed = True
+        log.info("watch room %s closed: %s (open for %.0f s, %d present, %s %r)", room_id, reason or "no reason given",
+                 self.clock() - room.created_at, len(room.present()), room.video.source, room.video.title)
         self._notify(room, "closed")

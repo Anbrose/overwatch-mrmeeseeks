@@ -33,6 +33,7 @@
 | `server/vod_search.py` | 一起看按片名搜索：解析 `WATCH_VOD_SOURCES`，并发查询采集接口（`?ac=detail&wd=`），只留 https 的 `.m3u8` 片源，多个接口按「片名+年份」合并、按贴近程度排序，最多 10 条 |
 | `server/vod_playlist.py` | 一起看 vod 播放列表：取 m3u8（master 跟进一层最高码率）、改写成全绝对 https 地址（密钥地址改成本服务器的 `key{n}`，原地址记在 `Playlist.keys`，`fetch_key` 取）、去掉片中插入的广告、试播探测（带 Origin 的 Range 请求，m3u8 和片段的跳转链也只认 https）、按线路找第一条能播的；`WatchServer.prepare_vod` 给整个过程加 45 秒总时限（`VOD_PREPARE_TIMEOUT`），超时按「这一集暂时没有能播的片源」处理 |
 | `server/watch_progress.py` | 一起看按频道的观看进度（`STATE_DIR/watch_progress.json`）：只记 vod 房间，少于 30 秒不记，房间里没人时不记（最后一个人宽限期结束时记最后一次），坏文件按空处理；生成「上次一起看到…」文案 |
+| `server/watch_store.py` | 一起看房间存盘（`STATE_DIR/watch_rooms.json`）：每个 tick 有变化就写，有房间时至少每 60 秒写一次；启动时读回来，部署重启后房间、播放位置、成员身份（重启前在线的人有 120 秒宽限连回来）和房主都还在。停机超过 11 分钟的存盘不恢复；B 站地址、m3u8、密钥、直播流这些缓存不存，按需再取。文件里有 viewer_id 和房主密钥，权限 600 |
 | `server/tv_net.py` | 一起看电视直播的出站请求层（防 SSRF）：`is_public_ip` 只放行公网地址，`FilteringResolver` 丢掉不通过 `ip_allowed` 的 DNS 结果，`open_url` 手动跟随跳转、每一跳都检查。直播的所有出站请求（列表下载、探测、中继）都走这里 |
 | `server/tv_channels.py` | 一起看电视直播的频道表：解析 `WATCH_TV_LISTS` 里的 m3u 列表（BOM、CRLF、`#EXTVLCOPT` 都能处理）、名称归一化和别名、把查询匹配到频道（完全匹配 / 最多 5 个包含匹配）、启动时和每 6 小时重新下载并探测（并发 16、单次 8 秒）、落盘到 `STATE_DIR/tv_channels.json`（坏文件按空表处理） |
 | `server/tv_stream.py` | 一起看电视直播的流处理：跟进主列表、只选 H.264 且不超过 8 Mbps 的最高清晰度、从 TS 的 PMT 识别 H.265、探测一条地址能不能播（最新分片至少 1 KB） |

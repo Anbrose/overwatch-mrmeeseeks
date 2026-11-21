@@ -442,8 +442,12 @@ class WatchUI:
             log.exception("Could not update watch card for room %s", room.room_id)
 
     async def end_stale(self, reason: str = "服务器重启") -> None:
-        """把 CardStore 里遗留的卡片（重启前的房间）编辑成已结束，然后清空。"""
+        """把 CardStore 里遗留的卡片（重启前的房间）编辑成已结束并去掉；
+        重启后接回来的房间（watch_store）还开着，它们的卡片留着。"""
+        alive = {(r.channel_id, r.message_id) for r in self.rooms.active() if r.message_id is not None}
         for channel_id, message_id in self.cards.all():
+            if (channel_id, message_id) in alive:
+                continue
             if self.edit is not None:
                 try:
                     await self.edit(channel_id, message_id, ended_text(reason=reason), None)
