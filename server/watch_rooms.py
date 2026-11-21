@@ -49,19 +49,20 @@ class TvRoomsFull(Exception):
 @dataclass
 class VodInfo:
     show: Show
-    episode: int                   # 从 0 开始
+    episode: int                   # 从 0 开始；line 这条线路上的序号（带名字的分段各线路顺序不同，见 Show.numbered）
     line: int                      # show.lines 的下标
     resume: object | None = None   # 建房时的观看进度快照（Progress），房间只存不改
 
 
-def vod_title(show: Show, episode: int) -> str:
+def vod_title(show: Show, episode: int, line: int = 0) -> str:
     if show.episode_count == 1:
         return show.title
-    return f"{show.title} · 第 {episode + 1} 集"
+    return f"{show.title} · {show.episode_name(line, episode)}"
 
 
 def vod_video(info: VodInfo, duration: float) -> Video:
-    return Video(source="vod", id=info.show.key, page=info.episode + 1, title=vod_title(info.show, info.episode),
+    return Video(source="vod", id=info.show.key, page=info.episode + 1,
+                 title=vod_title(info.show, info.episode, info.line),
                  duration=duration, url=info.show.lines[info.line].episodes[info.episode].url, vod=info)
 
 

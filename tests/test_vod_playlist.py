@@ -398,6 +398,22 @@ async def test_find_playable():
         long = vp.join_reasons(["甲：" + "很长" * 300])
         check("原因过长会截断", len(long) == vp.DETAIL_MAX_CHARS and long.endswith("…"))
         check("没有线路", vp.join_reasons([]) == "没有片源线路")
+
+        # 带名字的分段：各线路顺序不同，换线路要落在副标题相同的那一段上
+        def named(name, d, labels):
+            return Line(name, [Episode(lb, f"{base}/{d}/index.m3u8") for lb in labels])
+        variety = Show("v", "综艺", 2026, "综艺", [
+            named("甲", "l0", ["第20261029期上", "第20261029期下", "第20261030期加更"]),
+            named("乙", "l1", ["20261029上", "20261029下"]),
+            named("丙", "l2", ["20261030加更版", "20261029下", "20261029上"])])
+        idx, _ = await vp.find_playable(s, variety, 0, 1, origin, allow_http=True, ref_line=0)
+        check("分段：甲线第 1 个换线路 → 丙线有同名的一段", idx == 2 and variety.locate(0, 0, idx) == 2)
+        variety.lines[2].episodes.pop()
+        try:
+            await vp.find_playable(s, variety, 0, 1, origin, allow_http=True, ref_line=0)
+            check("分段：别的线路没有同名的一段 → 报错", False)
+        except PlaylistError as e:
+            check("分段：别的线路没有同名的一段 → 报错", "来源3：没有「第20261029期上」" in e.detail)
     await srv.close()
 
 

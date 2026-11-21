@@ -75,7 +75,7 @@ from sysstats import SystemStats
 from tv_channels import Candidate, Channel
 from vod_playlist import NO_PLAYABLE, Playlist, PlaylistError, fetch_key, fetch_playlist, find_playable
 from vod_search import Show
-from watch_progress import ProgressRecorder, resume_line
+from watch_progress import ProgressRecorder, resume_line, resume_target
 from watch_requests import KIND_LABEL, RequestStore
 from watch_rooms import Room, RoomManager, TvInfo, Video, VodInfo, tv_video, vod_video
 from watch_sources import BILI_REFERER, DashStreams, Sources, VideoUnavailable
@@ -558,7 +558,7 @@ class WatchServer:
             "source_label": source,
             "show_title": vod.show.title if vod is not None else None,
             "episode": vod.episode if vod is not None else None,
-            "episode_count": vod.show.episode_count if vod is not None else None,
+            "episode_count": vod.show.episode_total(vod.line) if vod is not None else None,
             "playing": room.playback.playing,
             "finished": bool(v.duration and pos >= v.duration),
             "position": pos,
@@ -615,11 +615,17 @@ class WatchServer:
         resume = None
         if v.vod is not None:
             show = v.vod.show
-            video.update(episode=v.vod.episode, episode_count=show.episode_count,
+            # episodes：带名字的分段（综艺的「第3期上」之类）给出当前线路每一段的副标题，选集表按它画；
+            # 按顺序编号的剧是 None，选集表画数字。episode 都是当前线路上的序号。
+            video.update(episode=v.vod.episode, episode_count=show.episode_total(v.vod.line),
+                         episodes=show.episode_labels(v.vod.line),
+                         episode_id=show.episode_id(v.vod.line, v.vod.episode),
                          line=v.vod.line, line_count=len(show.lines), show_title=show.title)
             snap = v.vod.resume
-            if snap is not None:
-                resume = {"episode": snap.episode, "position": snap.position,
+            target = resume_target(show, v.vod.line, snap) if snap is not None else None
+            if target is not None:
+                # 快照在别的线路上时 episode 是 None：网页端据此知道“还没到快照那一集”
+                resume = {"episode": target[1] if target[0] == v.vod.line else None, "position": snap.position,
                           "text": resume_line(snap, show.episode_count)}
         return {
             "type": "state",
@@ -909,7 +915,7 @@ class WatchServer:
         is_host, can_control = self._you(room, conn.viewer_id)
         if kind == "episode":
             index = data.get("index")
-            if not (is_host and type(index) is int and 0 <= index < info.show.episode_count):
+            if not (is_host and type(index) is int and 0 <= index < info.show.episode_total(info.line)):
                 return
             self._start_busy(conn, self._vod_switch(conn, kind, index))
         elif kind == "next_line":
@@ -917,23 +923,26 @@ class WatchServer:
                 self._start_busy(conn, self._vod_switch(conn, kind))
         elif kind == "resume":
             snap = info.resume
-            if (can_control and snap is not None and 0 <= snap.episode < info.show.episode_count
+            if (can_control and snap is not None and resume_target(info.show, info.line, snap) is not None
                     and _finite(snap.position)):
                 self._start_busy(conn, self._vod_switch(conn, kind))
 
     # ---------------- vod ----------------
     async def prepare_vod(self, show: Show, episode: int, start_line: int = 0,
-                          resume: object | None = None) -> tuple[Video, Playlist]:
+                          resume: object | None = None, ref_line: int | None = None) -> tuple[Video, Playlist]:
         """从 start_line 起找能播这一集的线路，返回 (vod 视频, 改写过的播放列表)；
-        都不能播或超过 vod_prepare_timeout 秒抛 PlaylistError。建房、选集、换片源、续看、自动下一集都走这里。"""
+        都不能播或超过 vod_prepare_timeout 秒抛 PlaylistError。建房、选集、换片源、续看、自动下一集都走这里。
+        episode 是 ref_line（默认 start_line）上的序号；落到别的线路时换算成那条线路上的序号（Show.locate）。"""
+        if ref_line is None:
+            ref_line = start_line % len(show.lines) if show.lines else 0
         try:
             line, playlist = await asyncio.wait_for(
-                find_playable(self._vod_http(), show, episode, start_line, self.origin, self.allow_http),
+                find_playable(self._vod_http(), show, episode, start_line, self.origin, self.allow_http, ref_line),
                 self.vod_prepare_timeout)
         except asyncio.TimeoutError:
             log.info("watch vod prepare timed out (%r episode %d)", show.title, episode)
             raise PlaylistError(NO_PLAYABLE, f"{self.vod_prepare_timeout:g} 秒内没找到能播的线路，资源站太慢") from None
-        return vod_video(VodInfo(show, episode, line, resume), playlist.duration), playlist
+        return vod_video(VodInfo(show, show.locate(ref_line, episode, line), line, resume), playlist.duration), playlist
 
     def attach_playlist(self, room: Room, playlist: Playlist) -> None:
         """把播放列表缓存在房间当前版本下；每次换视频成功后都要调用。"""
@@ -948,7 +957,10 @@ class WatchServer:
             info, version = room.video.vod, room.version
             if kind == "resume" and info.resume is None:
                 return
-            if kind == "resume" and info.resume.episode == info.episode:
+            target = resume_target(info.show, info.line, info.resume) if kind == "resume" else None
+            if kind == "resume" and target is None:
+                return
+            if kind == "resume" and target == (info.line, info.episode):
                 # 已经在快照那一集：不重新取播放列表，沿用当前版本的缓存
                 playlist = self._playlists.get((rid, version))
                 if self.rooms.resume(rid, vid, room.video, info.resume.position) and playlist is not None:
@@ -957,9 +969,10 @@ class WatchServer:
             if kind == "episode":
                 video, playlist = await self.prepare_vod(info.show, index, info.line, info.resume)
             elif kind == "next_line":
-                video, playlist = await self.prepare_vod(info.show, info.episode, info.line + 1, info.resume)
+                video, playlist = await self.prepare_vod(info.show, info.episode, info.line + 1, info.resume,
+                                                         ref_line=info.line)
             else:
-                video, playlist = await self.prepare_vod(info.show, info.resume.episode, info.line, info.resume)
+                video, playlist = await self.prepare_vod(info.show, target[1], target[0], info.resume)
             room = self.rooms.get(rid)
             if room is None or room.video.vod is None:
                 return
@@ -985,7 +998,7 @@ class WatchServer:
     def _start_auto_next(self, room: Room) -> None:
         """rooms 的同步回调里调用：记下当前版本号，后台准备下一集。"""
         info = room.video.vod
-        if info is None or info.episode + 1 >= info.show.episode_count:
+        if info is None or info.episode + 1 >= info.show.episode_total(info.line):
             return
         try:
             loop = asyncio.get_running_loop()

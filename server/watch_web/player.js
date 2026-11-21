@@ -145,6 +145,7 @@
   let lastDrift = 0;
   let health = { level: "", note: "", sentAt: 0 };
   let stallBtnMuteUntil = 0;
+  let episodesShown = null;   // list + current episode last painted: scroll to the current one once
   let episodesKey = null;     // which show/episode count the episode grid was built for
   // Live TV, reset by buildPlayer:
   let liveWasPlaying = false; // room was playing at the last live sync tick
@@ -923,10 +924,16 @@
     if (switching) return "\n正在自动换下一个来源…";
     const v = room && room.video;
     const count = v ? Number(v.line_count) || 0 : 0;
-    if (v && autoSwitch.episode === v.episode && count > 1 && autoSwitch.tried.length >= count) {
+    if (v && autoSwitch.episode === episodeId(v) && count > 1 && autoSwitch.tried.length >= count) {
       return "\n已自动试过全部来源，都放不出来";
     }
     return "\n房主可以在 🔑 面板里「换一个片源」";
+  }
+
+  // Titled segments (variety shows) sit at a different index on every line, so
+  // the server names the episode; numbered shows fall back to the index.
+  function episodeId(v) {
+    return v.episode_id != null ? String(v.episode_id) : String(v.episode);
   }
 
   function tryAutoSwitch(reason) {
@@ -934,7 +941,7 @@
     if (!me.isHost || !v || v.source !== "vod" || preparing) return false;
     const count = Number(v.line_count) || 0;
     if (count <= 1) return false;
-    if (autoSwitch.episode !== v.episode) autoSwitch = { episode: v.episode, tried: [] };
+    if (autoSwitch.episode !== episodeId(v)) autoSwitch = { episode: episodeId(v), tried: [] };
     const line = Number(v.line) || 0;
     if (autoSwitch.tried.includes(line)) return false;    // the server came back around: give up
     autoSwitch.tried.push(line);
@@ -1329,7 +1336,7 @@
   let resumeDismissed = null;
   try { resumeDismissed = localStorage.getItem(RESUME_KEY); } catch { /* private mode etc. */ }
   function resumeSignature(r) {
-    return `${r.episode}|${Math.round(Number(r.position) || 0)}|${r.text || ""}`;
+    return `${Math.round(Number(r.position) || 0)}|${r.text || ""}`;
   }
 
   function renderResume() {
@@ -1376,18 +1383,24 @@
     ui.vodPanel.hidden = !vod;
     if (!vod) return;
     const v = room.video;
-    const count = Number(v.episode_count) || 0;
-    const key = `${v.id}\n${count}`;
+    // Numbered shows get a grid of numbers. Titled segments ("第3期上",
+    // "沉浸版…") get one button per segment with the source's own label; that
+    // list belongs to the current line, so it is rebuilt when the line changes.
+    const names = Array.isArray(v.episodes) ? v.episodes : null;
+    const count = names ? names.length : Number(v.episode_count) || 0;
+    const key = names ? `${v.id}\n${v.line}\n${names.join("\n")}` : `${v.id}\n${count}`;
     if (key !== episodesKey) {
       episodesKey = key;
       ui.episodes.textContent = "";
+      ui.episodes.classList.toggle("titled", !!names);
       for (let i = 0; i < count; i++) {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "ep";
-        btn.textContent = String(i + 1);
-        btn.title = `第 ${i + 1} 集`;
-        btn.setAttribute("aria-label", `第 ${i + 1} 集`);
+        const name = names ? String(names[i]) : `第 ${i + 1} 集`;
+        btn.textContent = names ? name : String(i + 1);
+        btn.title = name;
+        btn.setAttribute("aria-label", name);
         btn.addEventListener("click", () => {
           if (preparing) return;
           send({ type: "episode", index: i });
@@ -1396,12 +1409,15 @@
         ui.episodes.appendChild(btn);
       }
     }
+    const shown = `${key}\n${v.episode}`;
     Array.from(ui.episodes.children).forEach((btn, i) => {
       const current = i === v.episode;
       btn.classList.toggle("current", current);
       if (current) btn.setAttribute("aria-current", "true"); else btn.removeAttribute("aria-current");
       btn.disabled = preparing;
+      if (current && names && shown !== episodesShown) btn.scrollIntoView({ block: "nearest" });
     });
+    episodesShown = shown;
     // Sources are numbered, never named: viewers should not see which site a stream comes from.
     ui.lineLabel.textContent = `来源${(Number(v.line) || 0) + 1}（共 ${v.line_count || 0} 个）`;
     ui.nextLine.disabled = preparing || (Number(v.line_count) || 0) <= 1;
