@@ -1,6 +1,8 @@
 """一起看按频道记录的观看进度（只记按片名搜索的 vod 房间），用于下次续看。
 
-存储形状：{"<channel_id>": {"<show key>": {"title", "episode", "position", "updated_at"}}}
+存储形状：{"<channel_id>": {"<show key>": {"title", "episode", "position", "updated_at", "label"}}}
+label 只有带名字的分段（综艺的「第3期上」之类，见 Show.numbered）才有：这类片子各线路顺序不同，
+序号 episode 只在当时那条线路上有意义，续看要按 label 找回同一段。
 本模块不依赖 watch_ui（watch_ui 会反过来用它），所以自带时间格式化。
 """
 from __future__ import annotations
@@ -14,6 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from vod_search import Show
 from watch_rooms import Room, RoomManager
 
 log = logging.getLogger(__name__)
@@ -29,6 +32,7 @@ class Progress:
     episode: int       # 从 0 开始
     position: float
     updated_at: float
+    label: str = ""    # 带名字的分段的副标题；按顺序编号的剧是 ""
 
 
 class ProgressStore:
@@ -44,7 +48,8 @@ class ProgressStore:
         try:
             raw = json.loads(self.path.read_text(encoding="utf-8"))
             return {str(int(ch)): {str(k): Progress(str(v["title"]), int(v["episode"]),
-                                                    float(v["position"]), float(v["updated_at"]))
+                                                    float(v["position"]), float(v["updated_at"]),
+                                                    str(v.get("label") or ""))
                                    for k, v in shows.items()}
                     for ch, shows in raw.items()}
         except FileNotFoundError:
@@ -62,7 +67,8 @@ class ProgressStore:
             fd, tmp = tempfile.mkstemp(dir=folder, suffix=".tmp")
             with os.fdopen(fd, "w", encoding="utf-8") as f:
                 json.dump({ch: {k: {"title": p.title, "episode": p.episode, "position": p.position,
-                                    "updated_at": p.updated_at} for k, p in shows.items()}
+                                    "updated_at": p.updated_at, **({"label": p.label} if p.label else {})}
+                                for k, p in shows.items()}
                            for ch, shows in self.data.items()}, f, ensure_ascii=False)
             os.replace(tmp, self.path)
         except OSError:
@@ -98,7 +104,8 @@ class ProgressRecorder:
         now = self.rooms.clock()
         self._last[room.room_id] = now
         pos = room.playback.position_at(now, room.video.duration)
-        self.store.record(room.channel_id, vod.show.key, Progress(vod.show.title, vod.episode, pos, now))
+        label = "" if vod.show.numbered else vod.show.episode_name(vod.line, vod.episode)
+        self.store.record(room.channel_id, vod.show.key, Progress(vod.show.title, vod.episode, pos, now, label))
 
     def on_event(self, room: Room, kind: str) -> None:
         if kind == "playback":
@@ -134,5 +141,23 @@ def _fmt_time(seconds: float) -> str:
 
 def resume_line(p: Progress, show_episode_count: int) -> str:
     d = datetime.fromtimestamp(p.updated_at, _TZ)
-    ep = "" if show_episode_count == 1 else f"第 {p.episode + 1} 集 "
+    ep = "" if show_episode_count == 1 else f"{p.label} " if p.label else f"第 {p.episode + 1} 集 "
     return f"上次一起看到 {ep}{_fmt_time(p.position)}（{d.month}月{d.day}日）"
+
+
+def seen_text(p: Progress) -> str:
+    """搜索结果选单里的「上次看到…」。"""
+    return f"上次看到 {p.label}" if p.label else f"上次看到第 {p.episode + 1} 集"
+
+
+def resume_target(show: Show, line: int, p: Progress) -> tuple[int, int] | None:
+    """进度快照对应现在的哪条线路、第几个：(线路, 序号)；找不到返回 None。
+    带名字的分段按副标题找，先看当前线路 line，再看别的线路；
+    没有副标题（按顺序编号的剧，或旧记录）就按序号落在当前线路上。"""
+    if p.label and not show.numbered:
+        for i in [line, *(k for k in range(len(show.lines)) if k != line)]:
+            at = show.find_label(i, p.label)
+            if at is not None:
+                return i, at
+        return None
+    return (line, p.episode) if 0 <= p.episode < show.episode_total(line) else None

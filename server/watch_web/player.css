@@ -337,6 +337,16 @@ button:disabled { cursor: not-allowed; }
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22);
   transition: background-color var(--dur-s) var(--ease), color var(--dur-s) var(--ease), box-shadow var(--dur-s) var(--ease), opacity var(--dur-s) var(--ease), scale var(--dur-s) var(--ease);
 }
+/* 带名字的分段（综艺的「第3期上 / 沉浸版 / 加更版」）：一行两个，写资源站给的副标题 */
+.episodes.titled { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.episodes.titled .ep {
+  height: auto;
+  min-height: 44px;
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
 .ep:hover:not(:disabled) { background-color: rgba(255, 255, 255, .26); }
 .ep.current, .ep.current:hover {
   background-color: #fff;
@@ -769,7 +779,7 @@ input[type="range"]:disabled::-moz-range-thumb { background: transparent; box-sh
 }
 @media (max-width: 380px) {
   .volume { display: none; }
-  .episodes { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .episodes:not(.titled) { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 }
 
 @media (prefers-reduced-motion: reduce) {

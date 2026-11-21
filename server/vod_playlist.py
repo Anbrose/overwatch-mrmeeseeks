@@ -300,29 +300,35 @@ async def probe(session: aiohttp.ClientSession, playlist: Playlist, origin: str,
 
 
 async def find_playable(session: aiohttp.ClientSession, show: Show, episode: int, start_line: int,
-                        origin: str, allow_http: bool = False) -> tuple[int, Playlist]:
+                        origin: str, allow_http: bool = False, ref_line: int | None = None) -> tuple[int, Playlist]:
     """从 start_line 起绕一圈，找第一条有这一集、m3u8 能取、片段能探测通的线路。
+    episode 是 ref_line（默认 start_line）上的序号；别的线路上是哪一个由 Show.locate 决定——
+    带名字的分段各线路顺序不同，按副标题对应，对不上就算那条线路没有这一集。
     每条线路跳过的原因记进日志（带线路名）；全都不能播时，原因按线路列在 PlaylistError.detail 里，
     线路只写成「来源N」（N 是线路序号，从 1 起），用户看不到资源站的名字。"""
     n = len(show.lines)
+    if n == 0:
+        raise PlaylistError(NO_PLAYABLE, join_reasons([]))
+    ref = start_line % n if ref_line is None else ref_line
+    name = show.episode_name(ref, episode)
     reasons: list[str] = []
     for k in range(n):
         idx = (start_line + k) % n
         line = show.lines[idx]
-        eps = line.episodes
-        if not 0 <= episode < len(eps):
-            reason = f"没有第 {episode + 1} 集"
+        at = show.locate(ref, episode, idx)
+        if at is None:
+            reason = f"没有{name}" if show.numbered else f"没有「{name}」"
         else:
             try:
-                pl = await fetch_playlist(session, eps[episode].url, allow_http)
+                pl = await fetch_playlist(session, line.episodes[at].url, allow_http)
             except PlaylistError as e:
                 reason = e.detail or "m3u8 不能用"
             else:
                 reason = await probe(session, pl, origin, allow_http)
                 if reason is None:
-                    log.info("watch vod %r ep %d: line %s playable", show.title, episode + 1, line.name)
+                    log.info("watch vod %r %s: line %s playable", show.title, name, line.name)
                     return idx, pl
-        log.info("watch vod %r ep %d: line %s skipped: %s", show.title, episode + 1, line.name, reason)
+        log.info("watch vod %r %s: line %s skipped: %s", show.title, name, line.name, reason)
         reasons.append(f"来源{idx + 1}：{reason}")
     raise PlaylistError(NO_PLAYABLE, join_reasons(reasons))
 

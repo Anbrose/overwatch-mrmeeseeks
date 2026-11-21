@@ -3,6 +3,7 @@
 运行：python tests/test_watch_progress.py
 不联网，不需要 Discord。
 """
+import json
 import os
 import sys
 import tempfile
@@ -13,7 +14,8 @@ from zoneinfo import ZoneInfo
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "server"))
 
-from watch_progress import MIN_POSITION, Progress, ProgressRecorder, ProgressStore, resume_line  # noqa: E402
+from watch_progress import (MIN_POSITION, Progress, ProgressRecorder, ProgressStore, resume_line,  # noqa: E402
+                            resume_target, seen_text)
 from watch_rooms import RoomManager, Video, VodInfo, vod_video  # noqa: E402
 from vod_search import Episode, Line, Show  # noqa: E402
 
@@ -200,6 +202,38 @@ def test_resume_line():
     check("多集", resume_line(p, 7) == "上次一起看到 第 3 集 34:12（10月23日）")
     check("超过一小时", resume_line(Progress("t", 2, 3725, ts), 7) == "上次一起看到 第 3 集 1:02:05（10月23日）")
     check("单集不带第 n 集", resume_line(p, 1) == "上次一起看到 34:12（10月23日）")
+    named = Progress("后会友期", 5, 2052, ts, "第3期上")
+    check("带名字的分段写副标题", resume_line(named, 27) == "上次一起看到 第3期上 34:12（10月23日）"
+          and seen_text(named) == "上次看到 第3期上" and seen_text(p) == "上次看到第 3 集")
+
+
+def test_titled_progress():
+    def line(name, labels):
+        return Line(name, [Episode(lb, f"https://{name}.example/{i}/index.m3u8") for i, lb in enumerate(labels)])
+    show = Show("v", "后会友期", 2026, "综艺", [line("a", ["第20261029期上", "第20261029期下"]),
+                                              line("b", ["20261030加更版", "20261029下", "20261029上"])])
+    now = [1000.0]
+    m = RoomManager(clock=lambda: now[0])
+    s = ProgressStore(None)
+    ProgressRecorder(m, s)
+    r = m.create(7, 42, "甲", vod_video(VodInfo(show, 1, 1), 3000.0))
+    h = m.connect(r.room_id, None, None)
+    m.control(r.room_id, h.viewer_id, "seek", 100.0)
+    p = s.get(7, "v")
+    check("分段的进度带副标题", p is not None and p.episode == 1 and p.label == "20261029下")
+    check("续看按副标题找：当前线路优先", resume_target(show, 1, p) == (1, 1) and resume_target(show, 0, p) == (0, 1))
+    check("当前线路没有就去别的线路找", resume_target(show, 0, Progress("t", 0, 60.0, 1.0, "20261030加更")) == (1, 0))
+    check("哪条线路都没有 → None", resume_target(show, 0, Progress("t", 0, 60.0, 1.0, "第9期")) is None)
+    check("旧记录没有副标题 → 按序号落在当前线路", resume_target(show, 0, Progress("t", 1, 60.0, 1.0)) == (0, 1)
+          and resume_target(show, 0, Progress("t", 2, 60.0, 1.0)) is None)
+    with tempfile.TemporaryDirectory() as d:
+        path = Path(d) / "p.json"
+        st = ProgressStore(path)
+        st.record(1, "v", p)
+        st.record(1, "k", Progress("剧", 2, 60.0, 1.0))
+        back = ProgressStore(path)
+        check("副标题存盘后读得回来，没有的不写", back.get(1, "v").label == "20261029下" and back.get(1, "k").label == ""
+              and "label" not in json.loads(path.read_text(encoding="utf-8"))["1"]["k"])
 
 
 if __name__ == "__main__":
@@ -210,6 +244,7 @@ if __name__ == "__main__":
     test_recorder_tick_interval()
     test_recorder_empty_room()
     test_resume_line()
+    test_titled_progress()
     passed = sum(1 for _, ok in results if ok)
     print(f"\n{passed}/{len(results)} passed")
     sys.exit(0 if passed == len(results) else 1)

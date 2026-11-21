@@ -240,7 +240,48 @@ def test_search_all_fail():
     asyncio.run(run())
 
 
+def titled_show():
+    """综艺：各线路的分段数量、顺序、写法都不一样（照《后会友期》在几个资源站上的样子）。"""
+    def line(name, labels):
+        return vs.Line(name, [Episode(lb, f"https://{name}.example/{i}.m3u8") for i, lb in enumerate(labels)])
+    return vs.Show("k", "后会友期", 2026, "大陆综艺", [
+        line("a", ["第01集"]),
+        line("b", ["第1期", "第2期", "沉浸版第1期", "第3期上", "第3期下"]),
+        line("c", ["第20261022期第01期", "第20261029期上", "第20261029期下", "第20261030期沉浸版上"]),
+        line("d", ["20261022-01", "20261030沉浸版上", "20261029 上", "20261029下"]),
+    ])
+
+
+def test_episode_labels():
+    check("编号写法", [vs.episode_number(x) for x in ("第03集", "3", "EP3", "第 3 话", "第3期上", "20261029", "")]
+          == [3, 3, 3, 3, None, None, None])
+    check("对应用的 key 去掉 第/期/版/空白/括号", vs.episode_key("第20261029期上") == vs.episode_key("20261029 上")
+          and vs.episode_key("20261030沉浸版（上）") == vs.episode_key("第20261030期沉浸上")
+          and vs.episode_key("第3期上") != vs.episode_key("20261029上"))
+    drama = vs.Show("k", "剧", 2020, "剧", [
+        vs.Line("a", [Episode(f"第{i + 1:02d}集", f"https://a/{i}.m3u8") for i in range(3)]),
+        vs.Line("b", [Episode(str(i + 1), f"https://b/{i}.m3u8") for i in range(2)])])
+    check("按顺序编号的剧：序号跨线路通用", drama.numbered and drama.episode_total(1) == 3
+          and drama.episode_labels(0) is None and drama.episode_name(1, 2) == "第 3 集"
+          and drama.locate(0, 1, 1) == 1 and drama.locate(0, 2, 1) is None and drama.start_line() == 0
+          and drama.episode_id(0, 1) == drama.episode_id(1, 1) == "1")
+    movie = vs.Show("k", "片", 2020, "片", [vs.Line("a", [Episode("HD中字", "https://a/0.m3u8")]),
+                                           vs.Line("b", [Episode("正片", "https://b/0.m3u8")])])
+    check("只有一集：副标题不同也算同一集", movie.numbered and movie.locate(0, 0, 1) == 0)
+    s = titled_show()
+    check("带名字的分段：选集表跟着线路", not s.numbered and s.episode_total(1) == 5 and s.episode_total(2) == 4
+          and s.episode_labels(1)[3] == "第3期上" and s.episode_name(2, 1) == "第20261029期上")
+    check("从别的线路最能接上的那条开始", s.start_line() == 2)
+    check("换线路按副标题对应，不按序号", s.locate(2, 1, 3) == 2 and s.locate(2, 3, 3) == 1 and s.locate(2, 0, 3) == 0)
+    check("对不上就是没有这一集", s.locate(1, 3, 2) is None and s.locate(2, 1, 0) is None)
+    check("同一条线路就是原序号", s.locate(1, 4, 1) == 4 and s.locate(1, 9, 1) is None)
+    check("换线路后标识不变", s.episode_id(2, 1) == s.episode_id(3, 2) != s.episode_id(3, 1))
+    shows = vs.parse_detail({"list": [entry(play_url="  第3期  上 $https://x/1.m3u8#" + "长" * 60 + "$https://x/2.m3u8")]}, "甲")
+    check("副标题压掉多余空白并限长", [e.label for e in shows[0].lines[0].episodes] == ["第3期 上", "长" * vs.LABEL_MAX])
+
+
 if __name__ == "__main__":
+    test_episode_labels()
     test_parse_sources_env()
     test_parse_detail_aggregator()
     test_parse_detail_filters()

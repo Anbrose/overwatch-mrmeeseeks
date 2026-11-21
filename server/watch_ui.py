@@ -31,7 +31,7 @@ import discord
 
 from tv_channels import Channel
 from vod_search import Show
-from watch_progress import ProgressStore
+from watch_progress import ProgressStore, seen_text
 from watch_requests import (KIND_NO_RESULTS, KIND_NOT_LISTED, RequestStore, clean_query, duplicate_text, limit_text,
                             recorded_text)
 from watch_rooms import Room, RoomManager
@@ -234,7 +234,7 @@ def build_pick_view(p: PendingSearch, progress: ProgressStore | None) -> discord
     for i, show in enumerate(p.shows):
         seen = progress.get(p.channel_id, show.key) if progress is not None else None
         options.append(discord.SelectOption(label=option_label(show), value=str(i),
-                                            description=f"上次看到第 {seen.episode + 1} 集" if seen else None))
+                                            description=seen_text(seen)[:OPTION_MAX] if seen else None))
     view = discord.ui.View(timeout=None)
     view.add_item(PickSelect(p.token, options))
     view.add_item(RequestButton("miss", p.query))
