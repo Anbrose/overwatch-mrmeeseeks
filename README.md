@@ -323,7 +323,7 @@ journalctl -u mrmeeseeks -f      # 查看日志
 | `ANTHROPIC_API_KEY` | 否 | 空 | 留空则只识别截图，不给建议 |
 | `CLAUDE_MODEL` | 否 | `claude-sonnet-5` | 给建议用的模型；想更快可换成 `claude-haiku-4-5-20251001`。可用模型见[模型列表](https://platform.claude.com/docs/en/models/overview) |
 | `ADVISE_EFFORT` | 否 | `low` | 给建议时的思考强度（`low`/`medium`/`high`），越高越慢 |
-| `STATE_DIR` | 否 | `state/` | 标注的模板、待标注队列、许愿次数（`wishes.json`）、赛区频道绑定（`regions.json`）、直播源（`live_sources.json`）、赛事竞猜（`predictions.db`）、公告的各语言版本（`announcements/`）、一起看的进度（`watch_progress.json`）、「没有我想看的」记录（`watch_requests.json`）、被拦 IP（`watch_blocked.json`）和后台密钥（`watch_admin_key`）存放位置；Docker 部署时是挂载的 `/state` |
+| `STATE_DIR` | 否 | `state/` | 标注的模板、待标注队列、许愿次数（`wishes.json`）、赛区频道绑定（`regions.json`）、直播源（`live_sources.json`）、赛事竞猜（`predictions.db`）、公告的各语言版本（`announcements/`）、一起看的进度（`watch_progress.json`）、还开着的房间（`watch_rooms.json`，部署重启后接回来）、「没有我想看的」记录（`watch_requests.json`）、被拦 IP（`watch_blocked.json`）和后台密钥（`watch_admin_key`）存放位置；Docker 部署时是挂载的 `/state` |
 | `WS_HOST` | 否 | `0.0.0.0` | WebSocket 监听地址；用反向代理时改为 `127.0.0.1` |
 | `WS_PORT` | 否 | `8765` | WebSocket 端口 |
 | `MIN_SNAPSHOT_INTERVAL` | 否 | `5` | 同一客户端两次分析的最短间隔（秒） |

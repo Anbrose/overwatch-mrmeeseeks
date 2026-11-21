@@ -29,6 +29,7 @@ import logging
 import os
 import re
 import secrets
+import signal
 import time
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -80,6 +81,7 @@ from sysstats import SystemStats
 from watch_progress import ProgressRecorder, ProgressStore
 from watch_requests import DAILY_LIMIT as REQUEST_DAILY_LIMIT, RequestStore
 from watch_rooms import RoomManager, RoomsFull, TvRoomsFull
+from watch_store import RoomStore
 from watch_server import TvUnavailable, WatchServer, load_admin_key
 from watch_sources import QUALITY_QN, Sources, VideoUnavailable, find_link
 from watch_ui import (HOST_LINK_FAILED, PICK_PREPARING, CardStore, PendingSearch, PickSelect, RequestButton, WatchUI,
@@ -323,7 +325,7 @@ class MeeseeksBot(discord.Client):
                 await ensure_entry(await self._channel(self.wish_channel_id), self.wish_desk.quota, self.wish_view)
             except discord.HTTPException:
                 log.exception("Could not set up the wish channel %s", self.wish_channel_id)
-        # 房间只在内存里：重启前发的一起看卡片都改成"已结束"，只做一次
+        # 重启前发的一起看卡片：房间没接回来的（见 watch_store）改成"已结束"，只做一次
         if self.watch_ui and not self._watch_ready:
             self._watch_ready = True
             await self.watch_ui.end_stale()
@@ -645,7 +647,7 @@ class MeeseeksBot(discord.Client):
                                        allowed_mentions=discord.AllowedMentions.none())
         except discord.HTTPException:
             log.exception("Could not post the watch card in channel %s", message.channel.id)
-            ui.rooms.close(room.room_id)   # 没有卡片就没人进得来，直接关掉，别占着 B 站名额
+            ui.rooms.close(room.room_id, "could not post the card")   # 没有卡片就没人进得来，直接关掉，别占着 B 站名额
             return
         room.message_id = card.id
         ui.cards.add(message.channel.id, card.id)
@@ -730,7 +732,7 @@ class MeeseeksBot(discord.Client):
                                                 allowed_mentions=discord.AllowedMentions.none())
         except discord.HTTPException:
             log.exception("Could not post the watch card in channel %s", p.channel_id)
-            ui.rooms.close(room.room_id)
+            ui.rooms.close(room.room_id, "could not post the card")
             await self._edit_search(p, "出错了，请稍后再试")
             return
         room.message_id = card.id
@@ -787,7 +789,7 @@ class MeeseeksBot(discord.Client):
                                       allowed_mentions=discord.AllowedMentions.none())
         except discord.HTTPException:
             log.exception("Could not post the watch card in channel %s", origin.channel.id)
-            ui.rooms.close(room.room_id)   # 没有卡片就没人进得来，直接关掉，别占着直播名额
+            ui.rooms.close(room.room_id, "could not post the card")   # 没有卡片就没人进得来，直接关掉，别占着直播名额
             await set_status("出错了，请稍后再试")
             return
         room.message_id = card.id
@@ -1237,7 +1239,10 @@ async def main() -> None:
                                    port=int(os.environ.get("WATCH_PORT", "").strip() or "8080"),
                                    origin=watch_url, recorder=recorder, admin_key=admin_key, requests=watch_requests,
                                    stats=SystemStats(disk_path=state_dir), geo=geo, blocks=blocks,
-                                   admin_password=os.environ.get("WATCH_ADMIN_PASSWORD", "").strip() or None)
+                                   admin_password=os.environ.get("WATCH_ADMIN_PASSWORD", "").strip() or None,
+                                   room_store=RoomStore(state_dir / "watch_rooms.json", watch_rooms))
+        # 部署会重启进程：把重启前的房间接回来，正在看的人连回来就能接着看
+        watch_server.room_store.restore()
         watch_ui = WatchUI(watch_rooms, watch_url, CardStore(state_dir / "watch_cards.json"), requests=watch_requests)
         # 电视直播：WATCH_TV_LISTS 不设用默认列表，设成空字符串关闭
         tv_lists = parse_tv_lists(os.environ.get("WATCH_TV_LISTS"))
@@ -1273,6 +1278,17 @@ async def main() -> None:
 
     async with bot:
         await ws.start()
+        # docker stop 发 SIGTERM。进程是容器里的 1 号进程，不装处理函数的话这个信号会被忽略，
+        # 10 秒后被强杀，来不及存房间。收到就先存盘，再让 bot 正常退出（走下面的 finally）。
+        def on_sigterm() -> None:
+            log.info("SIGTERM received; shutting down")
+            if watch_server is not None:
+                watch_server.save_rooms(force=True)
+            asyncio.ensure_future(bot.close())
+        try:
+            asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, on_sigterm)
+        except (NotImplementedError, AttributeError, ValueError):
+            pass     # Windows 上没有；本地开发用不到
         refreshers = [asyncio.create_task(refresh_loop(store, refresh_hours)),
                       asyncio.create_task(refresh_loop(matchup_store, refresh_hours, fetch=matchups.fetch_all)),
                       asyncio.create_task(esports_feed.run(bot.post_esports, bot.edit_esports)),
