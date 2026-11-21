@@ -320,7 +320,7 @@ async def test_ws_flow():
         await client.close()
 
 
-async def test_duration_and_change_video():
+async def test_duration_and_no_change_video():
     rooms, sources, server, client = await make()
     try:
         room = rooms.create(1, 2, "发起人", yt(duration=None))
@@ -338,112 +338,13 @@ async def test_duration_and_change_video():
         check("时长未知时接受房主的 duration", s and s["video"]["duration"] == 212.5 and room.video.duration == 212.5)
         await drain(b)
 
-        await b.send_json({"type": "change_video", "url": "https://youtu.be/abcdefghijk"})
-        got = await drain(b)
-        check("普通观众换视频无效且不去解析", room.video.id == "dQw4w9WgXcQ" and sources.resolve_calls == 0
-              and not any(m["type"] == "state" for m in got))
-
+        # 房间里换视频的入口已经去掉：这条消息谁发都不认，也不去解析链接
         await a.send_json({"type": "change_video", "url": "https://youtu.be/abcdefghijk"})
-        s1, s2 = await recv_type(a, "state"), await recv_type(b, "state")
-        check("房主换视频两边一起切换", s1 and s2 and s1["video"]["id"] == "abcdefghijk"
-              and s2["video"]["version"] == 1 and s2["playing"] is False and s2["position"] == 0)
-
-        await drain(b)
-        await a.send_json({"type": "change_video", "url": "https://youtu.be/slowslowslo"})
-        await a.send_json({"type": "change_video", "url": "https://youtu.be/abcdefghijk"})
-        e = await recv_type(a, "error")
-        s = await recv_type(a, "state")
-        got_b = await drain(b)
-        check("换视频进行中再换 → 提示请稍候", e and e["message"] == "正在换视频，请稍候"
-              and s and s["video"]["version"] == 2 and room.version == 2 and sources.resolve_calls == 2
-              and not any(m["type"] == "error" for m in got_b))
-    finally:
-        await client.close()
-
-
-async def test_change_video_errors():
-    rooms = RoomManager(max_bili_rooms=1)
-    rooms, sources, server, client = await make(rooms)
-    try:
-        rooms.create(9, 9, "别人", bili())          # 占满 B 站名额
-        room = rooms.create(1, 2, "发起人", yt())
-        rid = room.room_id
-        a, _ = await hello(client, rid, key=room.owner_key)
-        b, _ = await hello(client, rid)
-        await drain(a)
-        await drain(b)
-
-        await a.send_json({"type": "change_video", "url": "https://bad.example/x"})
-        e = await recv_type(a, "error")
-        got = await drain(b)
-        check("放不了的视频只回给发起人且原视频不变", e and e["message"] == "这个视频在海外服务器上无法播放"
-              and not got and room.video.id == "dQw4w9WgXcQ" and room.version == 0)
-
-        await a.send_json({"type": "change_video", "url": "https://www.bilibili.com/video/BV1yy411c7mD"})
-        e = await recv_type(a, "error")
-        got = await drain(b)
-        check("B 站满了提示", e and e["message"] == "B 站房间已满（最多 1 个），请稍后再试或换 YouTube 视频"
-              and not got and room.video.source == "youtube")
-        await a.send_json({"type": "change_video", "url": 5})
         await a.send_json({"type": "ping", "t": 3})
-        check("url 类型错误被忽略", (await recv_type(a, "pong")) is not None and sources.resolve_calls == 2)
-    finally:
-        await client.close()
-
-
-class _Resp:
-    def __init__(self, payload):
-        self.status, self._payload, self.headers = 200, payload, {}
-
-    async def json(self, content_type=None):
-        return self._payload
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *a):
-        return False
-
-
-class _Session:
-    """按 URL 片段返回假响应的 aiohttp.ClientSession 替身（给真的 Sources 用）。"""
-
-    def __init__(self, routes):
-        self.routes = routes
-
-    def get(self, url, **kw):
-        for key, payload in self.routes:
-            if key in url:
-                return _Resp(payload)
-        return _Resp({"code": -404})
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, *a):
-        return False
-
-
-async def test_change_video_playurl_rejected():
-    """真的 Sources：view 正常、playurl 报地区限制 → 换视频被拒，原视频不变，提示发给房主。"""
-    from watch_sources import Sources
-    with open(os.path.join(ROOT, "tests", "fixtures", "watch", "bili_view.json"), encoding="utf-8") as f:
-        view = json.load(f)
-    nav = {"code": -101, "data": {"wbi_img": {
-        "img_url": "https://i0.hdslb.com/bfs/wbi/7cd084941338484aae1ad9425b84077c.png",
-        "sub_url": "https://i0.hdslb.com/bfs/wbi/4932caff0ff746eab6f01bf08b70ac45.png"}}}
-    routes = [("finger/spi", {"code": 0, "data": {"b_3": "x", "b_4": "y"}}), ("web-interface/nav", nav),
-              ("wbi/view", view), ("wbi/playurl", {"code": -10403, "message": "地区限制"})]
-    sources = Sources(None, session_factory=lambda: _Session(routes))
-    rooms, sources, server, client = await make(sources=sources)
-    try:
-        room = rooms.create(1, 2, "发起人", yt())
-        a, _ = await hello(client, room.room_id, key=room.owner_key)
-        await drain(a)
-        await a.send_json({"type": "change_video", "url": "https://www.bilibili.com/video/BV1xrnz6gEVD"})
-        e = await recv_type(a, "error")
-        check("playurl 不可用 → 换视频被拒", e and e["message"] == "这个视频在海外服务器上无法播放"
-              and room.video.source == "youtube" and room.version == 0)
+        pong = await recv_type(a, "pong")
+        got = await drain(b)
+        check("change_video 消息已下线：房主发了也不换、不解析", pong is not None and room.video.id == "dQw4w9WgXcQ"
+              and room.version == 0 and sources.resolve_calls == 0 and not any(m["type"] in ("state", "error") for m in got))
     finally:
         await client.close()
 
@@ -569,6 +470,8 @@ async def test_pages():
         check("static 白名单内 200", r.status == 200 and "javascript" in r.content_type)
         r = await client.get("/static/style.css")
         check("static css 类型", r.status == 200 and r.content_type == "text/css")
+        r = await client.get("/static/player.css")
+        check("房间页的 player.css 在 static 白名单", r.status == 200 and r.content_type == "text/css")
         r = await client.get("/static/cast.js")
         check("cast.js 在 static 白名单", r.status == 200 and "javascript" in r.content_type
               and "WatchCast" in await r.text())
@@ -1955,9 +1858,7 @@ async def test_tv_manual_same():
 
 async def main():
     await test_ws_flow()
-    await test_duration_and_change_video()
-    await test_change_video_errors()
-    await test_change_video_playurl_rejected()
+    await test_duration_and_no_change_video()
     await test_bili_proxy()
     await test_pages()
     test_build_mpd()

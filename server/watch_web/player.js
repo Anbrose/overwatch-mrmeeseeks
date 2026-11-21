@@ -73,12 +73,15 @@
     cast: $("cast"),
     me: $("me"), panel: $("perm-panel"), members: $("members"), people: $("people"), stallBtn: $("stall-btn"),
     syncBtn: $("sync-btn"),
-    changeForm: $("change-form"), changeUrl: $("change-url"), toast: $("toast"),
+    toast: $("toast"),
     resume: $("resume"), vodPanel: $("vod-panel"), episodes: $("episodes"),
     lineLabel: $("line-label"), nextLine: $("next-line"),
     bsBtn: $("bs-btn"), bsPanel: $("bs-panel"), bsClose: $("bs-close"),
     qr: $("qr"), bsHost: $("bs-host"), bsCode: $("bs-code"),
     liveBadge: $("live-badge"), tvPanel: $("tv-panel"), tvLineLabel: $("tv-line-label"), tvNext: $("tv-next"),
+    epBtn: $("ep-btn"), epLabel: $("ep-btn-label"), epPanel: $("ep-panel"), bigPlay: $("big-play"),
+    status: $("status"), roomCode: $("room-code"), shield: $("shield"), row: $("row"),
+    dock: $("dock"), dockHide: $("dock-hide"), dockShow: $("dock-show"),
   };
 
   // ---------------------------------------------------------------- storage
@@ -1161,6 +1164,46 @@
     started = false;
     ui.start.hidden = ended;
     renderStartButton();
+    renderBigPlay();
+  }
+
+  // The big glass play button in the middle of a paused picture: the same
+  // action as the small one, only for someone who may control.
+  function renderBigPlay() {
+    const can = me.canControl && !ended && !!room;
+    ui.bigPlay.hidden = !(can && started && !room.playing);
+  }
+
+  // ---- floating panels (选集 / 权限): one open at a time ----
+  function setPanel(which) {
+    const ep = which === "ep" && !ui.epBtn.hidden;
+    const perm = which === "perm" && !ui.permBtn.hidden;
+    ui.epPanel.hidden = !ep;
+    ui.panel.hidden = !perm;
+    ui.epBtn.setAttribute("aria-expanded", String(ep));
+    ui.permBtn.setAttribute("aria-expanded", String(perm));
+    // the player gives way: left for the side panel (wide), up for the panel below (narrow)
+    ui.row.classList.toggle("side-open", ep || perm);
+    touch();
+  }
+
+  // ---- overlay controls fade out while a video plays and nobody touches anything ----
+  // Wide layout only (the narrow one has the controls below the picture). They
+  // stay clickable while faded; a touch tap on them only brings them back.
+  const IDLE_MS = 3000;
+  let idleTimer = null;
+  let wokeAt = -1e9;
+  function overlayLayout() {
+    return !window.matchMedia || window.matchMedia("(min-width: 721px)").matches;
+  }
+  function touch() {
+    ui.stageWrap.classList.remove("idle");
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      const busy = !started || ended || !room || !room.playing || seeking
+        || !ui.epPanel.hidden || !ui.panel.hidden || !overlayLayout();
+      if (!busy) ui.stageWrap.classList.add("idle");
+    }, IDLE_MS);
   }
 
   // The start tap must reach a ready player so play() runs inside the gesture.
@@ -1222,15 +1265,19 @@
     ui.time.hidden = live;
     ui.liveBadge.hidden = !live;
     const playing = room && room.playing;
-    ui.play.textContent = playing ? "⏸" : "▶";
+    ui.play.classList.toggle("playing", !!playing);
     ui.play.setAttribute("aria-label", playing ? "暂停" : "播放");
     ui.me.textContent = me.name ? `ID：「${me.name}」` : "";
-    ui.permBtn.hidden = !me.isHost || ended;
-    if (!me.isHost || ended) {
-      ui.panel.hidden = true;
-      ui.permBtn.setAttribute("aria-expanded", "false");
-    }
+    const hostUi = me.isHost && !ended;
+    ui.permBtn.hidden = !hostUi;
+    ui.epBtn.hidden = !(hostUi && (isVod() || live));
+    ui.epLabel.textContent = live ? "换源" : "选集";
+    if (ui.permBtn.hidden && !ui.panel.hidden) setPanel(null);
+    if (ui.epBtn.hidden && !ui.epPanel.hidden) setPanel(null);
     ui.conn.hidden = connected || ended;
+    ui.status.classList.toggle("offline", !connected && !ended);
+    renderBigPlay();
+    touch();
     ui.bsBtn.hidden = ended || !room;
     if (ui.bsBtn.hidden) ui.bsPanel.hidden = true;
     renderResume();
@@ -1261,7 +1308,11 @@
   ui.bsBtn.addEventListener("click", openBigScreen);
   ui.bsClose.addEventListener("click", () => { ui.bsPanel.hidden = true; });
   ui.bsPanel.addEventListener("click", (e) => { if (e.target === ui.bsPanel) ui.bsPanel.hidden = true; });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") ui.bsPanel.hidden = true; });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    ui.bsPanel.hidden = true;
+    setPanel(null);
+  });
 
   function isVod() {
     return !!(room && room.video && room.video.source === "vod");
@@ -1272,13 +1323,23 @@
   }
 
   // "上次一起看到…": hidden when the room is already at the snapshot.
+  // Dismissing is per snapshot and per device: a later snapshot (another
+  // episode or position) shows the line again.
+  const RESUME_KEY = `watch_resume_dismissed:${roomId}`;
+  let resumeDismissed = null;
+  try { resumeDismissed = localStorage.getItem(RESUME_KEY); } catch { /* private mode etc. */ }
+  function resumeSignature(r) {
+    return `${r.episode}|${Math.round(Number(r.position) || 0)}|${r.text || ""}`;
+  }
+
   function renderResume() {
     const r = room && room.resume;
     const atSnapshot = r && isVod() && room.video.episode === r.episode
       && Math.abs(expectedPosition(room) - r.position) < RESUME_NEAR;
+    const dismissed = !!r && resumeDismissed === resumeSignature(r);
+    ui.resume.hidden = !r || ended || atSnapshot || isLive() || dismissed;
+    if (ui.resume.hidden) return;   // keep the content while it fades out
     ui.resume.textContent = "";
-    ui.resume.hidden = !r || ended || atSnapshot || isLive();
-    if (ui.resume.hidden) return;
     const text = String(r.text || "");
     if (me.canControl) {
       const btn = document.createElement("button");
@@ -1291,8 +1352,22 @@
       });
       ui.resume.appendChild(btn);
     } else {
-      ui.resume.textContent = text;
+      const label = document.createElement("span");
+      label.className = "resume-text";
+      label.textContent = text;
+      ui.resume.appendChild(label);
     }
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "resume-x";
+    close.title = "不再提示";
+    close.setAttribute("aria-label", "关闭「上次一起看到」的提示");
+    close.addEventListener("click", () => {
+      resumeDismissed = resumeSignature(r);
+      try { localStorage.setItem(RESUME_KEY, resumeDismissed); } catch { /* same */ }
+      renderResume();
+    });
+    ui.resume.appendChild(close);
   }
 
   // Host-only episode list and source switch inside the 🔑 panel.
@@ -1310,7 +1385,9 @@
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "ep";
-        btn.textContent = `第 ${i + 1} 集`;
+        btn.textContent = String(i + 1);
+        btn.title = `第 ${i + 1} 集`;
+        btn.setAttribute("aria-label", `第 ${i + 1} 集`);
         btn.addEventListener("click", () => {
           if (preparing) return;
           send({ type: "episode", index: i });
@@ -1330,23 +1407,56 @@
     ui.nextLine.disabled = preparing || (Number(v.line_count) || 0) <= 1;
   }
 
-  function healthDot(m) {
-    const dot = document.createElement("span");
+  function paintDot(dot, m) {
     dot.className = "dot" + (m.health ? ` ${m.health}` : "");
     dot.title = m.health ? m.health_note || "" : "还不知道";
-    return dot;
   }
 
-  // Everyone in the room, with a health dot each (host marked with 🔑).
-  function renderPeople(members) {
-    ui.people.textContent = "";
-    for (const m of members) {
-      const chip = document.createElement("span");
-      chip.className = "person";
-      chip.append(healthDot(m), m.name + (m.is_host ? " 🔑" : ""));
-      chip.title = m.health ? m.health_note || "" : "还不知道";
-      ui.people.appendChild(chip);
+  // Rows are kept per member id and only updated: rebuilding them on every
+  // `members` message would make a switch or a health dot jump in one frame
+  // instead of easing (the transitions in player.css need the same element).
+  function syncRows(map, list, parent, create, update) {
+    const seen = new Set();
+    for (const m of list) {
+      const key = String(m.id);
+      seen.add(key);
+      let row = map.get(key);
+      if (!row) {
+        row = create();
+        map.set(key, row);
+        parent.appendChild(row.el);
+      }
+      row.m = m;
+      update(row, m);
     }
+    for (const [key, row] of map) {
+      if (seen.has(key)) continue;
+      row.el.remove();
+      map.delete(key);
+    }
+  }
+
+  // Everyone in the room, with a health dot each (host marked with a crown).
+  const peopleRows = new Map();
+  function renderPeople(members) {
+    syncRows(peopleRows, members, ui.people, () => {
+      const el = document.createElement("span");
+      el.className = "person";
+      const dot = document.createElement("span");
+      const name = document.createElement("span");
+      const mark = document.createElement("span");
+      mark.className = "host-mark";
+      mark.title = "房主";
+      mark.setAttribute("role", "img");
+      mark.setAttribute("aria-label", "房主");
+      el.append(dot, name, mark);
+      return { el, dot, name, mark, m: null };
+    }, (row, m) => {
+      paintDot(row.dot, m);
+      row.name.textContent = m.name;
+      row.mark.hidden = !m.is_host;
+      row.el.title = m.health ? m.health_note || "" : "还不知道";
+    });
   }
 
   // Host-only source switch for live TV, inside the 🔑 panel.
@@ -1360,47 +1470,52 @@
     ui.tvNext.disabled = preparing || count <= 1;
   }
 
+  const memberRows = new Map();
+  let membersEmpty = null;
   function renderMembers(members) {
-    ui.members.textContent = "";
     members = members.filter((m) => !m.is_host);
-    if (!members.length) {
-      const li = document.createElement("li");
-      li.className = "empty";
-      li.textContent = "还没有其他人";
-      ui.members.appendChild(li);
-      return;
+    if (!membersEmpty) {
+      membersEmpty = document.createElement("li");
+      membersEmpty.className = "empty";
+      membersEmpty.textContent = "还没有其他人";
+      ui.members.appendChild(membersEmpty);
     }
-    for (const m of members) {
-      const li = document.createElement("li");
+    membersEmpty.hidden = members.length > 0;
+    syncRows(memberRows, members, ui.members, () => {
+      const el = document.createElement("li");
       const name = document.createElement("span");
       name.className = "name";
-      name.append(healthDot(m), m.name);
+      const dot = document.createElement("span");
+      const label = document.createElement("span");
+      name.append(dot, label);
       const sw = document.createElement("button");
       sw.type = "button";
       sw.className = "switch";
-      sw.setAttribute("role", "switch");
-      sw.setAttribute("aria-checked", String(!!m.can_control));
-      sw.setAttribute("aria-label", `${m.name} 控制播放`);
-      sw.textContent = m.can_control ? "● 开" : "○ 关";
-      sw.addEventListener("click", () => {
-        send({ type: "grant", target: m.id, allowed: !m.can_control });
-      });
+      sw.setAttribute("role", "switch");   // the knob is drawn (and eased) by player.css
       // Hand the host role over. The server keeps the old host's control
       // permission, so this is not a way to lose the room.
       const crown = document.createElement("button");
       crown.type = "button";
-      crown.className = "make-host";
+      crown.className = "make-host";       // crown icon: player.css
       crown.title = "设为房主";
-      crown.setAttribute("aria-label", `把房主交给 ${m.name}`);
-      crown.textContent = "👑";
+      const row = { el, dot, label, sw, crown, m: null };
+      sw.addEventListener("click", () => {
+        send({ type: "grant", target: row.m.id, allowed: !row.m.can_control });
+      });
       crown.addEventListener("click", () => {
-        if (window.confirm(`把房主交给「${m.name}」？你会保留控制播放的权限。`)) {
-          send({ type: "transfer", target: m.id });
+        if (window.confirm(`把房主交给「${row.m.name}」？你会保留控制播放的权限。`)) {
+          send({ type: "transfer", target: row.m.id });
         }
       });
-      li.append(name, crown, sw);
-      ui.members.appendChild(li);
-    }
+      el.append(name, crown, sw);
+      return row;
+    }, (row, m) => {
+      paintDot(row.dot, m);
+      row.label.textContent = m.name;
+      row.sw.setAttribute("aria-checked", String(!!m.can_control));
+      row.sw.setAttribute("aria-label", `${m.name} 控制播放`);
+      row.crown.setAttribute("aria-label", `把房主交给 ${m.name}`);
+    });
   }
 
   let toastTimer = null;
@@ -1443,13 +1558,15 @@
     syncTick();
   }
 
-  ui.play.addEventListener("click", () => {
+  function togglePlay() {
     if (!room) return;
     const pos = currentPosition();
     sendControl(room.playing ? "pause" : "play", pos);
-  });
+  }
+  ui.play.addEventListener("click", togglePlay);
+  ui.bigPlay.addEventListener("click", togglePlay);
 
-  ui.seek.addEventListener("input", () => { seeking = true; renderProgress(); });
+  ui.seek.addEventListener("input", () => { seeking = true; touch(); renderProgress(); });
   ui.seek.addEventListener("change", () => {
     seeking = false;
     const dur = currentDuration();
@@ -1460,7 +1577,8 @@
   function applyVolume() {
     ui.volume.value = String(Math.round(volume * 100));
     setRangeFill(ui.volume, muted ? 0 : volume);
-    ui.mute.textContent = muted || volume === 0 ? "🔇" : "🔊";
+    ui.mute.classList.toggle("muted", muted || volume === 0);
+    ui.mute.setAttribute("aria-label", muted || volume === 0 ? "取消静音" : "静音");
     if (player && player.ready) player.setVolume(volume, muted);
   }
   ui.volume.addEventListener("input", () => {
@@ -1475,7 +1593,7 @@
   });
 
   ui.fs.addEventListener("click", () => {
-    const el = ui.stageWrap;
+    const el = ui.row;   // the whole row, so the side panels work in fullscreen too
     const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
     if (fsEl) {
       (document.exitFullscreen || document.webkitExitFullscreen).call(document);
@@ -1517,14 +1635,43 @@
     } else if (room) {
       seekTo(expectedPosition(room), { keepPaused: true });
     }
+    renderBigPlay();
+    touch();
     syncTick();
   });
 
-  ui.permBtn.addEventListener("click", () => {
-    const open = ui.panel.hidden;
-    ui.panel.hidden = !open;
-    ui.permBtn.setAttribute("aria-expanded", String(open));
-  });
+  ui.permBtn.addEventListener("click", () => setPanel(ui.panel.hidden ? "perm" : null));
+  ui.epBtn.addEventListener("click", () => setPanel(ui.epPanel.hidden ? "ep" : null));
+  ui.shield.addEventListener("click", () => setPanel(null));
+
+  // ---- the control bar can be put away by hand; remembered on this device ----
+  const DOCK_KEY = "watch_dock_hidden";
+  function setDockHidden(on, remember) {
+    ui.dock.hidden = on;
+    ui.dockShow.hidden = !on;
+    if (remember) {
+      try { localStorage.setItem(DOCK_KEY, on ? "1" : ""); } catch { /* private mode etc. */ }
+    }
+    touch();
+  }
+  ui.dockHide.addEventListener("click", () => { setDockHidden(true, true); ui.dockShow.focus(); });
+  ui.dockShow.addEventListener("click", () => { setDockHidden(false, true); ui.dockHide.focus(); });
+  try { if (localStorage.getItem(DOCK_KEY) === "1") setDockHidden(true, false); } catch { /* same */ }
+
+  // Any sign of life brings the overlay controls back.
+  for (const type of ["pointermove", "pointerdown", "keydown", "touchstart", "focusin"]) {
+    document.addEventListener(type, touch, { passive: true });
+  }
+  // A touch tap that lands on a faded-out control only wakes the controls.
+  ui.stageWrap.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "touch" && ui.stageWrap.classList.contains("idle")) wokeAt = performance.now();
+  }, true);
+  ui.stageWrap.addEventListener("click", (e) => {
+    if (performance.now() - wokeAt > 700) return;
+    wokeAt = -1e9;
+    e.stopPropagation();
+    e.preventDefault();
+  }, true);
 
   ui.nextLine.addEventListener("click", () => {
     if (preparing) return;
@@ -1558,14 +1705,6 @@
     if (preparing) return;
     send({ type: "tv_next" });
     startPreparing();
-  });
-
-  ui.changeForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const url = ui.changeUrl.value.trim();
-    if (!url) return;
-    send({ type: "change_video", url });
-    ui.changeUrl.value = "";
   });
 
   // ---------------------------------------------------------------- WebSocket
@@ -1719,6 +1858,7 @@
     window.WatchCast.on("available", renderCastButton);
     window.WatchCast.on("session", onCastSession);
   }
+  ui.roomCode.textContent = roomId;
   applyVolume();
   renderControls();
   renderStartButton();
