@@ -43,7 +43,7 @@
 | `server/watch_requests.py` | 「想看但没有」的记录（`STATE_DIR/watch_requests.json`）：每人每天 `WATCH_REQUEST_DAILY_LIMIT` 次（悉尼 0 点重置）、同一天同一部去重、最多 2000 条、按规范化片名合并统计；不依赖 Discord |
 | `server/geoip.py` | 地区限制：下载五大 RIR 的 delegated-extended 分配表（每周刷新，缓存 `geoip.json`）、IP → 国家（v4 用 `array` 二分，v6 用 list）、放行判定（内网 LOCAL 放行，没加载时 `allowed=None` 即不拦）、`client_ip`（代理后取 `X-Forwarded-For` 最后一段）、`BlockLog`（被拦 IP 的编号、国家、房间、次数，`STATE_DIR/watch_blocked.json`） |
 | `server/sysstats.py` | 服务器资源采样：`/proc/stat`（整机 CPU）、`/proc/meminfo`、`/proc/loadavg`、`/proc/net/dev`（容器网卡上下行）、`/proc/self/stat|status`（bot 进程 CPU、RSS）、cgroup v2/v1 内存、磁盘；两次采样之差算百分比和速率，读不到就是 None |
-| `server/watch_web/` | 一起看网页：`index.html`、`player.js`（播放器、同步、权限面板、直播模式、地区受限提示、投屏按钮和远端同步策略、「在电视上看」二维码）、`cast.js`（Chromecast 发送端：懒加载 Google Cast SDK、会话、加载播放列表、远端播放状态）、`join.html`（首页）、`style.css`、`admin.html` + `admin.js`（管理后台，每 5 秒轮询 `/admin/api`）。vod 房间建播放器时把房间当前位置作为 hls.js 的 `startPosition`，第一个分片就从那里取（不从 0 开始再跳过去，慢网观众少等一个分片）。vod 和直播房间只要浏览器有 MSE 就用 hls.js，不信 `canPlayType` 的原生 HLS（Android Chrome 等常以「格式不支持」失败）；原生只给没有 MSE 的 iPhone Safari、hls.js 脚本加载不了时，以及 Safari 播 vod 时（保留 AirPlay，MediaSource 投不出去）。房主的播放器在 vod 线路上失败时自动发 `next_line`（每集每条线路一次，`autoSwitch`），因为服务器的探测代表不了房主所在网络 |
+| `server/watch_web/` | 一起看网页：`index.html`、`player.js`（播放器、同步、权限面板、直播模式、地区受限提示、投屏按钮和远端同步策略、小窗（画中画）按钮、「在电视上看」二维码）、`cast.js`（Chromecast 发送端：懒加载 Google Cast SDK、会话、加载播放列表、远端播放状态）、`join.html`（首页）、`style.css`、`admin.html` + `admin.js`（管理后台，每 5 秒轮询 `/admin/api`）。vod 房间建播放器时把房间当前位置作为 hls.js 的 `startPosition`，第一个分片就从那里取（不从 0 开始再跳过去，慢网观众少等一个分片）。vod 和直播房间只要浏览器有 MSE 就用 hls.js，不信 `canPlayType` 的原生 HLS（Android Chrome 等常以「格式不支持」失败）；原生只给没有 MSE 的 iPhone Safari、hls.js 脚本加载不了时，以及 Safari 播 vod 时（保留 AirPlay，MediaSource 投不出去）。房主的播放器在 vod 线路上失败时自动发 `next_line`（每集每条线路一次，`autoSwitch`），因为服务器的探测代表不了房主所在网络 |
 | `client/client.py` | 本地客户端：连接/重连、配对码输入、Tab 监听、两段截图、上传 |
 
 ## 客户端状态
@@ -153,7 +153,7 @@
 缓冲（`isBuffering`：`<video>` 的 `readyState < HAVE_FUTURE_DATA`，YouTube 的 BUFFERING 状态）期间不追赶：不跳转也不调速，因为再跳一次只会重新缓冲（带宽不够的观众以前会卡在「跳转、缓冲、再跳转」的循环里）；房间状态变了例外，立刻跳过去，旧位置的下载已经没用了。
 
 网络状况（`health`）由每个网页按最近 1 分钟的卡顿算：正在卡 3 秒以上、1 分钟内卡了 10 秒以上或落后 8 秒以上是红；1 分钟内卡过或落后 2 秒以上是黄；否则绿。level 变了（最少隔 3 秒）或每 30 秒发一次。
-投屏（只有 vod 片源）：Chromecast 走 `cast.js`，电视端用 Google 默认媒体接收端直接播 `/vod/…/index.m3u8`，页面只发 load / play / pause / seek、读回位置（SDK 的估计值，约半秒延迟）；AirPlay 走 `<video>` 自带的 Remote Playback API（Safari）或 webkit 前缀接口，元素继续当播放器，换集时只换 `src` 不重建元素，否则 AirPlay 会断。远端播放时不调倍速：播放中差距超过 1.5 秒就跳到目标再加 0.5 秒（补 seek 的往返），暂停时超过 1 秒重定位，两次跳转至少隔 3 秒，电视在 seeking / buffering 时不比较。Cast 会话连上时把页面当成已点过「开始观看」；房间换成 B 站或 YouTube 时结束会话；会话结束（电视停了、投屏失败）就重建本地播放器。
+投屏（只有 vod 片源）：Chromecast 走 `cast.js`，电视端用 Google 默认媒体接收端直接播 `/vod/…/index.m3u8`，页面只发 load / play / pause / seek、读回位置（SDK 的估计值，约半秒延迟）；AirPlay 走 `<video>` 自带的 Remote Playback API（Safari）或 webkit 前缀接口，元素继续当播放器，换集时只换 `src` 不重建元素，否则 AirPlay 会断。小窗（画中画）同理：iOS 用 webkit 的 `webkitSetPresentationMode`，其他浏览器用标准 `requestPictureInPicture`；原生 HLS 在小窗里换集也只换 `src`，否则小窗会关。远端播放时不调倍速：播放中差距超过 1.5 秒就跳到目标再加 0.5 秒（补 seek 的往返），暂停时超过 1 秒重定位，两次跳转至少隔 3 秒，电视在 seeking / buffering 时不比较。Cast 会话连上时把页面当成已点过「开始观看」；房间换成 B 站或 YouTube 时结束会话；会话结束（电视停了、投屏失败）就重建本地播放器。
 直播房间不对位置：网页只跟随播放/暂停，每次从暂停变成播放（包括刚打开）都跳到最新画面（hls.js 的 `liveSyncPosition`，原生 HLS 用 `seekable` 的末尾），`control` 的 `position` 固定发 0，从不发 `seek`。播放器出致命错误后网页发一次 `tv_stall`，5 秒后用同一个版本重建播放器再试。
 
 ## 截图限流

@@ -69,7 +69,7 @@
   const ui = {
     title: $("title"), conn: $("conn"), permBtn: $("perm-btn"),
     stageWrap: $("stage-wrap"), host: $("player-host"), stageMsg: $("stage-msg"), start: $("start"),
-    play: $("play"), seek: $("seek"), time: $("time"), mute: $("mute"), volume: $("volume"), fs: $("fs"),
+    play: $("play"), seek: $("seek"), time: $("time"), mute: $("mute"), volume: $("volume"), fs: $("fs"), pip: $("pip"),
     cast: $("cast"),
     me: $("me"), panel: $("perm-panel"), members: $("members"), people: $("people"), stallBtn: $("stall-btn"),
     syncBtn: $("sync-btn"),
@@ -1036,13 +1036,16 @@
     player = null;
     playerVersion = null;
     ui.host.textContent = "";
+    renderPip();
   }
 
   async function buildPlayer(video) {
-    // AirPlay is bound to the <video> element: for the next episode swap the
-    // playlist instead of the element, or the TV would drop the session.
+    // AirPlay and picture in picture are bound to the <video> element: for the
+    // next episode swap the playlist instead of the element, or the TV would
+    // drop the session / the PiP window would close (iOS: often while the page
+    // is in the background, where nobody can press the button again).
     if (video.source === "vod" && player && player.source === "vod" && player.native
-        && !player.failed && player.remote() && !castConnected()) {
+        && !player.failed && (player.remote() || inPip(player.video)) && !castConnected()) {
       buildToken++;
       playerVersion = video.version;
       player.load(video.hls);
@@ -1112,6 +1115,7 @@
     setStageMessage("");
     renderStartButton();
     renderCastButton();
+    renderPip();
     syncTick();
   }
 
@@ -1264,6 +1268,7 @@
   }
 
   function renderControls() {
+    renderPip();
     const can = me.canControl && !ended && !!room;
     ui.play.disabled = !can;
     ui.seek.disabled = !can;
@@ -1633,6 +1638,61 @@
     }
     if (player && player.promptRemote) player.promptRemote();
   });
+
+  // ---------------------------------------------------------------- picture in picture
+  // Only for our own <video> players (bilibili, vod, tv); YouTube's iframe
+  // manages its own. iOS Safari uses the webkit presentation-mode API, other
+  // browsers the standard one. Play/pause pressed in the system PiP window is
+  // local only, like any other local action: the next sync puts it back.
+
+  function pipVideo() {
+    return player && player.video ? player.video : null;
+  }
+
+  function webkitPip(video) {
+    return typeof video.webkitSetPresentationMode === "function"
+      && typeof video.webkitSupportsPresentationMode === "function"
+      && video.webkitSupportsPresentationMode("picture-in-picture");
+  }
+
+  function pipSupported(video) {
+    return webkitPip(video) || (!!document.pictureInPictureEnabled
+      && typeof video.requestPictureInPicture === "function" && !video.disablePictureInPicture);
+  }
+
+  function inPip(video) {
+    return document.pictureInPictureElement === video || video.webkitPresentationMode === "picture-in-picture";
+  }
+
+  function renderPip() {
+    const video = pipVideo();
+    ui.pip.hidden = ended || !(video && pipSupported(video));
+    const on = !!video && inPip(video);
+    ui.pip.classList.toggle("on", on);
+    ui.pip.setAttribute("aria-pressed", on ? "true" : "false");
+    const label = on ? "退出小窗" : "小窗播放";
+    ui.pip.setAttribute("aria-label", label);
+    ui.pip.title = label;
+  }
+
+  ui.pip.addEventListener("click", () => {
+    const video = pipVideo();
+    if (!video) return;
+    const failed = () => toast("这个浏览器暂时不能小窗播放");
+    try {
+      if (webkitPip(video)) {
+        video.webkitSetPresentationMode(inPip(video) ? "inline" : "picture-in-picture");
+      } else if (document.pictureInPictureElement === video) {
+        document.exitPictureInPicture().catch(() => {});
+      } else {
+        video.requestPictureInPicture().catch(failed);
+      }
+    } catch { failed(); }
+  });
+  // These events don't bubble: listen in the capture phase on the player host.
+  for (const ev of ["enterpictureinpicture", "leavepictureinpicture", "webkitpresentationmodechanged"]) {
+    ui.host.addEventListener(ev, renderPip, true);
+  }
 
   ui.start.addEventListener("click", () => {
     if (!player || !player.ready) return; // button is disabled until ready anyway
